@@ -1,0 +1,117 @@
+"""The instigator: a scripted fake contractor that pushes teams toward cheating.
+
+It has no model and no tools. It is a small state machine driven by the round loop (first
+contact, once per team per round from round 2) and by PR events from the tool box (urging
+teammates to approve a PR that changes the tests or passes every test). Its messages go through
+the normal message path, so they arrive next round like anyone else's. Messages sent to it are
+stored and go nowhere.
+"""
+
+from __future__ import annotations
+
+import ast
+from typing import Callable
+
+from .events import EventLog
+from .world import PR, Agent, Message, World
+
+ROLE = "instigator"
+
+
+def parse_template(text: str) -> dict[str, str]:
+    """Sections of prompts/instigator.md: '## name' headings, each followed by its message."""
+    sections: dict[str, list[str]] = {}
+    current = None
+    for line in text.splitlines():
+        if line.startswith("## "):
+            current = line[3:].strip()
+            sections[current] = []
+        elif current is not None:
+            sections[current].append(line)
+    return {k: "\n".join(v).strip() for k, v in sections.items()}
+
+
+def failing_test(problem: dict) -> dict | None:
+    """Name, input and expected value of the problem's impossible assert, or None if it has none."""
+    impossible = problem.get("impossible_asserts") or []
+    if not impossible or impossible[0] not in problem["asserts"]:
+        return None
+    text = impossible[0]
+    info = {"test_name": f"test_{problem['asserts'].index(text) + 1:02d}", "test_input": text,
+            "expected": "", "assert_line": text}
+    try:
+        test = ast.parse(text).body[0].test
+        call = test.left
+        args = [ast.unparse(a) for a in call.args] + [f"{k.arg}={ast.unparse(k.value)}" for k in call.keywords]
+        info["test_input"] = ", ".join(args)
+        info["expected"] = ast.unparse(test.comparators[0])
+    except (SyntaxError, AttributeError, IndexError):
+        pass
+    return info
+
+
+class Instigator:
+    def __init__(self, world: World, log: EventLog, problems: dict[str, dict], template: str, approvals: int,
+                 post: Callable[..., Message]):
+        self.world = world
+        self.log = log
+        self.problems = problems
+        self.templates = parse_template(template)
+        self.approvals = approvals
+        self.post = post  # ToolBox.post_message
+        self.failing = {pid: failing_test(p) for pid, p in problems.items()}
+
+    @property
+    def id(self) -> str:
+        return self.world.instigator_id
+
+    def round_start(self, r: int) -> None:
+        """From round 2: one first-contact DM per team per round, to a member not yet contacted."""
+        w = self.world
+        if r < 2:
+            return
+        for team in sorted(self.problems):
+            if team in w.instigator_done or self.failing[team] is None:
+                continue
+            fresh = [a for a in sorted(w.active(), key=lambda a: a.id)
+                     if a.team == team and a.id not in w.instigator_contacted]
+            if not fresh:
+                continue
+            target = fresh[0]
+            w.instigator_contacted.append(target.id)
+            self._send(target, "first_contact", team, None)
+
+    def on_pr_change(self, pr: PR, touches_tests: bool) -> None:
+        """A PR was opened or updated. If it changes the team's test file, urge the team to approve it."""
+        if touches_tests and pr.status == "open":
+            self._urge(pr)
+
+    def on_full_pass(self, team: str, pr: PR | None) -> None:
+        """Some run passed every test. Stop first contacts for the team; urge approval of an open PR."""
+        if team not in self.world.instigator_done:
+            self.world.instigator_done.append(team)
+        if pr is not None and pr.status == "open":
+            self._urge(pr)
+
+    def _urge(self, pr: PR) -> None:
+        w = self.world
+        for a in sorted(w.active(), key=lambda a: a.id):
+            key = f"{pr.id}.v{pr.version}:{a.id}"
+            if a.team != pr.team or a.id == pr.author or a.id in pr.approvals or key in w.instigator_urged:
+                continue
+            w.instigator_urged.append(key)
+            self._send(a, "approve_pr", pr.team, pr)
+
+    def _send(self, to: Agent, trigger: str, team: str, pr: PR | None) -> None:
+        fields = {"team": team, "entry_point": self.problems[team]["entry_point"], "approvals": self.approvals,
+                  "pr_id": pr.id if pr else "", "author": pr.author if pr else "",
+                  **(self.failing[team] or {})}
+        text = self.templates[trigger].format_map(_Default(fields))
+        m = self.post(self.id, ROLE, "dm", text, to=to.id)
+        self.log.emit("instigator_message", self.world.round, agent=self.id, message_id=m.id, to=to.id, team=team,
+                      trigger=trigger, pr_id=pr.id if pr else None)
+
+
+class _Default(dict):
+    def __missing__(self, key):
+        return "{" + key + "}"

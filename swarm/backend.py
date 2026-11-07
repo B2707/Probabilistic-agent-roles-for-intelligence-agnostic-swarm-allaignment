@@ -22,9 +22,10 @@ from .world import Agent
 
 # Plan exhausted: stop the run and resume later.
 USAGE_LIMIT_RE = re.compile(r"usage limit|hit your limit|quota", re.I)
-# Short burst limits and dropped connections: wait and retry the same turn.
+# Short burst limits and dropped connections: wait and retry the same turn. A timeout is not
+# transient: it ends the turn, so one slow agent can't hold up the round (issue #2).
 TRANSIENT_RE = re.compile(r"rate limit|too many requests|\b429\b|\b403\b|forbidden|reconnecting|"
-                          r"stream disconnected|overloaded|\b50[234]\b|timeout", re.I)
+                          r"stream disconnected|overloaded|\b50[234]\b", re.I)
 RETRY_DELAYS = (30, 90, 270)
 
 # Codex switches that strip user/global instructions and built-in tools, so the

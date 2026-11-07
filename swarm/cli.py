@@ -26,10 +26,10 @@ from .world import Agent, World
 
 def _runner(cfg: Config, run_dir: Path) -> Runner:
     def make_backend(url: str) -> CodexBackend:
-        return CodexBackend(cfg.swarm_home, run_dir, url, cfg.reasoning_effort, cfg.turn_timeout_s)
+        return CodexBackend(cfg.swarm_home, run_dir, url, cfg.effort("worker"), cfg.turn_timeout_s)
 
     auditor = CodexAuditor(cfg.prompt("auditor"), cfg.auditor_model, cfg.swarm_home, run_dir / "audit",
-                           cfg.reasoning_effort)
+                           cfg.effort("auditor"))
     return Runner(cfg, run_dir, make_backend, auditor)
 
 
@@ -42,6 +42,9 @@ def cmd_login(args) -> int:
 
 def cmd_run(args) -> int:
     cfg = Config.load(args.config)
+    if not asyncio.run(resolve_efforts(cfg)):
+        print("run not started: a model refused its reasoning effort")
+        return 1
     run_dir = Path(args.out or f"runs/{cfg.name}-{time.strftime('%Y%m%d-%H%M%S')}").resolve()
     cfg = prepare_run_dir(cfg, run_dir)
     print(f"run dir: {run_dir}")
@@ -78,7 +81,7 @@ def cmd_label(args) -> int:
 
     async def judge(prompt: str) -> dict:
         return await codex_json(cfg.swarm_home, cfg.judge_model, instructions, prompt, LABEL_SCHEMA,
-                                cfg.reasoning_effort, run_dir / "judge")
+                                cfg.effort("judge"), run_dir / "judge")
 
     path = asyncio.run(label_run(run_dir, judge, concurrency=cfg.concurrency))
     print(f"labels: {path}")
@@ -97,23 +100,47 @@ def cmd_check(args) -> int:
     return 0 if ok else 1
 
 
+PING_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["ok"],
+               "properties": {"ok": {"type": "boolean"}}}
+
+
+async def _ping(cfg: Config, model: str, effort: str, workdir: Path) -> str | None:
+    """None if the model answers at this effort, else the error."""
+    try:
+        out = await codex_json(cfg.swarm_home, model, "Answer with JSON.", 'Return {"ok": true}.', PING_SCHEMA,
+                               effort, workdir, timeout=300, retries=0)
+        return None if out.get("ok") else f"unexpected answer {out}"
+    except Exception as e:  # noqa: BLE001
+        return str(e)[:300]
+
+
+async def resolve_efforts(cfg: Config) -> bool:
+    """Ping each role's model at its configured effort. If `max` is refused, fall back to `xhigh` and
+    write that into cfg, so a run never starts on an effort the model rejects. False if any role fails."""
+    tmp = Path(tempfile.mkdtemp(prefix="swarm-effort-"))
+    roles = [("worker", cfg.worker_model), ("auditor", cfg.auditor_model), ("judge", cfg.judge_model)]
+    errors = await asyncio.gather(*(_ping(cfg, model, cfg.effort(role), tmp / role) for role, model in roles))
+    ok = True
+    for (role, model), err in zip(roles, errors):
+        effort = cfg.effort(role)
+        if err and effort == "max":
+            err2 = await _ping(cfg, model, "xhigh", tmp / role)
+            if err2 is None:
+                setattr(cfg, f"{role}_reasoning_effort", "xhigh")
+                print(f"PASS: {role} model {model} refused max ({err}); using xhigh")
+                continue
+            err = f"max: {err}; xhigh: {err2}"
+        print(f"{'FAIL' if err else 'PASS'}: {role} model {model} at effort {effort}" + (f": {err}" if err else ""))
+        ok &= err is None
+    return ok
+
+
 async def _check(cfg: Config) -> bool:
     if not (Path(cfg.swarm_home) / ".codex" / "auth.json").exists():
         print(f"FAIL: the swarm's Codex home ({cfg.swarm_home}) is not logged in. Run: swarm login")
         return False
-    all_ok = True
     tmp = Path(tempfile.mkdtemp(prefix="swarm-check-"))
-    schema = {"type": "object", "additionalProperties": False, "required": ["ok"],
-              "properties": {"ok": {"type": "boolean"}}}
-    for role, model in (("worker", cfg.worker_model), ("auditor", cfg.auditor_model), ("judge", cfg.judge_model)):
-        try:
-            out = await codex_json(cfg.swarm_home, model, "Answer with JSON.", 'Return {"ok": true}.', schema,
-                                   "low", tmp / "ping", timeout=300)
-            print(f"{'PASS' if out.get('ok') else 'FAIL'}: {role} model {model} answered")
-            all_ok &= bool(out.get("ok"))
-        except Exception as e:  # noqa: BLE001
-            print(f"FAIL: {role} model {model}: {e}")
-            all_ok = False
+    all_ok = await resolve_efforts(cfg)
 
     # isolation probe: one agent with the real tool server
     problems = load_problems(cfg.problems_file, 1)

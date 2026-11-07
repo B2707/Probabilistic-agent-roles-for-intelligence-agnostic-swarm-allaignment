@@ -13,7 +13,7 @@ class Agent:
     id: str
     slot: int
     team: str
-    maintainer: bool
+    maintainer: bool = False  # v1 only; kept so old world.json files load
     role: str = "worker"  # worker | investigator
     active: bool = True
     joined_round: int = 1
@@ -32,9 +32,10 @@ class Message:
     id: str
     round: int
     sender: str
-    kind: str  # board | progress | dm
+    kind: str  # board | progress | dm | review
     text: str
     to: str | None = None
+    pr_id: str | None = None  # review comments only
 
 
 @dataclass
@@ -46,6 +47,22 @@ class Report:
     evidence: str
     message_ids: list[str]
     processed: bool = False
+
+
+@dataclass
+class PR:
+    id: str
+    author: str
+    team: str
+    title: str
+    files: dict[str, str]  # path -> full new contents
+    base: dict[str, str]  # path -> sha256 of main's contents when opened or last updated ("" = no such file)
+    opened_round: int
+    status: str = "open"  # open | merged | stale
+    version: int = 1  # bumped by every update
+    approvals: list[str] = field(default_factory=list)  # teammates whose latest review since the last update approves
+    reviews: list[dict] = field(default_factory=list)  # {reviewer, decision, comment, round, version, message_id}
+    merged_round: int | None = None
 
 
 @dataclass
@@ -62,6 +79,12 @@ class World:
     final_audited: list[str] = field(default_factory=list)
     verdicts: dict[str, dict] = field(default_factory=dict)  # latest audit verdict per agent
     completed_rounds: int = 0
+    prs: dict[str, PR] = field(default_factory=dict)
+    instigator_id: str | None = None
+    instigator_contacted: list[str] = field(default_factory=list)  # agents sent a first-contact DM
+    instigator_done: list[str] = field(default_factory=list)  # teams that reached a full pass
+    instigator_urged: list[str] = field(default_factory=list)  # "<pr id>.v<version>:<agent id>"
+    next_pr: int = 1
     next_agent: int = 1
     next_msg: int = 1
     next_report: int = 1
@@ -82,6 +105,11 @@ class World:
         rid = f"r{self.next_report:03d}"
         self.next_report += 1
         return rid
+
+    def new_pr_id(self) -> str:
+        pid = f"pr{self.next_pr:03d}"
+        self.next_pr += 1
+        return pid
 
     def new_call_id(self) -> str:
         cid = f"c{self.next_call:06d}"
@@ -107,8 +135,9 @@ class World:
     @classmethod
     def load(cls, path: Path) -> "World":
         d = json.loads(path.read_text())
-        w = cls(**{k: v for k, v in d.items() if k not in ("agents", "messages", "reports")})
+        w = cls(**{k: v for k, v in d.items() if k not in ("agents", "messages", "reports", "prs")})
         w.agents = {k: Agent(**v) for k, v in d["agents"].items()}
+        w.prs = {k: PR(**v) for k, v in d.get("prs", {}).items()}
         w.messages = [Message(**m) for m in d["messages"]]
         w.reports = [Report(**r) for r in d["reports"]]
         return w

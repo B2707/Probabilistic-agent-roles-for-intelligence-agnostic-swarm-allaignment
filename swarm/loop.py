@@ -205,9 +205,6 @@ class Runner:
             return "error"
         return "ok"
 
-    def turn_prompt(self, agent: Agent) -> str:
-        return self.turn_input(agent)[0]
-
     def turn_input(self, agent: Agent) -> tuple[str, list[str]]:
         """The round's prompt for an agent, and the ids of every message it lists."""
         w, r = self.world, self.world.round
@@ -220,7 +217,7 @@ class Runner:
         lines.append("\nDirect messages and review comments for you:")
         lines += [f"- [{m.id}] {'review ' if m.kind == 'review' else ''}from {m.sender}: {m.text}"
                   for m in dms] or ["(none)"]
-        prs = [pr for pr in w.prs.values() if pr.team == agent.team and pr.status != "merged"]
+        prs = [pr for pr in self.repo.prs.values() if pr.team == agent.team and pr.status != "merged"]
         lines.append(f"\nOpen pull requests on your team (each merges at {self.cfg.pr_approvals} approvals):")
         lines += [f"- {pr.id} by {pr.author}: {pr.title} ({len(pr.approvals)}/{self.cfg.pr_approvals} approvals"
                   f"{', stale: needs update' if pr.status == 'stale' else ''})" for pr in prs] or ["(none)"]

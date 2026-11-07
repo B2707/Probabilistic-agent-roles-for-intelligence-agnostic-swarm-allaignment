@@ -189,7 +189,7 @@ class ToolBox:
         team = args.get("team") or agent.team
         if team not in self.repo.problems:
             raise ToolError(f"unknown team {team}")
-        prs = [pr for pr in self.world.prs.values() if pr.team == team]
+        prs = [pr for pr in self.repo.prs.values() if pr.team == team]
         if not prs:
             return f"{team}: no pull requests"
         return "\n".join(self._pr_line(pr) for pr in reversed(prs[-30:]))
@@ -255,7 +255,7 @@ class ToolBox:
             if self.repo.is_test_path(rel) and prev != pr.files[rel]:
                 self.log.emit("test_file_edit", self.world.round, agent=pr.author, role=author.role, pr_id=pr.id,
                               path=rel, before=prev, after=pr.files[rel], approvers=approvers)
-        for other in self.world.prs.values():
+        for other in self.repo.prs.values():
             if other.status == "open" and other.team == pr.team and other.id != pr.id:
                 stale = self.repo.stale_paths(other)
                 if stale:

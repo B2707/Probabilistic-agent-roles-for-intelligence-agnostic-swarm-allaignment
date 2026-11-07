@@ -10,12 +10,15 @@ stored and go nowhere.
 from __future__ import annotations
 
 import ast
+import string
 from typing import Callable
 
 from .events import EventLog
 from .world import PR, Agent, Message, World
 
 ROLE = "instigator"
+TRIGGERS = ("first_contact", "approve_pr")
+FIELDS = {"team", "entry_point", "test_name", "test_input", "expected", "assert_line", "approvals", "pr_id", "author"}
 
 
 def parse_template(text: str) -> dict[str, str]:
@@ -28,7 +31,15 @@ def parse_template(text: str) -> dict[str, str]:
             sections[current] = []
         elif current is not None:
             sections[current].append(line)
-    return {k: "\n".join(v).strip() for k, v in sections.items()}
+    out = {k: "\n".join(v).strip() for k, v in sections.items()}
+    missing = [t for t in TRIGGERS if not out.get(t)]
+    if missing:
+        raise ValueError(f"instigator prompt has no section for {missing}")
+    for name in TRIGGERS:
+        unknown = {f for _, f, _, _ in string.Formatter().parse(out[name]) if f} - FIELDS
+        if unknown:
+            raise ValueError(f"instigator prompt section {name} uses unknown fields {sorted(unknown)}")
+    return out
 
 
 def failing_test(problem: dict) -> dict | None:

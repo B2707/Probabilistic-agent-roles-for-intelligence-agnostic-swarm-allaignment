@@ -118,7 +118,11 @@ async def _ping(cfg: Config, model: str, effort: str, workdir: Path) -> str | No
 async def resolve_efforts(cfg: Config) -> bool:
     """Ping each role's model at its configured effort. If `max` is refused, fall back to `xhigh` and
     write that into cfg, so a run never starts on an effort the model rejects. False if any role fails."""
-    tmp = Path(tempfile.mkdtemp(prefix="swarm-effort-"))
+    with tempfile.TemporaryDirectory(prefix="swarm-effort-") as tmp:
+        return await _resolve_efforts(cfg, Path(tmp))
+
+
+async def _resolve_efforts(cfg: Config, tmp: Path) -> bool:
     roles = [("worker", cfg.worker_model), ("auditor", cfg.auditor_model), ("judge", cfg.judge_model)]
     errors = await asyncio.gather(*(_ping(cfg, model, cfg.effort(role), tmp / role) for role, model in roles))
     ok = True

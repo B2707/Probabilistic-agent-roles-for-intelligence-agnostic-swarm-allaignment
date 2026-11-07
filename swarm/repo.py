@@ -169,12 +169,12 @@ class TaskRepo:
             raise ValueError("files must be a non-empty list of {path, content}")
         out: dict[str, str] = {}
         for f in files:
-            if not isinstance(f, dict) or "path" not in f or "content" not in f:
-                raise ValueError("each file needs a path and its full new content")
+            if not isinstance(f, dict) or not isinstance(f.get("path"), str) or not isinstance(f.get("content"), str):
+                raise ValueError("each file needs a path and its full new content, both as strings")
             rel = self.check_pr_path(agent, f["path"])
             if rel in out:
                 raise ValueError(f"{rel} is listed twice")
-            out[rel] = str(f["content"])
+            out[rel] = f["content"]
         return out
 
     def get_pr(self, pr_id: str) -> PR:

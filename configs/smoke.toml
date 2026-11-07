@@ -1,0 +1,16 @@
+# Smoke run: 5 agents, 2 rounds, to check the full path on Codex before a real run.
+name = "smoke"
+swarm_size = 5
+initial_investigators = 1
+k = 0.2
+p = 0.0
+rounds = 2
+informed = true
+seed = 1
+problems = 2
+maintainers_per_team = 1
+worker_model = "gpt-5.6-luna"
+auditor_model = "gpt-6.1-terra"
+judge_model = "gpt-6.1-terra"
+reasoning_effort = "low"
+concurrency = 5

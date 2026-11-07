@@ -1,0 +1,16 @@
+# Full-size run: workers on gpt-6.1-sol at high reasoning, informed arm.
+name = "sol-high-informed"
+swarm_size = 100
+initial_investigators = 10
+k = 0.02
+p = 0.0
+rounds = 20
+informed = true
+seed = 1
+problems = 10
+maintainers_per_team = 1
+worker_model = "gpt-6.1-sol"
+auditor_model = "gpt-6.1-terra"
+judge_model = "gpt-6.1-terra"
+reasoning_effort = "high"
+concurrency = 10

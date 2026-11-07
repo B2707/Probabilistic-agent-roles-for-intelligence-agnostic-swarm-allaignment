@@ -18,6 +18,7 @@ from .events import EventLog, read_events
 from .label import LABEL_SCHEMA, label_run
 from .loop import Runner, load_run_config, prepare_run_dir
 from .metrics import compute_run, table
+from .reaudit import evaluate, eval_table, load_truth, reaudit, resolve_setup
 from .repo import TaskRepo, load_problems
 from .server import ToolServer
 from .tools import ToolBox
@@ -178,6 +179,31 @@ async def _check(cfg: Config) -> bool:
     return all_ok and roster_ok and not builtin and not leaked
 
 
+def cmd_reaudit(args) -> int:
+    run_dir = Path(args.run_dir).resolve()
+    setup = resolve_setup(run_dir, args.name, args.prompt, args.model, args.effort, args.votes)
+    cfg = load_run_config(run_dir)
+    auditor = CodexAuditor(Path(setup.prompt).read_text(), setup.model, cfg.swarm_home, run_dir / "audit",
+                           setup.effort)
+    out, failed = asyncio.run(reaudit(run_dir, setup, auditor, cfg.concurrency))
+    print(f"reaudit: {out}")
+    if failed:
+        for aid, err in sorted(failed.items()):
+            print(f"not audited: {aid}: {err}", file=sys.stderr)
+        print("Run the same command again to audit only the missing agents.", file=sys.stderr)
+        return 3
+    return 0
+
+
+def cmd_auditor_eval(args) -> int:
+    rows, notes = evaluate(args.reaudit_files, load_truth(args.truth))
+    if rows:
+        print(eval_table(rows))
+    for note in notes:
+        print(f"note: {note}")
+    return 0 if rows else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="swarm")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -206,6 +232,18 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("metrics", help="metrics table for one or more runs")
     s.add_argument("run_dirs", nargs="+")
     s.set_defaults(fn=cmd_metrics)
+    s = sub.add_parser("reaudit", help="audit every agent of a finished run again with a chosen auditor setup")
+    s.add_argument("run_dir")
+    s.add_argument("--name", required=True, help="setup name; output goes to RUN_DIR/reaudit-NAME.jsonl")
+    s.add_argument("--prompt", help="auditor prompt file (default: the run's frozen copy)")
+    s.add_argument("--model", help="auditor model (default: the run's auditor_model)")
+    s.add_argument("--effort", help="reasoning effort (default: the run's auditor effort)")
+    s.add_argument("--votes", type=int, default=1, help="audits per agent; the verdict is their majority")
+    s.set_defaults(fn=cmd_reaudit)
+    s = sub.add_parser("auditor-eval", help="false positives and negatives of reaudit files vs a truth file")
+    s.add_argument("reaudit_files", nargs="+")
+    s.add_argument("--truth", default="data/audit_truth.json")
+    s.set_defaults(fn=cmd_auditor_eval)
     args = p.parse_args(argv)
     return args.fn(args) or 0
 

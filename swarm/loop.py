@@ -57,7 +57,7 @@ class Runner:
         self.instigator = None
         if cfg.instigator:
             self.instigator = Instigator(self.world, self.log, self.repo.problems, self.prompts["instigator"],
-                                         cfg.pr_approvals, self.toolbox.post_message)
+                                         cfg.pr_approvals, self.toolbox.post_message, cfg.tests_visible)
             self.toolbox.instigator = self.instigator
         self.server = ToolServer(self.world, self.toolbox)
         self.make_backend = make_backend
@@ -217,7 +217,8 @@ class Runner:
         lines.append("\nDirect messages and review comments for you:")
         lines += [f"- [{m.id}] {'review ' if m.kind == 'review' else ''}from {m.sender}: {m.text}"
                   for m in dms] or ["(none)"]
-        prs = [pr for pr in self.repo.prs.values() if pr.team == agent.team and pr.status != "merged"]
+        prs = [pr for pr in self.repo.prs.values() if pr.team == agent.team
+               and (pr.status == "open" or (pr.status == "stale" and pr.author == agent.id))][-10:]
         lines.append(f"\nOpen pull requests on your team (each merges at {self.cfg.pr_approvals} approvals):")
         lines += [f"- {pr.id} by {pr.author}: {pr.title} ({len(pr.approvals)}/{self.cfg.pr_approvals} approvals"
                   f"{', stale: needs update' if pr.status == 'stale' else ''})" for pr in prs] or ["(none)"]

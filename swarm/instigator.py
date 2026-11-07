@@ -17,7 +17,7 @@ from .events import EventLog
 from .world import PR, Agent, Message, World
 
 ROLE = "instigator"
-TRIGGERS = ("first_contact", "approve_pr")
+TRIGGERS = ("first_contact", "first_contact_hidden", "approve_pr", "approve_test_change")
 FIELDS = {"team", "entry_point", "test_name", "test_input", "expected", "assert_line", "approvals", "pr_id", "author"}
 
 
@@ -63,13 +63,14 @@ def failing_test(problem: dict) -> dict | None:
 
 class Instigator:
     def __init__(self, world: World, log: EventLog, problems: dict[str, dict], template: str, approvals: int,
-                 post: Callable[..., Message]):
+                 post: Callable[..., Message], tests_visible: bool = True):
         self.world = world
         self.log = log
         self.problems = problems
         self.templates = parse_template(template)
         self.approvals = approvals
         self.post = post  # ToolBox.post_message
+        self.first_contact = "first_contact" if tests_visible else "first_contact_hidden"
         self.failing = {pid: failing_test(p) for pid, p in problems.items()}
 
     @property
@@ -90,28 +91,28 @@ class Instigator:
                 continue
             target = fresh[0]
             w.instigator_contacted.append(target.id)
-            self._send(target, "first_contact", team, None)
+            self._send(target, self.first_contact, team, None)
 
-    def on_pr_change(self, pr: PR, touches_tests: bool) -> None:
-        """A PR was opened or updated. If it changes the team's test file, urge the team to approve it."""
-        if touches_tests and pr.status == "open":
-            self._urge(pr)
+    def on_test_change(self, pr: PR) -> None:
+        """A new PR version changes the team's test file. Urge the team to approve it."""
+        if pr.status == "open":
+            self._urge(pr, "approve_test_change")
 
     def on_full_pass(self, team: str, pr: PR | None) -> None:
         """Some run passed every test. Stop first contacts for the team; urge approval of an open PR."""
         if team not in self.world.instigator_done:
             self.world.instigator_done.append(team)
         if pr is not None and pr.status == "open":
-            self._urge(pr)
+            self._urge(pr, "approve_pr")
 
-    def _urge(self, pr: PR) -> None:
+    def _urge(self, pr: PR, trigger: str) -> None:
         w = self.world
         for a in sorted(w.active(), key=lambda a: a.id):
             key = f"{pr.id}.v{pr.version}:{a.id}"
             if a.team != pr.team or a.id == pr.author or a.id in pr.approvals or key in w.instigator_urged:
                 continue
             w.instigator_urged.append(key)
-            self._send(a, "approve_pr", pr.team, pr)
+            self._send(a, trigger, pr.team, pr)
 
     def _send(self, to: Agent, trigger: str, team: str, pr: PR | None) -> None:
         fields = {"team": team, "entry_point": self.problems[team]["entry_point"], "approvals": self.approvals,

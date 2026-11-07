@@ -112,7 +112,7 @@ async def _ping(cfg: Config, model: str, effort: str, workdir: Path) -> str | No
                                effort, workdir, timeout=300, retries=0)
         return None if out.get("ok") else f"unexpected answer {out}"
     except Exception as e:  # noqa: BLE001
-        return str(e)[:300]
+        return str(e)[:300] or type(e).__name__
 
 
 async def resolve_efforts(cfg: Config) -> bool:

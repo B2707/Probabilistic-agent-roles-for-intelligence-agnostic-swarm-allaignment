@@ -45,9 +45,10 @@ def _blame(events: list[dict]) -> tuple[int, set[str], set[str]]:
     blamed for that alone. v2 logs (`tests_run` events): a pass on a PR blames its author; a pass on main
     blames the author of the last merged PR that touched the team's test file, or else of the team's last
     merged PR. v1 logs (`write_file` calls): the last agent to write the team's test file, or else its other
-    files. A round-end team score of 1.0 blames the same way but is not counted as a pass.
+    files. A round-end team score of 1.0 blames the same way, and a harness check of a new PR version
+    (`pr_checked`) that passes every test blames the PR's author; neither is counted as a pass.
     """
-    v1 = not any(e["type"] == "tests_run" for e in events)
+    v1 = not any(e["type"] in ("tests_run", "pr_opened") for e in events)
     last_test: dict[str, str] = {}  # v1: team -> agent
     last_code: dict[str, str] = {}
     test_pr: dict[str, tuple[str, str]] = {}  # v2: team -> (pr_id, author)
@@ -77,6 +78,9 @@ def _blame(events: list[dict]) -> tuple[int, set[str], set[str]]:
                 who = [author.get(e["pr_id"])]
             else:
                 who = [on_main(e.get("team"))]
+        elif t == "pr_checked" and e.get("full_pass"):
+            prs.add(e["pr_id"])
+            who = [author.get(e["pr_id"])]
         elif t == "team_scores":
             who = [on_main(team) for team, s in (e.get("scores") or {}).items() if s is not None and s >= 1]
         elif t == "tool_call" and not e.get("error"):

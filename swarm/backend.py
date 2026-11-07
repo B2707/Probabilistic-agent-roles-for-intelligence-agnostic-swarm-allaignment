@@ -82,12 +82,35 @@ async def run_codex(args: list[str], prompt: str, env: dict, cwd: Path, timeout:
     proc = await asyncio.create_subprocess_exec(
         "codex", *args, cwd=cwd, env=env, stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    out_chunks: list[bytes] = []
+    err_chunks: list[bytes] = []
+
+    async def drain(stream, sink: list[bytes]) -> None:
+        while chunk := await stream.read(65536):
+            sink.append(chunk)
+
+    async def feed() -> None:
+        try:
+            proc.stdin.write(prompt.encode())
+            await proc.stdin.drain()
+            proc.stdin.close()
+        except (BrokenPipeError, ConnectionResetError):  # codex exited without reading the prompt
+            pass
+
     try:
-        out, err = await asyncio.wait_for(proc.communicate(prompt.encode()), timeout)
+        await asyncio.wait_for(asyncio.gather(feed(), drain(proc.stdout, out_chunks),
+                                              drain(proc.stderr, err_chunks), proc.wait()), timeout)
     except asyncio.TimeoutError:
         proc.kill()
-        await proc.wait()
-        return TurnResult(error="timeout")
+        try:  # a child that still holds the pipes must not keep the turn open
+            await asyncio.wait_for(proc.wait(), 10)
+        except asyncio.TimeoutError:
+            pass
+        # keep what the turn produced, above all the session id, so the next round resumes this session
+        res = parse_codex_events(b"".join(out_chunks).decode(errors="replace"))
+        res.error, res.raw_error = "timeout", None
+        return res
+    out, err = b"".join(out_chunks), b"".join(err_chunks)
     res = parse_codex_events(out.decode(errors="replace"))
     if res.error is None and proc.returncode != 0:
         res.error = (err.decode(errors="replace").strip()[-500:] or f"codex exited {proc.returncode}")

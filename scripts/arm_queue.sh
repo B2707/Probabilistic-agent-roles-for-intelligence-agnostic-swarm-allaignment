@@ -18,8 +18,9 @@
 # AFTER_RUNS="run-a run-b" (names under runs/) holds the groups back until those runs have completed, or until every
 # PID given (if any) has exited, so new runs never share the machine with the ones still going. It checks every
 # AFTER_POLL seconds.
-# SLOTS=n starts a group's arms one at a time, in the order given, each once fewer than n runs under runs/ are live on
-# this machine (from any queue), so the machine never runs more than n at once. It checks every SLOT_POLL seconds and
+# SLOTS=n starts a group's arms one at a time, in the order given, each once fewer than n tasks are live on this
+# machine (from any queue), so it never runs more than n at once. A task is a run (going, or waiting to resume after
+# a usage stop) or a label job; label jobs also start one at a time, each in a free slot. It checks every SLOT_POLL seconds and
 # waits SLOT_SETTLE seconds after each start so the new run is counted. Queues using SLOTS take turns through a lock
 # (runs/.slot-lock), so two of them never fill the same free slot. Without SLOTS a group starts all at once.
 set -u
@@ -34,8 +35,8 @@ publish() { (cd "$M" && uv run python scripts/publish_results.py --push) 2>&1 | 
 is_v2() { grep -q '"pr_approvals"' "$1/config.json" 2>/dev/null; }
 has_ended() { grep -q '"type": "run_end", "round": [0-9]*, "reason": "completed"' "$1/events.jsonl" 2>/dev/null; }
 is_live() { pgrep -f -- "$1" >/dev/null; }
-# Distinct runs under $R with a live `swarm run` or `swarm resume` process (uv and its python child count once),
-# plus runs waiting to resume.
+# Tasks: distinct runs under $R with a live `swarm run`, `swarm resume` or `swarm label` process (uv and its python
+# child count once), plus runs waiting to resume.
 # A run that stopped on a usage limit within the last SLOT_HOLD seconds (default 20 min) is waiting for its queue to
 # resume it (after RETRY_WAIT), so it still holds its slot.
 waiting_runs() {
@@ -48,7 +49,7 @@ waiting_runs() {
   done
 }
 live_runs() {
-  { ps -axo command= | grep -E 'swarm (run|resume) ' | grep -v grep | grep -oE "$R/[^ /]+"; waiting_runs; } |
+  { ps -axo command= | grep -E 'swarm (run|resume|label) ' | grep -v grep | grep -oE "$R/[^ /]+"; waiting_runs; } |
     sort -u | wc -l | tr -d ' '
 }
 # The slot lock (a directory under runs/) makes two SLOTS queues take turns, so they never start into the same free
@@ -137,7 +138,16 @@ pids=()
 for d in "$R"/*/; do
   d=${d%/}
   case $(basename "$d") in *-stopped|pilot-*) continue ;; esac
-  if is_v2 "$d" && has_ended "$d" && [ ! -f "$d/labels.jsonl" ]; then label_run "$d" & pids+=($!); fi
+  if is_v2 "$d" && has_ended "$d" && [ ! -f "$d/labels.jsonl" ] && ! is_live "swarm label $d"; then
+    if [ -n "${SLOTS:-}" ]; then
+      slot_lock
+      until [ "$(live_runs)" -lt "$SLOTS" ]; do sleep "${SLOT_POLL:-60}"; done
+      if [ -f "$d/labels.jsonl" ] || is_live "swarm label $d"; then slot_unlock; continue; fi
+      log "slot free ($(live_runs) of $SLOTS tasks live): labeling $(basename "$d")"
+    fi
+    label_run "$d" & pids+=($!)
+    if [ -n "${SLOTS:-}" ]; then sleep "${SLOT_SETTLE:-60}"; slot_unlock; fi
+  fi
 done
 log "labeling ${#pids[@]} runs"
 for p in ${pids[@]+"${pids[@]}"}; do wait "$p"; done

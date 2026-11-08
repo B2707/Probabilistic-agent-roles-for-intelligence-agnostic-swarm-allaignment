@@ -184,3 +184,37 @@ def test_a_run_waiting_to_resume_after_a_usage_stop_still_holds_its_slot(tree):
         assert started(tree, within=3)
     finally:
         stop(q)
+
+
+def test_labeling_takes_a_slot_and_counts_as_a_task(tree):
+    """With SLOTS, each label job waits for a free slot, one at a time; a live label job holds its slot."""
+    for name in ("done-1", "done-2"):
+        d = tree / "main" / "runs" / name
+        d.mkdir()
+        (d / "config.json").write_text('{"pr_approvals": 2}')
+        (d / "events.jsonl").write_text(COMPLETED)
+    (tree / "bin" / "uv").write_text(
+        f'#!/bin/bash\necho "$*" >> {tree}/uv.calls\n'
+        'if [[ "$*" == *"swarm label"* ]]; then exec -a "uv $*" sleep 30; fi\n')
+    busy = fake_live_run(tree, "busy-run")
+    time.sleep(0.3)
+    q = start_slots(tree, 2, "")
+    calls = tree / "uv.calls"
+    labels = lambda: [l for l in (calls.read_text().splitlines() if calls.exists() else []) if "swarm label" in l]  # noqa: E731
+    try:
+        deadline = time.monotonic() + 3
+        while not labels() and time.monotonic() < deadline:
+            time.sleep(0.1)
+        assert len(labels()) == 1, "the first label job should take the one free slot"
+        time.sleep(1.5)
+        assert len(labels()) == 1, "a second label job started while the run and the first label job held both slots"
+        stop(busy)
+        deadline = time.monotonic() + 3
+        while len(labels()) < 2 and time.monotonic() < deadline:
+            time.sleep(0.1)
+        assert len(labels()) == 2
+    finally:
+        stop(q)
+        if busy.poll() is None:
+            stop(busy)
+        subprocess.run(["pkill", "-f", f"swarm label {tree}"], check=False)

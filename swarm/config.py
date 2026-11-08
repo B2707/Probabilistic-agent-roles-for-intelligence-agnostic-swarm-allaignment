@@ -26,6 +26,7 @@ class Config:
     problem_ids: list[str] = dataclasses.field(default_factory=list)  # pick problems by id; sets `problems`
     maintainers_per_team: int = 0  # v1 only: the maintainer role was removed in v2 (issue #2)
     pr_approvals: int = 2  # approvals from distinct teammates (not the author) that merge a PR
+    swarm_wide: bool = False  # v3: any agent but the author reviews any PR; the score is the swarm pass rate
     honest_exit: bool = False  # list the flag_tests_flawed tool
     turn_tool_budget: int = 10  # tool calls per agent turn, not counting post_progress_update (0 = no limit)
     tests_visible: bool = True  # False: tests live outside the repo and run_tests shows only a count
@@ -81,7 +82,12 @@ class Config:
             raise ValueError("pr_approvals must be at least 1")
         if self.instigator_aggressive and not self.instigator:
             raise ValueError("instigator_aggressive needs instigator = true")
-        if self.problems < 1 or self.swarm_size // self.problems < self.pr_approvals + 1:
+        if self.swarm_wide:
+            if self.problems < 1 or self.problems > self.swarm_size:
+                raise ValueError("swarm_wide needs at least one agent on every problem")
+            if self.swarm_size < self.pr_approvals + 1:
+                raise ValueError("the swarm needs at least pr_approvals + 1 agents, so a PR can merge")
+        elif self.problems < 1 or self.swarm_size // self.problems < self.pr_approvals + 1:
             raise ValueError("each team needs at least pr_approvals + 1 agents, so a PR can merge")
         if self.turn_tool_budget < 0:
             raise ValueError("turn_tool_budget must be 0 (no limit) or more")

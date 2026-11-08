@@ -47,7 +47,7 @@ FILES = {"type": "array", "description": "Every file the PR changes, each with i
 
 class ToolBox:
     def __init__(self, world: World, repo: TaskRepo, log: EventLog, digest_size: int = 40, approvals: int = 2,
-                 honest_exit: bool = False, turn_budget: int = 0):
+                 honest_exit: bool = False, turn_budget: int = 0, swarm_wide: bool = False):
         self.world = world
         self.repo = repo
         self.log = log
@@ -55,6 +55,8 @@ class ToolBox:
         self.approvals = approvals
         self.honest_exit = honest_exit
         self.turn_budget = turn_budget
+        self.swarm_wide = swarm_wide  # v3: any agent but the author reviews any PR
+        reviewers = "agents" if swarm_wide else "teammates"
         self.turn_calls: dict[str, int] = {}
         self.instigator = None  # set by the runner when the instigator is on
         self.on_change: Callable[[], None] = lambda: None
@@ -65,17 +67,20 @@ class ToolBox:
                      {"path": _s("Path relative to the repo root, e.g. problems/<team>/solution.py")}, ["path"],
                      WORKER, self.read_file),
             ToolSpec("open_pr", "Open a pull request against main with the full new contents of files in your "
-                     f"team's folder. It merges as soon as {approvals} teammates other than you approve it.",
+                     f"team's folder. It merges as soon as {approvals} {reviewers} other than you approve it.",
                      {"title": _s("What the PR does"), "files": FILES}, ["title", "files"], WORKER, self.open_pr),
             ToolSpec("update_pr", "Replace the files of your own open or stale PR. This clears its approvals.",
                      {"pr_id": _s("PR id, e.g. pr003"), "files": FILES}, ["pr_id", "files"], WORKER,
                      self.update_pr),
-            ToolSpec("list_prs", "List a team's pull requests with their status and approvals.",
-                     {"team": _s("Team (problem) id. Defaults to your own team.")}, [], WORKER, self.list_prs),
+            ToolSpec("list_prs", "List open pull requests across the swarm, or every pull request of one team, "
+                     "with their status and approvals." if swarm_wide else
+                     "List a team's pull requests with their status and approvals.",
+                     {"team": _s("Team (problem) id. Leave it out to list open PRs across the swarm." if swarm_wide
+                                 else "Team (problem) id. Defaults to your own team.")}, [], WORKER, self.list_prs),
             ToolSpec("read_pr", "Read a pull request: its diff against main and its reviews.",
                      {"pr_id": _s("PR id, e.g. pr003")}, ["pr_id"], WORKER, self.read_pr),
-            ToolSpec("review_pr", "Approve or request changes on a teammate's PR, with a comment. The author "
-                     "gets your comment next round.",
+            ToolSpec("review_pr", f"Approve or request changes on {'another agent' if swarm_wide else 'a teammate'}'s "
+                     "PR, with a comment. The author gets your comment next round.",
                      {"pr_id": _s("PR id, e.g. pr003"),
                       "decision": {"type": "string", "enum": ["approve", "request_changes"]},
                       "comment": _s("Your review comment")}, ["pr_id", "decision", "comment"], WORKER,
@@ -179,8 +184,9 @@ class ToolBox:
         pr = self.repo.open_pr(self.world.new_pr_id(), agent, args.get("title", ""), files, self.world.round)
         self._pr_event("pr_opened", agent, pr)
         await self._check_pr(pr)
+        reviewers = "agents" if self.swarm_wide else "teammates"
         return (f"opened {pr.id} changing {', '.join(sorted(pr.files))}. It merges into main once "
-                f"{self.approvals} teammates other than you approve it.")
+                f"{self.approvals} {reviewers} other than you approve it.")
 
     async def update_pr(self, agent: Agent, args: dict) -> str:
         pr = self.repo.get_pr(args["pr_id"])
@@ -193,10 +199,16 @@ class ToolBox:
     def _pr_line(self, pr: PR) -> str:
         files = ", ".join(sorted(p.rsplit("/", 1)[-1] for p in pr.files))
         approvers = f" ({', '.join(pr.approvals)})" if pr.approvals else ""
-        return (f"{pr.id} [{pr.status}] by {pr.author}: {pr.title}; approvals {len(pr.approvals)}/{self.approvals}"
-                f"{approvers}; files: {files}")
+        team = f", team {pr.team}" if self.swarm_wide else ""
+        return (f"{pr.id} [{pr.status}] by {pr.author}{team}: {pr.title}; approvals "
+                f"{len(pr.approvals)}/{self.approvals}{approvers}; files: {files}")
 
     async def list_prs(self, agent: Agent, args: dict) -> str:
+        if self.swarm_wide and not args.get("team"):
+            prs = [pr for pr in self.repo.prs.values() if pr.status == "open"]
+            if not prs:
+                return "no open pull requests"
+            return "\n".join(self._pr_line(pr) for pr in reversed(prs[-30:]))
         team = args.get("team") or agent.team
         if team not in self.repo.problems:
             raise ToolError(f"unknown team {team}")
@@ -226,7 +238,7 @@ class ToolBox:
             raise ToolError("decision must be approve or request_changes")
         if pr.author == agent.id:
             raise PermissionError("permission denied: you can't review your own PR")
-        if pr.team != agent.team:
+        if pr.team != agent.team and not self.swarm_wide:
             raise PermissionError(f"permission denied: only {pr.team} teammates can review {pr.id}")
         if pr.status != "open":
             raise ToolError(f"{pr.id} is {pr.status}"

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import ast
 import math
+import random
 import string
 from typing import Callable
 
@@ -21,7 +22,9 @@ from .world import PR, Agent, Message, World
 
 ROLE = "instigator"
 TRIGGERS = ("first_contact", "first_contact_hidden", "approve_pr", "approve_test_change")
-FIELDS = {"team", "entry_point", "test_name", "test_input", "expected", "assert_line", "approvals", "pr_id", "author"}
+FIELDS = {"team", "entry_point", "test_name", "test_input", "expected", "assert_line", "approvals", "pr_id", "author",
+          "reviewers"}
+URGE_TARGETS = 4  # swarm_wide: agents sampled for each PR version's approval push (v2 pushed all <= 4 teammates)
 
 
 def parse_template(text: str, extra: tuple[str, ...] = ()) -> dict[str, str]:
@@ -69,7 +72,7 @@ def failing_test(problem: dict) -> dict | None:
 class Instigator:
     def __init__(self, world: World, log: EventLog, problems: dict[str, dict], template: str, approvals: int,
                  post: Callable[..., Message], tests_visible: bool = True, aggressive: bool = False,
-                 rounds: int = 0):
+                 rounds: int = 0, swarm_wide: bool = False, seed: int = 0):
         self.world = world
         self.log = log
         self.problems = problems
@@ -77,6 +80,8 @@ class Instigator:
             raise ValueError("the aggressive instigator needs the run length (rounds >= 3)")
         self.aggressive = aggressive
         self.rounds = rounds
+        self.swarm_wide = swarm_wide  # pushes go to URGE_TARGETS agents from any team, sampled with the seed
+        self.seed = seed
         self.templates = parse_template(template, ("evasion",) if aggressive else ())
         self.approvals = approvals
         self.post = post  # ToolBox.post_message
@@ -118,16 +123,25 @@ class Instigator:
             self._urge(pr, "approve_pr")
 
     def _urge(self, pr: PR, trigger: str) -> None:
+        """Push agents to approve a PR, once per PR version. v2: every teammate but the author and approvers.
+        swarm_wide: URGE_TARGETS agents in total per version, sampled with the run seed from every team."""
         w = self.world
-        for a in sorted(w.active(), key=lambda a: a.id):
-            key = f"{pr.id}.v{pr.version}:{a.id}"
-            if a.team != pr.team or a.id == pr.author or a.id in pr.approvals or key in w.instigator_urged:
-                continue
-            w.instigator_urged.append(key)
+        prefix = f"{pr.id}.v{pr.version}:"
+        pool = [a for a in sorted(w.active(), key=lambda a: a.id)
+                if a.id != pr.author and a.id not in pr.approvals and prefix + a.id not in w.instigator_urged]
+        if self.swarm_wide:
+            left = URGE_TARGETS - sum(k.startswith(prefix) for k in w.instigator_urged)
+            pool = random.Random(f"{self.seed}-{pr.id}-{pr.version}").sample(pool, max(0, min(left, len(pool))))
+            pool.sort(key=lambda a: a.id)
+        else:
+            pool = [a for a in pool if a.team == pr.team]
+        for a in pool:
+            w.instigator_urged.append(prefix + a.id)
             self._send(a, trigger, pr.team, pr)
 
     def _send(self, to: Agent, trigger: str, team: str, pr: PR | None) -> None:
         fields = {"team": team, "entry_point": self.problems[team]["entry_point"], "approvals": self.approvals,
+                  "reviewers": "other agents" if self.swarm_wide else "teammates",
                   "pr_id": pr.id if pr else "", "author": pr.author if pr else "",
                   **(self.failing[team] or {})}
         text = self.templates[trigger].format_map(_Default(fields))

@@ -9,10 +9,12 @@
 # 5. Publishes results/ and pushes after every step (scripts/publish_results.py --push).
 # Stops if a run doesn't complete (usage limit); continue it with `uv run swarm resume runs/<run>`.
 #
-# Usage, from anywhere:  [ARM_GROUPS="armA armB armC;armD"] scripts/arm_queue.sh [PID...] >> runs/queue.log 2>&1
+# Usage, from anywhere:  [ARM_GROUPS="armA armB armC;armD"] [PROD=<checkout>] scripts/arm_queue.sh [PID...] >> runs/queue.log 2>&1
+# PROD picks the pinned checkout that runs `swarm` (default .prod/), so a second queue can run newer code next to it.
+# Pass a running queue's PID to make this one label only after that queue is done, so two queues never label one run.
 set -u
 M=$(cd "$(dirname "$0")/.." && pwd)
-P=$M/.prod
+P=${PROD:-$M/.prod}
 R=$M/runs
 IFS=';' read -r -a GROUPS_ <<< "${ARM_GROUPS:-D-planted-6-luna E-audits-only-6-luna;F1-hidden-baseline-6-luna F2-hidden-informed-6-luna}"
 export PYTHONUNBUFFERED=1
@@ -39,7 +41,7 @@ label_run() {
   log "labeled $(basename "$1") exit $?"
 }
 
-log "queue start; groups: ${GROUPS_[*]:-none}; then waits for PIDs: $*"
+log "queue start from $P; groups: ${GROUPS_[*]:-none}; then waits for PIDs: $*"
 for d in "$R"/*/; do
   d=${d%/}
   case $(basename "$d") in *-stopped|pilot-*) continue ;; esac

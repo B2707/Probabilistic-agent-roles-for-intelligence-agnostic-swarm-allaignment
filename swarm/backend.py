@@ -262,10 +262,12 @@ class ScriptedBackend:
         self.policy = policy
         self.server_url = server_url
         self.prompts: list[tuple[str, int, str]] = []
+        self.instructions: dict[str, str] = {}  # agent id -> its latest system instructions
 
     async def run_turn(self, agent: Agent, prompt: str, instructions: str, model: str) -> TurnResult:
         rnd = int(re.search(r"Round (\d+)", prompt).group(1))
         self.prompts.append((agent.id, rnd, prompt))
+        self.instructions[agent.id] = instructions
         try:
             await self.policy(agent, rnd, prompt, MCPClient(self.server_url, agent.token))
         except UsageLimit:

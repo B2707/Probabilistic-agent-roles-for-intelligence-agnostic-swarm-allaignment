@@ -7,7 +7,8 @@
 # 3. Waits for the given PIDs (runs started elsewhere), so their labels come out of this queue too.
 # 4. Labels every ended v2 run that has no labels yet, LABEL_FIRST first, at most LABEL_JOBS at once (see below).
 # 5. Publishes results/ and pushes after every step (scripts/publish_results.py --push).
-# A run that stops on a usage limit (exit 3) is resumed after RETRY_WAIT seconds, up to RETRIES times. A run that still
+# A run that stops on a usage limit (exit 3) is resumed after RETRY_WAIT seconds (default 60; Bader, 8 Nov 10:2x: a
+# stopped run must not sit stale for 10 minutes), up to RETRIES times. A run that still
 # doesn't complete is logged and left for `uv run swarm resume runs/<run>`; the queue goes on and labels what ended.
 #
 # Usage, from anywhere:  [ARM_GROUPS="armA armB armC;armD"] [PROD=<checkout>] [SLOTS=n] scripts/arm_queue.sh [PID...] >> runs/queue.log 2>&1
@@ -98,8 +99,8 @@ resume_run() {
 retry_run() {
   local rc=$2 n=0
   while [ "$rc" -eq 3 ] && [ "$n" -lt "${RETRIES:-4}" ]; do
-    n=$((n + 1)); log "$(basename "$1") stopped; resume $n of ${RETRIES:-4} in ${RETRY_WAIT:-600}s"
-    sleep "${RETRY_WAIT:-600}"
+    n=$((n + 1)); log "$(basename "$1") stopped; resume $n of ${RETRIES:-4} in ${RETRY_WAIT:-60}s"
+    sleep "${RETRY_WAIT:-60}"
     resume_run "$1"; rc=$?
   done
   return $rc

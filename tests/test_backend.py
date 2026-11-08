@@ -2,6 +2,7 @@
 custom-provider config. Every other model stays on the swarm's ChatGPT login."""
 
 import asyncio
+from pathlib import Path
 
 import pytest
 
@@ -97,3 +98,52 @@ def test_effort_check_pings_every_mixed_worker_model_at_its_effort(tmp_path, mon
     cfg.resolve(tmp_path)
     assert asyncio.run(cli.resolve_efforts(cfg))
     assert sorted(pinged) == [("model-a", "high"), ("model-b", "xhigh"), ("referee", "max"), ("referee", "max")]
+
+
+# Codex speed tier: `service_tier = "priority"` is Codex's Fast mode. Empty keeps every model on its default.
+
+def tiered_call(kind, model, tmp_path, tier):
+    if kind == "agent turn":
+        be = B.CodexBackend(str(tmp_path / "home"), tmp_path, "http://127.0.0.1:1/mcp", "high", 60, service_tier=tier)
+        return asyncio.run(be.run_turn(AGENT, "Round 1.", "Be good.", model))
+    return asyncio.run(B.codex_json(str(tmp_path / "home"), model, "Answer with JSON.", "Say ok.",
+                                    {"type": "object"}, "high", tmp_path / "judge", service_tier=tier))
+
+
+@pytest.mark.parametrize("kind", ["agent turn", "judge call"])
+def test_a_configured_service_tier_goes_on_every_chatgpt_call(kind, seen, tmp_path):
+    tiered_call(kind, "gpt-6-luna", tmp_path, "priority")
+    assert 'service_tier="priority"' in settings(seen["args"])
+
+
+@pytest.mark.parametrize("kind", ["agent turn", "judge call"])
+def test_no_service_tier_unless_configured(kind, seen, tmp_path):
+    call(kind, "gpt-6-luna", tmp_path)
+    assert not any(s.startswith("service_tier") for s in settings(seen["args"]))
+
+
+def test_adaption_models_never_get_a_service_tier(seen, tmp_path, monkeypatch):
+    monkeypatch.setenv("ADAPTION_API_KEY", "test-key-not-real")
+    tiered_call("agent turn", "adaption/glm-53-flash", tmp_path, "priority")
+    assert not any(s.startswith("service_tier") for s in settings(seen["args"]))
+
+
+def test_the_runner_passes_the_configured_tier_to_agents_and_the_auditor(tmp_path, monkeypatch):
+    from swarm import cli
+    from swarm.config import Config
+    monkeypatch.setattr(cli, "Runner", lambda cfg, run_dir, make_backend, auditor: (make_backend, auditor))
+    cfg = Config(service_tier="priority")
+    cfg.resolve(Path(__file__).resolve().parent.parent)  # the repo's prompts
+    make_backend, auditor = cli._runner(cfg, tmp_path)
+    assert make_backend("http://127.0.0.1:1/mcp").service_tier == "priority"
+    assert auditor.service_tier == "priority"
+
+
+def test_runs_saved_before_the_setting_load_with_no_tier(tmp_path):
+    import json
+    from swarm.config import Config
+    from swarm.loop import load_run_config
+    saved = Config().to_dict()
+    saved.pop("service_tier", None)
+    (tmp_path / "config.json").write_text(json.dumps(saved))
+    assert load_run_config(tmp_path).service_tier == ""

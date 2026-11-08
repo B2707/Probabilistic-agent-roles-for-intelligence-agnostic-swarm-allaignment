@@ -68,11 +68,11 @@ def is_adaption(model: str) -> bool:
     return model.startswith(ADAPTION_PREFIX)
 
 
-def model_args(model: str) -> list[str]:
+def model_args(model: str, service_tier: str = "") -> list[str]:
     """`-m` for a model, plus the provider switch for `adaption/<id>`."""
     if is_adaption(model):
         return ["-m", model.removeprefix(ADAPTION_PREFIX), *ADAPTION_PROVIDER]
-    return ["-m", model]
+    return ["-m", model, *(["-c", f"service_tier={toml_str(service_tier)}"] if service_tier else [])]
 
 
 def adaption_key() -> str:
@@ -206,8 +206,10 @@ def parse_codex_events(stdout: str) -> TurnResult:
 
 
 class CodexBackend:
-    def __init__(self, swarm_home: str, run_dir: Path, server_url: str, reasoning_effort: str, timeout: float):
+    def __init__(self, swarm_home: str, run_dir: Path, server_url: str, reasoning_effort: str, timeout: float,
+                 service_tier: str = ""):
         self.swarm_home = swarm_home
+        self.service_tier = service_tier
         self.run_dir = Path(run_dir)
         self.server_url = server_url
         self.reasoning_effort = reasoning_effort
@@ -221,7 +223,7 @@ class CodexBackend:
         args = ["exec"]
         if agent.session_id:
             args += ["resume", agent.session_id]
-        args += ["--json", *model_args(model), *CODEX_ISOLATION,
+        args += ["--json", *model_args(model, self.service_tier), *CODEX_ISOLATION,
                  "-c", f"model_reasoning_effort={toml_str(effort or self.reasoning_effort)}",
                  "-c", f"developer_instructions={toml_str(instructions)}",
                  "-c", f"mcp_servers.swarm.url={toml_str(self.server_url)}",
@@ -237,13 +239,14 @@ class CodexBackend:
 
 
 async def codex_json(swarm_home: str, model: str, instructions: str, prompt: str, schema: dict,
-                     reasoning_effort: str, workdir: Path, timeout: float = 900, retries: int = 2) -> dict:
+                     reasoning_effort: str, workdir: Path, timeout: float = 900, retries: int = 2,
+                     service_tier: str = "") -> dict:
     """One stateless Codex call that must answer with JSON matching `schema` (auditor, judge)."""
     workdir = Path(workdir).resolve()
     workdir.mkdir(parents=True, exist_ok=True)
     schema_file = workdir / f"schema-{hashlib.sha256(json.dumps(schema, sort_keys=True).encode()).hexdigest()[:12]}.json"
     schema_file.write_text(json.dumps(schema))
-    args = ["exec", "--json", "--ephemeral", *model_args(model), *CODEX_ISOLATION,
+    args = ["exec", "--json", "--ephemeral", *model_args(model, service_tier), *CODEX_ISOLATION,
             "-c", f"model_reasoning_effort={toml_str(reasoning_effort)}",
             "-c", f"developer_instructions={toml_str(instructions)}",
             "--output-schema", str(schema_file), "-"]

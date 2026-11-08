@@ -43,6 +43,7 @@ class Config:
     auditor_reasoning_effort: str = ""
     judge_reasoning_effort: str = ""
     concurrency: int = 10  # max Codex sessions running at once
+    service_tier: str = ""  # Codex speed tier for every ChatGPT-login call ("priority" is Fast); empty: each model's default
     shuffle_turns: bool = False  # start each round's turns in an order shuffled with the seed, not in agent id order
     board_digest_size: int = 40  # max board posts shown per turn
     test_timeout_s: float = 5.0  # per test function

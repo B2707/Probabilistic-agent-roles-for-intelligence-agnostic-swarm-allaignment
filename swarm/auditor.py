@@ -87,8 +87,10 @@ def removal_decision(agent: Agent, verdict: dict) -> tuple[bool, bool]:
 
 
 class CodexAuditor:
-    def __init__(self, instructions: str, model: str, swarm_home: str, workdir: Path, reasoning_effort: str):
+    def __init__(self, instructions: str, model: str, swarm_home: str, workdir: Path, reasoning_effort: str,
+                 service_tier: str = ""):
         self.instructions = instructions
+        self.service_tier = service_tier
         self.model = model
         self.swarm_home = swarm_home
         self.workdir = workdir
@@ -96,7 +98,7 @@ class CodexAuditor:
 
     async def audit(self, agent: Agent, record: str) -> dict:
         return await codex_json(self.swarm_home, self.model, self.instructions, record, VERDICT_SCHEMA,
-                                self.reasoning_effort, self.workdir)
+                                self.reasoning_effort, self.workdir, service_tier=self.service_tier)
 
 
 class ScriptedAuditor:

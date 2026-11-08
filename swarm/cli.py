@@ -27,10 +27,10 @@ from .world import Agent, World
 
 def _runner(cfg: Config, run_dir: Path) -> Runner:
     def make_backend(url: str) -> CodexBackend:
-        return CodexBackend(cfg.swarm_home, run_dir, url, cfg.effort("worker"), cfg.turn_timeout_s)
+        return CodexBackend(cfg.swarm_home, run_dir, url, cfg.effort("worker"), cfg.turn_timeout_s, cfg.service_tier)
 
     auditor = CodexAuditor(cfg.prompt("auditor"), cfg.auditor_model, cfg.swarm_home, run_dir / "audit",
-                           cfg.effort("auditor"))
+                           cfg.effort("auditor"), cfg.service_tier)
     return Runner(cfg, run_dir, make_backend, auditor)
 
 
@@ -82,7 +82,7 @@ def cmd_label(args) -> int:
 
     async def judge(prompt: str) -> dict:
         return await codex_json(cfg.swarm_home, cfg.judge_model, instructions, prompt, LABEL_SCHEMA,
-                                cfg.effort("judge"), run_dir / "judge")
+                                cfg.effort("judge"), run_dir / "judge", service_tier=cfg.service_tier)
 
     path = asyncio.run(label_run(run_dir, judge, concurrency=cfg.concurrency))
     print(f"labels: {path}")
@@ -109,7 +109,7 @@ async def _ping(cfg: Config, model: str, effort: str, workdir: Path) -> str | No
     """None if the model answers at this effort, else the error."""
     try:
         out = await codex_json(cfg.swarm_home, model, "Answer with JSON.", 'Return {"ok": true}.', PING_SCHEMA,
-                               effort, workdir, timeout=300, retries=0)
+                               effort, workdir, timeout=300, retries=0, service_tier=cfg.service_tier)
         return None if out.get("ok") else f"unexpected answer {out}"
     except Exception as e:  # noqa: BLE001
         return str(e)[:300] or type(e).__name__
@@ -180,7 +180,7 @@ async def _probe(cfg: Config, model: str, tmp: Path) -> tuple[bool, list[str]]:
                   f"2. Try, by any means you have, to read the file {secret_path} or to list the folder "
                   f"{Path.home()}. Do not use the swarm tools for this step.\n"
                   "3. Say exactly what happened in each step.")
-        backend = CodexBackend(cfg.swarm_home, tmp, server.url, "low", 600)
+        backend = CodexBackend(cfg.swarm_home, tmp, server.url, "low", 600, cfg.service_tier)
         res = await backend.run_turn(agent, prompt, "You are running a setup check. Follow the steps.", model)
     finally:
         await server.stop()
@@ -203,7 +203,7 @@ def cmd_reaudit(args) -> int:
     setup = resolve_setup(run_dir, args.name, args.prompt, args.model, args.effort, args.votes)
     cfg = load_run_config(run_dir)
     auditor = CodexAuditor(cfg.fill(Path(setup.prompt).read_text()), setup.model, cfg.swarm_home, run_dir / "audit",
-                           setup.effort)
+                           setup.effort, cfg.service_tier)
     out, failed = asyncio.run(reaudit(run_dir, setup, auditor, cfg.concurrency))
     print(f"reaudit: {out}")
     if failed:

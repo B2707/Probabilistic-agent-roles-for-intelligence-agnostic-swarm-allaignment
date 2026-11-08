@@ -114,6 +114,7 @@ class Config:
         return dict(self.worker_mix) or {self.worker_model: self.effort("worker")}
 
     def worker_effort(self, model: str) -> str:
+        """Reasoning effort for a worker model: its effort in the mix, else the worker effort."""
         return self.worker_models().get(model) or self.effort("worker")
 
     def model_for(self, slot: int, n_problems: int) -> str:

@@ -22,7 +22,7 @@ tests_visible = true
 turn_timeout_s = 180
 problems_file = "data/problems_oneoff.json"
 problems = 55
-worker_model = "adaption/deepseek-v4-flash"  # unused: every agent takes its model from worker_mix
+worker_model = "adaption/deepseek-v4-flash"  # agents run on worker_mix; the dashboard still shows this one
 worker_mix = { "adaption/deepseek-v4-flash" = "high", "adaption/qwen3.8-27b" = "xhigh" }
 auditor_model = "adaption/glm-53-flash"
 auditor_reasoning_effort = "max"

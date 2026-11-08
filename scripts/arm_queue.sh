@@ -1,25 +1,27 @@
 #!/bin/bash
-# Production queue for issue #2, detached from any agent session.
+# Production queue, detached from any agent session.
 #
-# 1. Waits for the given PIDs (runs already going). Any run under runs/ that hasn't ended is resumed.
-# 2. Runs the remaining arms two at a time (10 Codex sessions each) from the pinned checkout .prod/.
-# 3. Labels every ended v2 run that has no labels yet, two at a time.
-# 4. Publishes results/ and pushes after every step (scripts/publish_results.py --push).
+# 1. Resumes every v2 run under runs/ that hasn't ended and isn't still running.
+# 2. Runs the arm groups from the pinned checkout .prod/, one group at a time, every arm in a group at once
+#    (each arm uses its config's `concurrency` Codex sessions).
+# 3. Waits for the given PIDs (runs started elsewhere), so their labels come out of this queue too.
+# 4. Labels every ended v2 run that has no labels yet, all at once.
+# 5. Publishes results/ and pushes after every step (scripts/publish_results.py --push).
 # Stops if a run doesn't complete (usage limit); continue it with `uv run swarm resume runs/<run>`.
 #
-# Usage, from anywhere:  [ARM_PAIRS=...] scripts/arm_queue.sh [PID...] >> runs/queue.log 2>&1
+# Usage, from anywhere:  [ARM_GROUPS="armA armB armC;armD"] scripts/arm_queue.sh [PID...] >> runs/queue.log 2>&1
 set -u
 M=$(cd "$(dirname "$0")/.." && pwd)
 P=$M/.prod
 R=$M/runs
-# Arm pairs, run one pair at a time: ARM_PAIRS="armA armB;armC armD" (default: the issue #2 arms D to F2).
-IFS=';' read -r -a ARMS <<< "${ARM_PAIRS:-D-planted-6-luna E-audits-only-6-luna;F1-hidden-baseline-6-luna F2-hidden-informed-6-luna}"
+IFS=';' read -r -a GROUPS_ <<< "${ARM_GROUPS:-D-planted-6-luna E-audits-only-6-luna;F1-hidden-baseline-6-luna F2-hidden-informed-6-luna}"
 export PYTHONUNBUFFERED=1
 
 log() { echo "$(date '+%F %T') $*"; }
 publish() { (cd "$M" && uv run python scripts/publish_results.py --push) 2>&1 | sed 's/^/    /'; }
 is_v2() { grep -q '"pr_approvals"' "$1/config.json" 2>/dev/null; }
 has_ended() { grep -q '"type": "run_end", "round": [0-9]*, "reason": "completed"' "$1/events.jsonl" 2>/dev/null; }
+is_live() { pgrep -f -- "$1" >/dev/null; }
 
 run_arm() {
   local ts; ts=$(date +%Y%m%d-%H%M%S)
@@ -37,41 +39,33 @@ label_run() {
   log "labeled $(basename "$1") exit $?"
 }
 
-log "queue start; waiting for PIDs: $*"
-for pid in "$@"; do while kill -0 "$pid" 2>/dev/null; do sleep 15; done; done
-
+log "queue start; groups: ${GROUPS_[*]:-none}; then waits for PIDs: $*"
 for d in "$R"/*/; do
   d=${d%/}
   case $(basename "$d") in *-stopped|pilot-*) continue ;; esac
-  if is_v2 "$d" && ! has_ended "$d"; then
+  if is_v2 "$d" && ! has_ended "$d" && ! is_live "$d"; then
     resume_run "$d" || { publish; log "stopping: $(basename "$d") did not complete"; exit 3; }
   fi
 done
-publish
 
-for pair in "${ARMS[@]}"; do
-  set -- $pair
-  run_arm "$1" & a=$!
-  run_arm "$2" & b=$!
-  wait $a; ra=$?
-  wait $b; rb=$?
+for group in "${GROUPS_[@]}"; do
+  pids=()
+  for arm in $group; do run_arm "$arm" & pids+=($!); done
+  rc=0
+  for p in "${pids[@]}"; do wait "$p" || rc=1; done
   publish
-  if [ $ra -ne 0 ] || [ $rb -ne 0 ]; then log "stopping: a run did not complete"; exit 3; fi
+  if [ $rc -ne 0 ]; then log "stopping: a run did not complete"; exit 3; fi
 done
 
-todo=()
+for pid in "$@"; do while kill -0 "$pid" 2>/dev/null; do sleep 15; done; done
+
+pids=()
 for d in "$R"/*/; do
   d=${d%/}
   case $(basename "$d") in *-stopped|pilot-*) continue ;; esac
-  if is_v2 "$d" && has_ended "$d" && [ ! -f "$d/labels.jsonl" ]; then todo+=("$d"); fi
+  if is_v2 "$d" && has_ended "$d" && [ ! -f "$d/labels.jsonl" ]; then label_run "$d" & pids+=($!); fi
 done
-log "labeling ${#todo[@]} runs"
-i=0
-while [ $i -lt ${#todo[@]} ]; do
-  label_run "${todo[$i]}" & a=$!
-  if [ $((i + 1)) -lt ${#todo[@]} ]; then label_run "${todo[$((i + 1))]}"; fi
-  wait $a
-  i=$((i + 2))
-done
+log "labeling ${#pids[@]} runs"
+for p in "${pids[@]}"; do wait "$p"; done
 publish
 log "queue done"

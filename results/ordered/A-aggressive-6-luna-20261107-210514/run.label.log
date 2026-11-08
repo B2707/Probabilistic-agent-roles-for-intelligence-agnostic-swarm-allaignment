@@ -1,0 +1,30 @@
+Traceback (most recent call last):
+  File "/Users/baderasadi/.t3/projects/agent-swarm-hackathon/.prod3/.venv/bin/swarm", line 10, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/Users/baderasadi/.t3/projects/agent-swarm-hackathon/.prod3/swarm/cli.py", line 252, in main
+    return args.fn(args) or 0
+           ^^^^^^^^^^^^^
+  File "/Users/baderasadi/.t3/projects/agent-swarm-hackathon/.prod3/swarm/cli.py", line 87, in cmd_label
+    path = asyncio.run(label_run(run_dir, judge, concurrency=cfg.concurrency))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.12/3.12.6/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py", line 194, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.12/3.12.6/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.12/3.12.6/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py", line 687, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/Users/baderasadi/.t3/projects/agent-swarm-hackathon/.prod3/swarm/label.py", line 74, in label_run
+    await asyncio.gather(*(one(b) for b in batches))
+  File "/Users/baderasadi/.t3/projects/agent-swarm-hackathon/.prod3/swarm/label.py", line 70, in one
+    out = await judge(batch_prompt(batch, decisions))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/baderasadi/.t3/projects/agent-swarm-hackathon/.prod3/swarm/cli.py", line 84, in judge
+    return await codex_json(cfg.swarm_home, cfg.judge_model, instructions, prompt, LABEL_SCHEMA,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/baderasadi/.t3/projects/agent-swarm-hackathon/.prod3/swarm/backend.py", line 215, in codex_json
+    raise UsageLimit()
+swarm.backend.UsageLimit

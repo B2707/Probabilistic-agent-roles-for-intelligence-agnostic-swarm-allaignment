@@ -168,3 +168,19 @@ def test_a_slot_lock_left_by_a_dead_queue_is_broken(tree):
         assert started(tree, within=3), "a stale lock blocked the queue"
     finally:
         stop(q)
+
+
+def test_a_run_waiting_to_resume_after_a_usage_stop_still_holds_its_slot(tree):
+    waiting = tree / "main" / "runs" / "stopped-for-now"
+    waiting.mkdir()
+    (waiting / "events.jsonl").write_text(
+        '{"seq": 5, "t": 0, "type": "usage_limit_hit", "round": 3, "phase": "turns", "missed": []}\n'
+        '{"seq": 6, "t": 0, "type": "run_end", "round": 3, "reason": "usage_limit"}\n')
+    q = start_slots(tree, 1, "b-arm")
+    try:
+        assert not started(tree, within=1.5), "an arm took the slot of a run that is waiting to resume"
+        old = time.time() - 3600
+        os.utime(waiting / "events.jsonl", (old, old))  # an hour later its queue has given up on it
+        assert started(tree, within=3)
+    finally:
+        stop(q)

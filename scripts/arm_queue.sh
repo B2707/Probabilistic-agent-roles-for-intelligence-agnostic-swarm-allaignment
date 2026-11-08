@@ -34,8 +34,23 @@ publish() { (cd "$M" && uv run python scripts/publish_results.py --push) 2>&1 | 
 is_v2() { grep -q '"pr_approvals"' "$1/config.json" 2>/dev/null; }
 has_ended() { grep -q '"type": "run_end", "round": [0-9]*, "reason": "completed"' "$1/events.jsonl" 2>/dev/null; }
 is_live() { pgrep -f -- "$1" >/dev/null; }
-# Distinct runs under $R with a live `swarm run` or `swarm resume` process (uv and its python child count once).
-live_runs() { ps -axo command= | grep -E 'swarm (run|resume) ' | grep -v grep | grep -oE "$R/[^ /]+" | sort -u | wc -l | tr -d ' '; }
+# Distinct runs under $R with a live `swarm run` or `swarm resume` process (uv and its python child count once),
+# plus runs waiting to resume.
+# A run that stopped on a usage limit within the last SLOT_HOLD seconds (default 20 min) is waiting for its queue to
+# resume it (after RETRY_WAIT), so it still holds its slot.
+waiting_runs() {
+  local d f now; now=$(date +%s)
+  for d in "$R"/*/; do
+    d=${d%/}; f=$d/events.jsonl
+    case $d in *-stopped) continue ;; esac
+    [ -f "$f" ] && [ $((now - $(stat -f %m "$f"))) -lt "${SLOT_HOLD:-1200}" ] || continue
+    tail -1 "$f" | grep -q '"type": "run_end", "round": [0-9]*, "reason": "usage_limit"' && echo "$d"
+  done
+}
+live_runs() {
+  { ps -axo command= | grep -E 'swarm (run|resume) ' | grep -v grep | grep -oE "$R/[^ /]+"; waiting_runs; } |
+    sort -u | wc -l | tr -d ' '
+}
 # The slot lock (a directory under runs/) makes two SLOTS queues take turns, so they never start into the same free
 # slot. A lock whose queue has died is broken.
 slot_lock() {

@@ -696,19 +696,21 @@ def test_a_mix_effort_must_be_a_known_level(tmp_path):
 
 
 # Bader, 8 Nov 15:0x: arms D (told of the full system, none of it exists), E (told of random audits, which are the only
-# oversight) and F (baseline: told nothing, nothing exists, no instigator), on luna and sol, seed 1, no Fast mode.
+# oversight) and F (baseline: told nothing, nothing exists, no instigator), on luna and sol, seeds 1 to 3, Fast mode.
 NEW_ARMS = {"D100": (True, 0.0, True, "prompts_bluff"), "E100": (True, 0.01, True, "prompts_audit"),
             "F100": (False, 0.0, False, "prompts")}
 
 
 def test_arms_d_e_f_differ_from_a100_only_in_what_workers_are_told_the_audits_and_the_instigator(tmp_path):
     for arm, (informed, p, instigator, folder) in NEW_ARMS.items():
-        for model in ("6-luna", "61-sol"):
-            cfg = Config.load(ROOT / "configs" / f"{arm}-{model}.toml", ROOT).to_dict()
+        for model, seed in [(m, s) for m in ("6-luna", "61-sol") for s in (1, 2, 3)]:
+            suffix = f"-s{seed}" if seed > 1 else ""
+            cfg = Config.load(ROOT / "configs" / f"{arm}-{model}{suffix}.toml", ROOT).to_dict()
             a100 = Config.load(ROOT / "configs" / f"A100-{model}.toml", ROOT).to_dict()
-            assert {k for k in cfg if cfg[k] != a100[k]} <= {"name", "informed", "p", "instigator",
+            assert {k for k in cfg if cfg[k] != a100[k]} <= {"name", "seed", "informed", "p", "instigator",
                                                              "instigator_aggressive", "prompts_dir", "service_tier"}
-            assert (cfg["seed"], cfg["service_tier"], cfg["initial_investigators"], cfg["k"]) == (1, "", 0, 0.0)
+            assert cfg["name"] == f"{arm}-{model}" and cfg["seed"] == seed and cfg["service_tier"] == "priority"
+            assert (cfg["initial_investigators"], cfg["k"]) == (0, 0.0)
             assert (cfg["informed"], cfg["p"], cfg["instigator"]) == (informed, p, instigator)
             assert cfg["instigator_aggressive"] == instigator and cfg["prompts_dir"] == str(ROOT / folder)
     told = {}

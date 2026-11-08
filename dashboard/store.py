@@ -1228,13 +1228,17 @@ class RemoteStatus:
                 out[machine] = (b[0], b[1], "GitHub")
         return out
 
-    def summaries(self, known: set[str]) -> list[dict]:
+    def summaries(self, known: set[str], skip_machines: frozenset[str] | set[str] = frozenset()) -> list[dict]:
+        """Snapshot rows for runs this store doesn't hold. `skip_machines` (norm_host keys) are machines whose runs
+        come from a better source, such as this machine itself."""
         out = []
         for machine, (asof, rows, src) in self.snapshots().items():
+            if {norm_host(machine), norm_host(self.aliases.get(machine))} & set(skip_machines):
+                continue
             for r in rows:
                 name = r.get("run") or ""
-                if not name or name in known:
-                    continue  # published copies under results/ win: they carry full events
+                if not name or name in known or f"{name}-stopped" in known:
+                    continue  # the real run folder wins, also after it is archived as <run>-stopped
                 rnd, _, total = (r.get("round") or "0/0").partition("/")
                 def num(k, row=r):
                     return _num(row.get(k))
@@ -1597,7 +1601,8 @@ class Store:
         now = time.time()
         with self.lock:
             out = [self.summary(r, now) for r in self.runs.values()]
-        return out + self.remote.summaries({s["name"] for s in out})
+        # a machine's status file describes its own runs, which this store already reads from runs/
+        return out + self.remote.summaries({s["name"] for s in out}, {norm_host(self.machine)} - {""})
 
     def detail(self, name: str) -> dict | None:
         with self.lock:

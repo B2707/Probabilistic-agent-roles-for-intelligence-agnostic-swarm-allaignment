@@ -25,9 +25,9 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # run as a file: uv run python dashboard/server.py
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-    from dashboard.store import DEADLINE, DEADLINE_T, Store, hostname
+    from dashboard.store import DEADLINE, DEADLINE_T, Store, hostname, norm_host
 else:
-    from .store import DEADLINE, DEADLINE_T, Store, hostname
+    from .store import DEADLINE, DEADLINE_T, Store, hostname, norm_host
 
 STATIC = Path(__file__).resolve().parent / "static"
 STATIC_FILES = {"index.html": "text/html; charset=utf-8", "app.js": "text/javascript; charset=utf-8",
@@ -154,7 +154,19 @@ class App:
                     cur = out.get(name)
                     if cur is None or (s.get("events") or 0) > (cur.get("events") or 0):
                         out[name] = {**s, "peer": i, "machine": s.get("machine") or p.machine}
+            out = {n: s for n, s in out.items() if not self._superseded(s, out)}
         return sorted(out.values(), key=lambda s: (s.get("start_t") or 0), reverse=True)
+
+    def _superseded(self, s: dict, rows: dict[str, dict]) -> bool:
+        """A git snapshot row loses to live data: the real run is listed (also as <run>-stopped after archiving), or
+        the snapshot's machine is a peer we can reach right now, whose own list is current."""
+        if s.get("origin") != "snapshot":
+            return False
+        real = rows.get(s["name"] + "-stopped")
+        if real is not None and real.get("origin") != "snapshot":
+            return True
+        live = {norm_host(p.machine) for p in self.peers if p.ok and p.machine} - {""}
+        return bool({norm_host(s.get("machine")), s.get("machine_key")} & live)
 
     def fleet(self, local_only: bool = False) -> dict:
         """Devices from this machine's fleet pathway, merged with each peer's (a device seen twice keeps the copy

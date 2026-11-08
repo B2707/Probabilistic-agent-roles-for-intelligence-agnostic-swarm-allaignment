@@ -40,6 +40,7 @@ class Config:
     auditor_reasoning_effort: str = ""
     judge_reasoning_effort: str = ""
     concurrency: int = 10  # max Codex sessions running at once
+    shuffle_turns: bool = False  # start each round's turns in an order shuffled with the seed, not in agent id order
     board_digest_size: int = 40  # max board posts shown per turn
     test_timeout_s: float = 5.0  # per test function
     turn_timeout_s: float = 180.0  # a timed-out turn ends and is not retried

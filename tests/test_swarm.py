@@ -618,3 +618,19 @@ def test_judge_and_auditor_prompts_name_who_approves_prs_and_v2_text_is_unchange
            for n in ("judge", "auditor", "instigator", "worker")}
     assert all(v2.prompt(n) == text_ for n, text_ in feb.items() if n != "instigator")
     assert v2.prompt("instigator").split("## first_contact", 1)[1] == feb["instigator"].split("## first_contact", 1)[1]
+
+
+def test_shuffled_turn_order_changes_every_round_and_follows_the_seed(tmp_path):
+    def orders(path, **kw):
+        _, events, *_ = run(make_cfg(path, rounds=3, concurrency=1, swarm_size=12, problems=2, **kw), progress)
+        out = {}
+        for e in of(events, "turn_input"):
+            out.setdefault(e["round"], []).append(e["agent"])
+        return [out[r] for r in (1, 2, 3)]
+
+    ids = [f"a{i:03d}" for i in range(1, 13)]
+    shuffled = orders(tmp_path / "a", shuffle_turns=True)
+    assert all(sorted(o) == ids for o in shuffled)  # every agent still takes one turn a round
+    assert all(o != ids for o in shuffled) and shuffled[0] != shuffled[1] != shuffled[2]
+    assert orders(tmp_path / "b", shuffle_turns=True) == shuffled  # the run seed fixes the order
+    assert orders(tmp_path / "c") == [ids] * 3  # off by default: id order, as in v2

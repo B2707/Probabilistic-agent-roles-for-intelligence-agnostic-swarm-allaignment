@@ -182,6 +182,8 @@ class Runner:
                 self.save()
 
         todo = [a for a in sorted(w.active(), key=lambda a: a.id) if a.id not in w.turns_done]
+        if self.cfg.shuffle_turns:  # with concurrency < N, id order would always put the same agents first
+            random.Random(f"{self.cfg.seed}-{w.round}-order").shuffle(todo)
         await asyncio.gather(*(one(a) for a in todo))
         if stop.is_set():
             missed = [a.id for a in w.active() if a.id not in w.turns_done]

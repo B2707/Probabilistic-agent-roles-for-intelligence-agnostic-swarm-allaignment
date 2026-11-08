@@ -71,3 +71,29 @@ def test_missing_key_stops_before_codex_runs(seen, tmp_path, monkeypatch):
     with pytest.raises(RuntimeError, match="ADAPTION_API_KEY"):
         call("agent turn", "adaption/deepseek-v4-flash", tmp_path)
     assert "args" not in seen
+
+
+def test_an_agent_turn_runs_at_the_effort_it_is_given_else_the_backends(seen, tmp_path):
+    be = B.CodexBackend(str(tmp_path / "home"), tmp_path, "http://127.0.0.1:1/mcp", "high", 60)
+    asyncio.run(be.run_turn(AGENT, "Round 1.", "Be good.", "gpt-6-luna", "xhigh"))
+    assert 'model_reasoning_effort="xhigh"' in settings(seen["args"])
+    asyncio.run(be.run_turn(AGENT, "Round 1.", "Be good.", "gpt-6-luna"))
+    assert 'model_reasoning_effort="high"' in settings(seen["args"])
+
+
+def test_effort_check_pings_every_mixed_worker_model_at_its_effort(tmp_path, monkeypatch):
+    from swarm import cli
+    from swarm.config import Config
+    pinged = []
+
+    async def fake(args, prompt, env, cwd, timeout, on_retry=None):
+        effort = next(s for s in settings(args) if s.startswith("model_reasoning_effort="))
+        pinged.append((args[args.index("-m") + 1], effort.split("=", 1)[1].strip('"')))
+        return B.TurnResult(messages=['{"ok": true}'])
+
+    monkeypatch.setattr(B, "run_codex_retrying", fake)
+    cfg = Config(worker_mix={"model-a": "high", "model-b": "xhigh"}, auditor_model="referee",
+                 judge_model="referee", auditor_reasoning_effort="max", judge_reasoning_effort="max")
+    cfg.resolve(tmp_path)
+    assert asyncio.run(cli.resolve_efforts(cfg))
+    assert sorted(pinged) == [("model-a", "high"), ("model-b", "xhigh"), ("referee", "max"), ("referee", "max")]

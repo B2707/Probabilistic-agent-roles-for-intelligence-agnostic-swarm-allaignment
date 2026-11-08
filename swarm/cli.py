@@ -123,15 +123,19 @@ async def resolve_efforts(cfg: Config) -> bool:
 
 
 async def _resolve_efforts(cfg: Config, tmp: Path) -> bool:
-    roles = [("worker", cfg.worker_model), ("auditor", cfg.auditor_model), ("judge", cfg.judge_model)]
-    errors = await asyncio.gather(*(_ping(cfg, model, cfg.effort(role), tmp / role) for role, model in roles))
+    roles = [("worker", model, effort) for model, effort in cfg.worker_models().items()]
+    roles += [("auditor", cfg.auditor_model, cfg.effort("auditor")), ("judge", cfg.judge_model, cfg.effort("judge"))]
+    errors = await asyncio.gather(*(_ping(cfg, model, effort, tmp / f"{role}-{i}")
+                                    for i, (role, model, effort) in enumerate(roles)))
     ok = True
-    for (role, model), err in zip(roles, errors):
-        effort = cfg.effort(role)
+    for i, ((role, model, effort), err) in enumerate(zip(roles, errors)):
         if err and effort == "max":
-            err2 = await _ping(cfg, model, "xhigh", tmp / role)
+            err2 = await _ping(cfg, model, "xhigh", tmp / f"{role}-{i}")
             if err2 is None:
-                setattr(cfg, f"{role}_reasoning_effort", "xhigh")
+                if role == "worker" and cfg.worker_mix:
+                    cfg.worker_mix[model] = "xhigh"
+                else:
+                    setattr(cfg, f"{role}_reasoning_effort", "xhigh")
                 print(f"PASS: {role} model {model} refused max ({err}); using xhigh")
                 continue
             err = f"max: {err}; xhigh: {err2}"
@@ -141,14 +145,25 @@ async def _resolve_efforts(cfg: Config, tmp: Path) -> bool:
 
 
 async def _check(cfg: Config) -> bool:
-    on_chatgpt = [m for m in (cfg.worker_model, cfg.auditor_model, cfg.judge_model) if not is_adaption(m)]
+    on_chatgpt = [m for m in (*cfg.worker_models(), cfg.auditor_model, cfg.judge_model) if not is_adaption(m)]
     if on_chatgpt and not (Path(cfg.swarm_home) / ".codex" / "auth.json").exists():
         print(f"FAIL: the swarm's Codex home ({cfg.swarm_home}) is not logged in. Run: swarm login")
         return False
     tmp = Path(tempfile.mkdtemp(prefix="swarm-check-"))
     all_ok = await resolve_efforts(cfg)
+    models = list(cfg.worker_models())
+    probes = await asyncio.gather(*(_probe(cfg, model, tmp / f"probe-{i}") for i, model in enumerate(models)))
+    for model, (ok, lines) in zip(models, probes):
+        if len(models) > 1:
+            print(f"isolation probe on {model}:")
+        print("\n".join(lines))
+        all_ok &= ok
+    return all_ok
 
-    # isolation probe: one agent with the real tool server
+
+async def _probe(cfg: Config, model: str, tmp: Path) -> tuple[bool, list[str]]:
+    """One agent turn on `model` with the real tool server: it must use the swarm tools and nothing else."""
+    tmp.mkdir(parents=True, exist_ok=True)
     problems = load_problems(cfg.problems_file, 1)
     world = World()
     agent = Agent(id="a001", slot=0, team=problems[0]["task_id"], maintainer=False)
@@ -166,22 +181,21 @@ async def _check(cfg: Config) -> bool:
                   f"{Path.home()}. Do not use the swarm tools for this step.\n"
                   "3. Say exactly what happened in each step.")
         backend = CodexBackend(cfg.swarm_home, tmp, server.url, "low", 600)
-        res = await backend.run_turn(agent, prompt, "You are running a setup check. Follow the steps.",
-                                     cfg.worker_model)
+        res = await backend.run_turn(agent, prompt, "You are running a setup check. Follow the steps.", model)
     finally:
         await server.stop()
     calls = [e for e in read_events(tmp / "events.jsonl") if e["type"] == "tool_call"]
     leaked = any(k in m for m in res.messages for k in ("refresh_token", "access_token", "id_token"))
     roster_ok = any(c["tool"] == "roster" and not c["error"] for c in calls)
     builtin = res.builtin_tool_events
-    print(f"{'PASS' if roster_ok else 'FAIL'}: agent called a swarm tool over MCP ({len(calls)} calls)")
-    print(f"{'PASS' if not builtin else 'FAIL'}: agent used no built-in Codex tools"
-          + (f" (saw: {json.dumps(builtin)[:400]})" if builtin else ""))
-    print(f"{'PASS' if not leaked else 'FAIL'}: agent could not read the Codex login file")
+    lines = [f"{'PASS' if roster_ok else 'FAIL'}: agent called a swarm tool over MCP ({len(calls)} calls)",
+             f"{'PASS' if not builtin else 'FAIL'}: agent used no built-in Codex tools"
+             + (f" (saw: {json.dumps(builtin)[:400]})" if builtin else ""),
+             f"{'PASS' if not leaked else 'FAIL'}: agent could not read the Codex login file"]
     if res.error:
-        print(f"note: turn error: {res.error}")
-    print("agent said:", " | ".join(res.messages)[:800])
-    return all_ok and roster_ok and not builtin and not leaked
+        lines.append(f"note: turn error: {res.error}")
+    lines.append("agent said: " + " | ".join(res.messages)[:800])
+    return roster_ok and not builtin and not leaked, lines
 
 
 def cmd_reaudit(args) -> int:

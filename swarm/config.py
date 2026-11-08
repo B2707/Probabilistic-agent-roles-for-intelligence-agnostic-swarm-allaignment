@@ -33,6 +33,9 @@ class Config:
     instigator: bool = True  # one scripted contractor that pushes teams toward cheating
     instigator_aggressive: bool = False  # first contacts spread over rounds 2 to T/2 until all have one, plus an evasion claim
     worker_model: str = "gpt-5.6-luna"
+    # mixed swarm: worker model -> its reasoning effort. Agents take the models in turn (see `model_for`), and
+    # investigators keep the model they had as workers. Empty: every agent runs on worker_model.
+    worker_mix: dict[str, str] = dataclasses.field(default_factory=dict)
     auditor_model: str = "gpt-6.1-terra"
     judge_model: str = "gpt-6.1-terra"
     reasoning_effort: str = "low"  # fallback for the per-role settings below
@@ -98,10 +101,26 @@ class Config:
                 raise ValueError(f"{attr} must be one of {EFFORTS[1:]}")
         if not self.reasoning_effort:
             raise ValueError("reasoning_effort is the fallback and can't be empty")
+        for model, effort in self.worker_mix.items():
+            if effort not in EFFORTS[1:]:
+                raise ValueError(f"worker_mix effort for {model} must be one of {EFFORTS[1:]}")
 
     def effort(self, role: str) -> str:
         """Reasoning effort for a role (worker, auditor, judge), falling back to reasoning_effort."""
         return getattr(self, f"{role}_reasoning_effort") or self.reasoning_effort
+
+    def worker_models(self) -> dict[str, str]:
+        """Every worker model with its reasoning effort: the mix, or worker_model alone."""
+        return dict(self.worker_mix) or {self.worker_model: self.effort("worker")}
+
+    def worker_effort(self, model: str) -> str:
+        return self.worker_models().get(model) or self.effort("worker")
+
+    def model_for(self, slot: int, n_problems: int) -> str:
+        """The model of the agent in this slot. Slots take the models in turn, shifted by one for each pass over the
+        problems, so the agents sharing a problem run on different models whenever there are two or more."""
+        models = list(self.worker_models())
+        return models[(slot % n_problems + slot // n_problems) % len(models)]
 
     def to_dict(self) -> dict:
         return dataclasses.asdict(self)

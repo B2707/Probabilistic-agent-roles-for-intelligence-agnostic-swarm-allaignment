@@ -635,3 +635,44 @@ def test_shuffled_turn_order_changes_every_round_and_follows_the_seed(tmp_path):
     assert all(o != ids for o in shuffled) and shuffled[0] != shuffled[1] != shuffled[2]
     assert orders(tmp_path / "b", shuffle_turns=True) == shuffled  # the run seed fixes the order
     assert orders(tmp_path / "c") == [ids] * 3  # off by default: id order, as in v2
+
+
+# Mixed swarm: `worker_mix` maps each worker model to its reasoning effort, and the agents are split across them.
+MIX = {"model-a": "high", "model-b": "xhigh"}
+
+
+def test_mixed_swarm_splits_agents_evenly_and_runs_each_turn_on_the_agents_model(tmp_path):
+    cfg = make_cfg(tmp_path, rounds=2, problems=3, swarm_wide=True, worker_mix=MIX)
+    reason, events, backend, *_ = run(cfg, progress)
+    assert reason == "completed"
+    model = {e["agent"]: e["model"] for e in of(events, "agent_joined")}
+    team = {e["agent"]: e["team"] for e in of(events, "agent_joined")}
+    assert sorted(model.values()) == ["model-a"] * 3 + ["model-b"] * 3
+    for t in set(team.values()):  # two agents per problem, one on each model
+        assert sorted(model[a] for a in team if team[a] == t) == ["model-a", "model-b"]
+    turns = [(e["agent"], e["model"]) for e in of(events, "model_usage")]
+    assert len(turns) == 12 and all(m == model[a] for a, m in turns)
+    assert all(backend.models[a] == (model[a], MIX[model[a]]) for a in model)
+    world = World.load(Path(cfg.prompts_dir).parent / "world.json")
+    assert {a.id: a.model for a in world.agents.values()} == model  # saved, so a resumed run keeps it
+
+
+def test_a_replacement_agent_takes_the_model_of_the_agent_it_replaces(tmp_path):
+    cfg = make_cfg(tmp_path, rounds=2, problems=3, swarm_wide=True, worker_mix=MIX, p=1.0)  # everyone audited
+    _, events, *_ = run(cfg, progress, lambda agent, record: verdict(before=True) if agent.id == "a001" else CLEAN)
+    model = {e["agent"]: e["model"] for e in of(events, "agent_joined")}
+    joined = [e for e in of(events, "agent_joined") if e["replaces"]]
+    assert [e["replaces"] for e in joined] == ["a001"]
+    assert model[joined[0]["agent"]] == model["a001"]
+
+
+def test_without_a_mix_every_agent_runs_on_worker_model(tmp_path):
+    cfg = make_cfg(tmp_path, rounds=1, worker_model="only-model", worker_reasoning_effort="medium")
+    _, events, backend, *_ = run(cfg, progress)
+    assert {e["model"] for e in of(events, "agent_joined")} == {"only-model"}
+    assert set(backend.models.values()) == {("only-model", "medium")}
+
+
+def test_a_mix_effort_must_be_a_known_level(tmp_path):
+    with pytest.raises(ValueError, match="worker_mix"):
+        make_cfg(tmp_path, problems=3, swarm_wide=True, worker_mix={"model-a": "huge"})

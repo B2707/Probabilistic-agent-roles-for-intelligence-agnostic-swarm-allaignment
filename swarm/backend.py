@@ -213,14 +213,16 @@ class CodexBackend:
         self.reasoning_effort = reasoning_effort
         self.timeout = timeout
 
-    async def run_turn(self, agent: Agent, prompt: str, instructions: str, model: str) -> TurnResult:
+    async def run_turn(self, agent: Agent, prompt: str, instructions: str, model: str,
+                       effort: str | None = None) -> TurnResult:
+        """One agent turn on `model` at `effort` (else the backend's effort, which unmixed runs always use)."""
         cwd = self.run_dir.resolve() / "agents" / agent.id
         cwd.mkdir(parents=True, exist_ok=True)
         args = ["exec"]
         if agent.session_id:
             args += ["resume", agent.session_id]
         args += ["--json", *model_args(model), *CODEX_ISOLATION,
-                 "-c", f"model_reasoning_effort={toml_str(self.reasoning_effort)}",
+                 "-c", f"model_reasoning_effort={toml_str(effort or self.reasoning_effort)}",
                  "-c", f"developer_instructions={toml_str(instructions)}",
                  "-c", f"mcp_servers.swarm.url={toml_str(self.server_url)}",
                  "-c", 'mcp_servers.swarm.bearer_token_env_var="SWARM_AGENT_TOKEN"',
@@ -301,11 +303,14 @@ class ScriptedBackend:
         self.server_url = server_url
         self.prompts: list[tuple[str, int, str]] = []
         self.instructions: dict[str, str] = {}  # agent id -> its latest system instructions
+        self.models: dict[str, tuple[str, str | None]] = {}  # agent id -> (model, effort) of its latest turn
 
-    async def run_turn(self, agent: Agent, prompt: str, instructions: str, model: str) -> TurnResult:
+    async def run_turn(self, agent: Agent, prompt: str, instructions: str, model: str,
+                       effort: str | None = None) -> TurnResult:
         rnd = int(re.search(r"Round (\d+)", prompt).group(1))
         self.prompts.append((agent.id, rnd, prompt))
         self.instructions[agent.id] = instructions
+        self.models[agent.id] = (model, effort)
         try:
             await self.policy(agent, rnd, prompt, MCPClient(self.server_url, agent.token))
         except UsageLimit:

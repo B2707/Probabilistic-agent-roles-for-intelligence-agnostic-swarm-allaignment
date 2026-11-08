@@ -25,3 +25,4 @@ judge_model = "gpt-6.1-terra"
 judge_reasoning_effort = "max"
 reasoning_effort = "high"
 concurrency = 10
+shuffle_turns = true  # rerun from 8 Nov: each round starts its turns in an order shuffled with the seed, not agent id order

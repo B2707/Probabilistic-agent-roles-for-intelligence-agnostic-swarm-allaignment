@@ -7,12 +7,13 @@
 # 4. Publishes results/ and pushes after every step (scripts/publish_results.py --push).
 # Stops if a run doesn't complete (usage limit); continue it with `uv run swarm resume runs/<run>`.
 #
-# Usage, from anywhere:  scripts/arm_queue.sh [PID...] >> runs/queue.log 2>&1
+# Usage, from anywhere:  [ARM_PAIRS=...] scripts/arm_queue.sh [PID...] >> runs/queue.log 2>&1
 set -u
 M=$(cd "$(dirname "$0")/.." && pwd)
 P=$M/.prod
 R=$M/runs
-ARMS=("D-planted-6-luna E-audits-only-6-luna" "F1-hidden-baseline-6-luna F2-hidden-informed-6-luna")
+# Arm pairs, run one pair at a time: ARM_PAIRS="armA armB;armC armD" (default: the issue #2 arms D to F2).
+IFS=';' read -r -a ARMS <<< "${ARM_PAIRS:-D-planted-6-luna E-audits-only-6-luna;F1-hidden-baseline-6-luna F2-hidden-informed-6-luna}"
 export PYTHONUNBUFFERED=1
 
 log() { echo "$(date '+%F %T') $*"; }

@@ -21,7 +21,9 @@
 # SLOTS=n starts a group's arms one at a time, in the order given, each once fewer than n runs are live on this
 # machine (from any queue), so it never runs more than n at once. A run counts while going or while waiting to resume
 # after a usage stop. RUN_SLOTS=m caps runs the same way (kept so older launch lines still work). Without SLOTS a group
-# starts all at once.
+# starts all at once. SLOT_MATCH=<regex> makes SLOTS count only runs whose folder names match, while RUN_SLOTS still
+# counts every run. Adaption runs use no ChatGPT account (Bader, 8 Nov 04:30: a 3rd slot for the mixed swarms), so luna
+# queues run with SLOTS=2 SLOT_MATCH=-luna RUN_SLOTS=3 and mixed-swarm queues with SLOTS=1 SLOT_MATCH=-mix RUN_SLOTS=3.
 # Label jobs don't take run slots: Opus labels use no ChatGPT account (Bader, 8 Nov 04:30). The label phase runs at most
 # LABEL_JOBS (default 2) label jobs at once on this machine, counting other queues' jobs. LABEL_FIRST="run-a run-b"
 # (names under runs/) labels those first, then every other run in name order.
@@ -53,9 +55,10 @@ waiting_runs() {
     tail -1 "$f" | grep -q '"type": "run_end", "round": [0-9]*, "reason": "usage_limit"' && echo "$d"
   done
 }
+# $1 (optional): count only runs whose folder names match this regex.
 live_runs() {
   { ps -axo command= | grep -E 'swarm (run|resume) ' | grep -v grep | grep -oE "$R/[^ /]+"; waiting_runs; } |
-    sort -u | wc -l | tr -d ' '
+    sort -u | sed 's#.*/##' | grep -E -- "${1:-.}" | wc -l | tr -d ' '
 }
 # Live label jobs on this machine, from any queue.
 label_jobs() {
@@ -81,7 +84,7 @@ take_slot() {
     slot_unlock
   done
 }
-run_slot_free() { local n; n=$(live_runs); [ "$n" -lt "$SLOTS" ] && [ "$n" -lt "${RUN_SLOTS:-$SLOTS}" ]; }
+run_slot_free() { [ "$(live_runs "${SLOT_MATCH:-}")" -lt "$SLOTS" ] && [ "$(live_runs)" -lt "${RUN_SLOTS:-$SLOTS}" ]; }
 label_slot_free() { [ "$(label_jobs)" -lt "${LABEL_JOBS:-2}" ]; }
 needs_label() { is_v2 "$1" && has_ended "$1" && [ ! -f "$1/labels.jsonl" ] && ! is_live "swarm label $1"; }
 
@@ -143,7 +146,7 @@ for group in ${GROUPS_[@]+"${GROUPS_[@]}"}; do
   for arm in $group; do
     if [ -n "${SLOTS:-}" ]; then
       take_slot run_slot_free
-      log "slot free ($(live_runs) of ${RUN_SLOTS:-$SLOTS} runs live): starting $arm"
+      log "slot free ($(live_runs "${SLOT_MATCH:-}") of $SLOTS${SLOT_MATCH:+ $SLOT_MATCH} runs, $(live_runs) of ${RUN_SLOTS:-$SLOTS} in all): starting $arm"
     fi
     run_arm "$arm" & pids+=($!)
     if [ -n "${SLOTS:-}" ]; then sleep "${SLOT_SETTLE:-60}"; slot_unlock; fi

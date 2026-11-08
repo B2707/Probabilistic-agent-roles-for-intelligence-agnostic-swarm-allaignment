@@ -7,3 +7,47 @@ run ended: usage_limit
 run ended: usage_limit
 run ended: usage_limit
 run ended: usage_limit
+run ended: usage_limit
+run ended: usage_limit
+run ended: usage_limit
+run ended: usage_limit
+run ended: usage_limit
+run ended: usage_limit
+Traceback (most recent call last):
+  File "/Users/danaasadi12gmail.com/.t3/projects/agent-swarm-hackathon/.prod/.venv/bin/swarm", line 10, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/Users/danaasadi12gmail.com/.t3/projects/agent-swarm-hackathon/.prod/swarm/cli.py", line 267, in main
+    return args.fn(args) or 0
+           ^^^^^^^^^^^^^
+  File "/Users/danaasadi12gmail.com/.t3/projects/agent-swarm-hackathon/.prod/swarm/cli.py", line 60, in cmd_resume
+    reason = asyncio.run(_runner(cfg, run_dir).run())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/danaasadi12gmail.com/.local/share/uv/python/cpython-3.12.16-macos-aarch64-none/lib/python3.12/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/Users/danaasadi12gmail.com/.local/share/uv/python/cpython-3.12.16-macos-aarch64-none/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/danaasadi12gmail.com/.local/share/uv/python/cpython-3.12.16-macos-aarch64-none/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/Users/danaasadi12gmail.com/.t3/projects/agent-swarm-hackathon/.prod/swarm/loop.py", line 78, in run
+    return await self._run()
+           ^^^^^^^^^^^^^^^^^
+  File "/Users/danaasadi12gmail.com/.t3/projects/agent-swarm-hackathon/.prod/swarm/loop.py", line 98, in _run
+    if await self.process_audits():
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/danaasadi12gmail.com/.t3/projects/agent-swarm-hackathon/.prod/swarm/loop.py", line 315, in process_audits
+    await asyncio.gather(*(one(a) for a in targets))
+  File "/Users/danaasadi12gmail.com/.t3/projects/agent-swarm-hackathon/.prod/swarm/loop.py", line 312, in one
+    verdicts[agent.id] = await self.auditor.audit(agent, trajectory(self.log, agent))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/danaasadi12gmail.com/.t3/projects/agent-swarm-hackathon/.prod/swarm/auditor.py", line 100, in audit
+    return await codex_json(self.swarm_home, self.model, self.instructions, record, VERDICT_SCHEMA,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/danaasadi12gmail.com/.t3/projects/agent-swarm-hackathon/.prod/swarm/backend.py", line 266, in codex_json
+    raise RuntimeError(f"codex call failed: {error}")
+RuntimeError: codex call failed: unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574e01eef6debbd-YYZ, request id: req_8bb3fb23c22f4f4aabb41a652ca2d973
+run ended: usage_limit
+run ended: completed

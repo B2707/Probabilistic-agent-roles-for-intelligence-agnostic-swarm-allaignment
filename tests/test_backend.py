@@ -2,6 +2,8 @@
 custom-provider config. Every other model stays on the swarm's ChatGPT login."""
 
 import asyncio
+import json
+import os
 from pathlib import Path
 
 import pytest
@@ -147,3 +149,39 @@ def test_runs_saved_before_the_setting_load_with_no_tier(tmp_path):
     saved.pop("service_tier", None)
     (tmp_path / "config.json").write_text(json.dumps(saved))
     assert load_run_config(tmp_path).service_tier == ""
+
+
+def test_claude_judge_call_is_isolated_and_returns_the_structured_answer(tmp_path, monkeypatch):
+    """A `claude/<model>` judge runs `claude -p` on the user's own login: no tools, MCP servers, settings or saved
+    session, the instructions as the whole system prompt, and the schema enforced by --json-schema."""
+    bin_ = tmp_path / "bin"
+    bin_.mkdir()
+    (bin_ / "claude").write_text(
+        f'#!/bin/bash\nprintf "%s\\n" "$@" > {tmp_path}/args\ncat > {tmp_path}/stdin\n'
+        'echo \'{"type":"result","is_error":false,"result":"","structured_output":{"ok":true}}\'\n')
+    (bin_ / "claude").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_}:{os.environ['PATH']}")
+    out = asyncio.run(B.claude_json("claude/claude-opus-5-5", "Judge this.", "Say ok.", {"type": "object"}, "xhigh",
+                                    tmp_path / "judge"))
+    assert out == {"ok": True}
+    args = (tmp_path / "args").read_text().splitlines()
+    pairs = {args[i]: args[i + 1] for i in range(len(args) - 1)}
+    assert pairs["--model"] == "claude-opus-5-5" and pairs["--effort"] == "xhigh"
+    assert pairs["--system-prompt"] == "Judge this." and json.loads(pairs["--json-schema"]) == {"type": "object"}
+    assert pairs["--tools"] == "" and pairs["--setting-sources"] == "" and pairs["--output-format"] == "json"
+    assert {"-p", "--strict-mcp-config", "--no-session-persistence"} <= set(args)
+    assert (tmp_path / "stdin").read_text() == "Say ok."
+
+
+def test_claude_judge_retries_an_error_answer_then_gives_up(tmp_path, monkeypatch):
+    bin_ = tmp_path / "bin"
+    bin_.mkdir()
+    (bin_ / "claude").write_text(
+        f'#!/bin/bash\necho x >> {tmp_path}/n\necho \'{{"type":"result","is_error":true,"result":"overloaded"}}\'\n')
+    (bin_ / "claude").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_}:{os.environ['PATH']}")
+    monkeypatch.setattr(B, "RETRY_DELAYS", (0, 0, 0))
+    with pytest.raises(RuntimeError, match="overloaded"):
+        asyncio.run(B.claude_json("claude/claude-opus-5-5", "J", "P", {"type": "object"}, "xhigh", tmp_path / "j",
+                                  retries=2))
+    assert len((tmp_path / "n").read_text().splitlines()) == 3

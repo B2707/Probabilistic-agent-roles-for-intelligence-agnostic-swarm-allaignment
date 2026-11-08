@@ -266,6 +266,49 @@ async def codex_json(swarm_home: str, model: str, instructions: str, prompt: str
     raise RuntimeError(f"codex call failed: {error}")
 
 
+CLAUDE_PREFIX = "claude/"
+
+
+def is_claude(model: str) -> bool:
+    return model.startswith(CLAUDE_PREFIX)
+
+
+async def claude_json(model: str, instructions: str, prompt: str, schema: dict, reasoning_effort: str,
+                      workdir: Path, timeout: float = 900, retries: int = 2) -> dict:
+    """One stateless Claude Code call (`claude -p` on the user's own login) that must answer with JSON matching
+    `schema` (judge). The instructions are the whole system prompt; no tools, MCP servers, settings or saved session,
+    and an empty working directory. Error answers (overload, rate limit) are retried after RETRY_DELAYS."""
+    workdir = Path(workdir).resolve()
+    workdir.mkdir(parents=True, exist_ok=True)
+    args = ["-p", "--model", model.removeprefix(CLAUDE_PREFIX), "--effort", reasoning_effort,
+            "--system-prompt", instructions, "--json-schema", json.dumps(schema), "--output-format", "json",
+            "--tools", "", "--strict-mcp-config", "--setting-sources", "", "--no-session-persistence",
+            "--exclude-dynamic-system-prompt-sections"]
+    error = None
+    for attempt in range(retries + 1):
+        if attempt:
+            await asyncio.sleep(RETRY_DELAYS[min(attempt - 1, len(RETRY_DELAYS) - 1)])
+        proc = await asyncio.create_subprocess_exec(
+            "claude", *args, cwd=workdir, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE)
+        try:
+            out, err = await asyncio.wait_for(proc.communicate(prompt.encode()), timeout)
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.wait()
+            error = "timeout"
+            continue
+        try:
+            answer = json.loads(out)
+        except ValueError:
+            error = err.decode(errors="replace").strip()[-300:] or f"claude exited {proc.returncode}"
+            continue
+        if not answer.get("is_error") and isinstance(answer.get("structured_output"), dict):
+            return answer["structured_output"]
+        error = str(answer.get("result") or answer.get("subtype") or "no structured answer")[:300]
+    raise RuntimeError(f"claude call failed: {error}")
+
+
 # scripted backend (tests) ----------------------------------------------
 
 class MCPClient:

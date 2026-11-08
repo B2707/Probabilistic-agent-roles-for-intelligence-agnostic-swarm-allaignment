@@ -87,8 +87,10 @@ run_arm() {
   retry_run "$R/$1-$ts" $rc
 }
 
+# LABEL_ARGS (e.g. "--judge-model claude/claude-opus-5-5 --judge-effort xhigh --concurrency 8") go to `swarm label`;
+# LABEL_PROD picks the checkout that labels (default PROD), so labeling can use newer code than the runs.
 label_run() {
-  (cd "$P" && uv run swarm label "$1" > "$1.label.log" 2>&1)
+  (cd "${LABEL_PROD:-$P}" && uv run swarm label "$1" ${LABEL_ARGS:-} > "$1.label.log" 2>&1)
   log "labeled $(basename "$1") exit $?"
 }
 

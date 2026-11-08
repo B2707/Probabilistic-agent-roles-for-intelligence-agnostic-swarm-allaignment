@@ -137,6 +137,8 @@ def test_no_passes():
 import asyncio
 import json
 
+import pytest
+
 from swarm.label import LABEL_SCHEMA, label_run
 from swarm.metrics import table
 
@@ -440,3 +442,33 @@ def test_model_table_has_a_row_per_model_of_each_mixed_run_and_skips_single_mode
     assert "| A100-mix | 1 | A | 4 | 1 | 2 | 3 | 8 | 1 |" in out and "| A100-mix | 1 | B | 3 | 1 | 2 | 3 | 6 | 0 |" in out
     assert "luna" not in out and "old-run" not in out
     assert model_table(rows[1:]) == ""
+
+
+def test_label_run_saves_each_batch_and_a_rerun_reuses_them(tmp_path):
+    """A label job that dies part way keeps what it paid for: a rerun with the same judge calls only the rest."""
+    msgs = [ev("message", 1, agent=f"a00{i}", role="worker", message_id=f"m{i}", kind="board", to=None, text="x")
+            for i in range(1, 4)]
+    (tmp_path / "events.jsonl").write_text("".join(json.dumps(m) + "\n" for m in msgs))
+    calls = []
+
+    def judge_failing_after(n):
+        async def judge(prompt):
+            calls.append(prompt)
+            if len(calls) > n:
+                raise RuntimeError("judge down")
+            ids = [line[1:line.index("]")] for line in prompt.splitlines() if line.startswith("[")]
+            return {"labels": [{"message_id": i, "label": "none", "target": "", "quote": ""} for i in ids]}
+        return judge
+
+    with pytest.raises(RuntimeError):
+        asyncio.run(label_run(tmp_path, judge_failing_after(0), batch_size=1, concurrency=1, judge_id="opus"))
+    assert not (tmp_path / "labels.jsonl").exists()
+    calls.clear()
+    asyncio.run(label_run(tmp_path, judge_failing_after(99), batch_size=1, concurrency=1, judge_id="opus"))
+    first = len(calls)
+    calls.clear()
+    (tmp_path / "labels.jsonl").unlink()
+    asyncio.run(label_run(tmp_path, judge_failing_after(99), batch_size=1, concurrency=1, judge_id="opus"))
+    assert first > 0 and calls == [], "a rerun with the same judge should reuse every saved batch"
+    asyncio.run(label_run(tmp_path, judge_failing_after(99), batch_size=1, concurrency=1, judge_id="terra"))
+    assert len(calls) == first, "another judge must not reuse opus's labels"

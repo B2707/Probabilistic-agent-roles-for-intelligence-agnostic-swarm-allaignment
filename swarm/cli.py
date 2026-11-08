@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 
 from .auditor import CodexAuditor, trajectory
-from .backend import CodexBackend, codex_env, codex_json, is_adaption
+from .backend import CodexBackend, claude_json, codex_env, codex_json, is_adaption, is_claude
 from .config import Config
 from .events import EventLog, read_events
 from .label import LABEL_SCHEMA, label_run
@@ -80,11 +80,20 @@ def cmd_label(args) -> int:
     instructions = cfg.fill(Path(args.judge_prompt).read_text()) if args.judge_prompt else cfg.prompt("judge")
     (run_dir / "labels.judge.md").write_text(instructions)  # the judge prompt these labels came from
 
-    async def judge(prompt: str) -> dict:
-        return await codex_json(cfg.swarm_home, cfg.judge_model, instructions, prompt, LABEL_SCHEMA,
-                                cfg.effort("judge"), run_dir / "judge", service_tier=cfg.service_tier)
+    model = args.judge_model or cfg.judge_model
+    effort = args.judge_effort or cfg.effort("judge")
 
-    path = asyncio.run(label_run(run_dir, judge, concurrency=cfg.concurrency))
+    async def judge(prompt: str) -> dict:
+        if is_claude(model):
+            return await claude_json(model, instructions, prompt, LABEL_SCHEMA, effort, run_dir / "judge")
+        return await codex_json(cfg.swarm_home, model, instructions, prompt, LABEL_SCHEMA, effort,
+                                run_dir / "judge", service_tier=cfg.service_tier)
+
+    meta = {"judge_model": model, "judge_effort": effort, "started": time.strftime("%Y-%m-%d %H:%M:%S")}
+    path = asyncio.run(label_run(run_dir, judge, concurrency=args.concurrency or cfg.concurrency,
+                                 judge_id=f"{model}@{effort}"))
+    meta["finished"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    (run_dir / "labels.meta.json").write_text(json.dumps(meta, indent=2) + "\n")  # which judge made labels.jsonl
     print(f"labels: {path}")
     return 0
 
@@ -247,6 +256,9 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("label", help="label offers and acceptances with the judge")
     s.add_argument("run_dir")
     s.add_argument("--judge-prompt", help="judge prompt file (default: the run's frozen copy)")
+    s.add_argument("--judge-model", help="judge model (default: the run's judge_model); claude/<model> runs Claude Code")
+    s.add_argument("--judge-effort", help="judge effort (default: the run's judge effort)")
+    s.add_argument("--concurrency", type=int, help="judge calls at once (default: the run's concurrency)")
     s.set_defaults(fn=cmd_label)
     s = sub.add_parser("metrics", help="metrics table for one or more runs")
     s.add_argument("run_dirs", nargs="+")

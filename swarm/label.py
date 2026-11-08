@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 from pathlib import Path
 from typing import Awaitable, Callable
@@ -53,7 +54,10 @@ def batch_prompt(msgs: list[dict], decisions: dict[str, str] | None = None) -> s
     return "\n".join(lines)
 
 
-async def label_run(run_dir: Path, judge: Judge, batch_size: int = 30, concurrency: int = 5) -> Path:
+async def label_run(run_dir: Path, judge: Judge, batch_size: int = 30, concurrency: int = 5,
+                    judge_id: str = "") -> Path:
+    """Label every message of a run. Each answered batch is saved to labels.partial.jsonl under a key made of
+    judge_id and the batch prompt, so a rerun with the same judge only asks for the batches still missing."""
     events = read_events(Path(run_dir) / "events.jsonl")
     msgs = [e for e in events if e["type"] == "message"]  # instigator messages included; metrics drop them
     decisions = {e["message_id"]: e["decision"] for e in events
@@ -64,14 +68,31 @@ async def label_run(run_dir: Path, judge: Judge, batch_size: int = 30, concurren
             batches.append(conv[max(0, i - 5):i + batch_size])  # 5 messages of overlap for context
     sem = asyncio.Semaphore(concurrency)
     labels: dict[str, dict] = {}
+    partial = Path(run_dir) / "labels.partial.jsonl"
+    saved: dict[str, list[dict]] = {}
+    if partial.exists():
+        for line in partial.read_text().splitlines():
+            try:
+                row = json.loads(line)
+            except ValueError:  # a line cut off by a kill
+                continue
+            saved[row["key"]] = row["labels"]
 
-    async def one(batch: list[dict]) -> None:
-        async with sem:
-            out = await judge(batch_prompt(batch, decisions))
-        for lab in out["labels"]:
+    async def one(batch: list[dict]) -> list[dict]:
+        prompt = batch_prompt(batch, decisions)
+        key = hashlib.sha256(f"{judge_id}\n{prompt}".encode()).hexdigest()
+        if key not in saved:
+            async with sem:
+                out = await judge(prompt)
+            saved[key] = out["labels"]
+            with open(partial, "a") as f:
+                f.write(json.dumps({"key": key, "judge": judge_id, "labels": out["labels"]}) + "\n")
+        return saved[key]
+
+    # batches in order, so with overlap the first batch that saw a message decides its label, as before
+    for out in await asyncio.gather(*(one(b) for b in batches)):
+        for lab in out:
             labels.setdefault(lab["message_id"], lab)
-
-    await asyncio.gather(*(one(b) for b in batches))
     path = Path(run_dir) / "labels.jsonl"
     with open(path, "w") as f:
         for m in msgs:

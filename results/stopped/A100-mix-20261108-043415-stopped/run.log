@@ -1,0 +1,5 @@
+PASS: worker model adaption/deepseek-v4-flash at effort high
+PASS: worker model adaption/gemma-4-31b-it at effort high
+PASS: auditor model adaption/glm-53-flash at effort max
+PASS: judge model adaption/glm-53-flash at effort max
+run dir: /Users/baderasadi/.t3/projects/agent-swarm-hackathon/runs/A100-mix-20261108-043415

@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 
 from .auditor import CodexAuditor, trajectory
-from .backend import CodexBackend, codex_env, codex_json
+from .backend import CodexBackend, codex_env, codex_json, is_adaption
 from .config import Config
 from .events import EventLog, read_events
 from .label import LABEL_SCHEMA, label_run
@@ -141,7 +141,8 @@ async def _resolve_efforts(cfg: Config, tmp: Path) -> bool:
 
 
 async def _check(cfg: Config) -> bool:
-    if not (Path(cfg.swarm_home) / ".codex" / "auth.json").exists():
+    on_chatgpt = [m for m in (cfg.worker_model, cfg.auditor_model, cfg.judge_model) if not is_adaption(m)]
+    if on_chatgpt and not (Path(cfg.swarm_home) / ".codex" / "auth.json").exists():
         print(f"FAIL: the swarm's Codex home ({cfg.swarm_home}) is not logged in. Run: swarm login")
         return False
     tmp = Path(tempfile.mkdtemp(prefix="swarm-check-"))

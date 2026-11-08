@@ -2,6 +2,8 @@
 
 CodexBackend runs each agent as a Codex session (`codex exec`, then
 `codex exec resume` every round) on the swarm's own Codex login.
+A model named `adaption/<id>` runs through the same Codex sessions on Adaption's
+Responses API instead, paid with Adaption credits (see `model_args`).
 ScriptedBackend runs a Python policy against the same tool server, for tests.
 """
 
@@ -51,6 +53,37 @@ CODEX_ISOLATION = [
 ]
 
 
+# Adaption serves open-weight models (DeepSeek, Gemma, Qwen, GLM) on an OpenAI-style Responses API,
+# so Codex reaches it as a custom model provider. The key comes from ADAPTION_API_KEY, else this file.
+ADAPTION_PREFIX = "adaption/"
+ADAPTION_KEY_FILE = Path.home() / ".config" / "adaption" / "api_key"
+ADAPTION_PROVIDER = [
+    "-c", "model_provider=adaption",
+    "-c", 'model_providers.adaption={name="Adaption",base_url="https://api.prod.adaptionlabs.ai/api/v1",'
+          'env_key="ADAPTION_API_KEY",wire_api="responses"}',
+]
+
+
+def is_adaption(model: str) -> bool:
+    return model.startswith(ADAPTION_PREFIX)
+
+
+def model_args(model: str) -> list[str]:
+    """`-m` for a model, plus the provider switch for `adaption/<id>`."""
+    if is_adaption(model):
+        return ["-m", model.removeprefix(ADAPTION_PREFIX), *ADAPTION_PROVIDER]
+    return ["-m", model]
+
+
+def adaption_key() -> str:
+    key = os.environ.get("ADAPTION_API_KEY", "").strip()
+    if not key and ADAPTION_KEY_FILE.exists():
+        key = ADAPTION_KEY_FILE.read_text().strip()
+    if not key:
+        raise RuntimeError(f"no Adaption key: set ADAPTION_API_KEY or write the key to {ADAPTION_KEY_FILE}")
+    return key
+
+
 class UsageLimit(Exception):
     pass
 
@@ -70,11 +103,14 @@ def toml_str(s: str) -> str:
     return json.dumps(s)  # JSON string literals are valid TOML basic strings
 
 
-def codex_env(swarm_home: str, token: str | None = None) -> dict:
-    env = {k: v for k, v in os.environ.items() if not k.startswith("CODEX_")}
+def codex_env(swarm_home: str, token: str | None = None, model: str = "") -> dict:
+    """Environment for a Codex subprocess. Only an `adaption/<id>` model gets the Adaption key."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith("CODEX_") and k != "ADAPTION_API_KEY"}
     env["HOME"] = swarm_home
     if token:
         env["SWARM_AGENT_TOKEN"] = token
+    if is_adaption(model):
+        env["ADAPTION_API_KEY"] = adaption_key()
     return env
 
 
@@ -183,7 +219,7 @@ class CodexBackend:
         args = ["exec"]
         if agent.session_id:
             args += ["resume", agent.session_id]
-        args += ["--json", "-m", model, *CODEX_ISOLATION,
+        args += ["--json", *model_args(model), *CODEX_ISOLATION,
                  "-c", f"model_reasoning_effort={toml_str(self.reasoning_effort)}",
                  "-c", f"developer_instructions={toml_str(instructions)}",
                  "-c", f"mcp_servers.swarm.url={toml_str(self.server_url)}",
@@ -191,7 +227,8 @@ class CodexBackend:
                  "-c", "mcp_servers.swarm.tool_timeout_sec=300",
                  "-c", 'mcp_servers.swarm.default_tools_approval_mode="approve"',
                  "-"]
-        res = await run_codex_retrying(args, prompt, codex_env(self.swarm_home, agent.token), cwd, self.timeout)
+        env = codex_env(self.swarm_home, agent.token, model)
+        res = await run_codex_retrying(args, prompt, env, cwd, self.timeout)
         if res.session_id is None:
             res.session_id = agent.session_id
         return res
@@ -204,13 +241,14 @@ async def codex_json(swarm_home: str, model: str, instructions: str, prompt: str
     workdir.mkdir(parents=True, exist_ok=True)
     schema_file = workdir / f"schema-{hashlib.sha256(json.dumps(schema, sort_keys=True).encode()).hexdigest()[:12]}.json"
     schema_file.write_text(json.dumps(schema))
-    args = ["exec", "--json", "--ephemeral", "-m", model, *CODEX_ISOLATION,
+    args = ["exec", "--json", "--ephemeral", *model_args(model), *CODEX_ISOLATION,
             "-c", f"model_reasoning_effort={toml_str(reasoning_effort)}",
             "-c", f"developer_instructions={toml_str(instructions)}",
             "--output-schema", str(schema_file), "-"]
+    env = codex_env(swarm_home, model=model)
     error = None
     for _ in range(retries + 1):
-        res = await run_codex_retrying(args, prompt, codex_env(swarm_home), workdir, timeout)
+        res = await run_codex_retrying(args, prompt, env, workdir, timeout)
         if res.error == "usage_limit":
             raise UsageLimit()
         if not res.error and res.messages:

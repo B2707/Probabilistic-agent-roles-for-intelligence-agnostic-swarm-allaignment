@@ -10,7 +10,8 @@
 #     run still in its queue's hands is never touched).
 # A resumed run that stops again holds its slot: arm_queue counts a run stopped in the last SLOT_HOLD (1200) seconds
 # as waiting, and WAIT is under that, so no queue starts a new run into its slot.
-# A run that is not live and did not stop on a usage limit (a crash) is logged once and left alone.
+# A run that is not live and did not stop on a usage limit (a crash) is logged once and left alone, and so is a run
+# whose resume failed to start (exit other than 0 or 3, such as 127 when `uv` is missing from PATH).
 # Each run gets at most MAX (default 30) resumes from this watcher. It never exits on its own; kill its PID.
 #
 # Usage: PROD=<checkout> nohup python3 scripts/detach.py /bin/bash runs/resume_watch.sh PREFIX... >> runs/queue.log 2>&1 < /dev/null &
@@ -38,6 +39,7 @@ while :; do
       d=${d%/}; name=$(basename "$d")
       case $name in *-stopped) continue ;; esac
       [ -f "$d/events.jsonl" ] || continue
+      [ -f "$d.watch-failed" ] && continue
       has_ended "$d" && continue
       is_live "$d" && continue
       if ! stopped_on_limit "$d"; then
@@ -53,7 +55,8 @@ while :; do
       fi
       n=$((n + 1)); echo "$n" > "$d.watch-resumes"
       log "$name stopped ${age}s ago and no queue resumed it; resume $n of $MAX"
-      ( cd "$P" && uv run swarm resume "$d" >> "$d.log" 2>&1; log "resumed $name exit $?" ) &
+      ( cd "$P" && uv run swarm resume "$d" >> "$d.log" 2>&1; rc=$?; log "resumed $name exit $rc"
+        if [ $rc -ne 0 ] && [ $rc -ne 3 ]; then echo $rc > "$d.watch-failed"; log "$name resume failed (exit $rc); leaving it"; fi ) &
     done
   done
   sleep "$POLL"

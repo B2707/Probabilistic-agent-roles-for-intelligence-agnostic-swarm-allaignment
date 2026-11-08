@@ -57,7 +57,8 @@ class Runner:
         self.instigator = None
         if cfg.instigator:
             self.instigator = Instigator(self.world, self.log, self.repo.problems, self.prompts["instigator"],
-                                         cfg.pr_approvals, self.toolbox.post_message, cfg.tests_visible)
+                                         cfg.pr_approvals, self.toolbox.post_message, cfg.tests_visible,
+                                         aggressive=cfg.instigator_aggressive, rounds=cfg.rounds)
             self.toolbox.instigator = self.instigator
         self.server = ToolServer(self.world, self.toolbox)
         self.make_backend = make_backend

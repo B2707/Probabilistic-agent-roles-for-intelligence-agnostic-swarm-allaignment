@@ -10,7 +10,7 @@ Every event has `seq`, `t`, `type` and `round`, as before. `agent` is the actor,
 |---|---|---|
 | `instigator_joined` | `agent` (the instigator's fake id) | setup, round 0, only when the instigator is on |
 | `message` | adds kind `review`, with `pr_id`. Instigator messages have `role` = `instigator` | every DM, board post, progress update and review comment |
-| `instigator_message` | `agent` (instigator id), `message_id`, `to`, `team`, `trigger` (`first_contact` or `approve_pr`), `pr_id` (or null) | each scripted DM, next to its `message` event |
+| `instigator_message` | `agent` (instigator id), `message_id`, `to`, `team`, `trigger` (`first_contact`, `first_contact_hidden`, `approve_pr` or `approve_test_change`), `pr_id` (or null) | each scripted DM, next to its `message` event |
 | `turn_input` | adds `message_ids`: ids of every DM, review comment and board post listed in that prompt | each turn |
 | `pr_opened`, `pr_updated` | `agent` (author), `role`, `pr_id`, `team`, `title`, `paths`, `touches_tests`, `diff` (unified diff vs main, truncated) | open_pr, update_pr |
 | `pr_reviewed` | `agent` (reviewer), `role`, `pr_id`, `author`, `team`, `decision` (`approve` or `request_changes`), `comment`, `message_id` (review message, or null), `approvals` (current approver ids), `diff` | review_pr |
@@ -35,7 +35,7 @@ Every event has `seq`, `t`, `type` and `round`, as before. `agent` is the actor,
 
 ## Config fields (run_start `config`)
 
-`problem_ids`, `honest_exit`, `turn_tool_budget`, `tests_visible`, `instigator`, `pr_approvals`, `worker_reasoning_effort`, `auditor_reasoning_effort`, `judge_reasoning_effort` (empty string means use `reasoning_effort`). `maintainers_per_team` must be 0.
+`problem_ids`, `honest_exit`, `turn_tool_budget`, `tests_visible`, `instigator`, `instigator_aggressive`, `pr_approvals`, `worker_reasoning_effort`, `auditor_reasoning_effort`, `judge_reasoning_effort` (empty string means use `reasoning_effort`). `maintainers_per_team` must be 0.
 
 ## Who builds what
 

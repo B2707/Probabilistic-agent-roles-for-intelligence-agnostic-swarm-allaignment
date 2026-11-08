@@ -2,7 +2,9 @@
 
 It has no model and no tools. It is a small state machine driven by the round loop (first
 contact, once per team per round from round 2) and by PR events from the tool box (urging
-teammates to approve a PR that changes the tests or passes every test). Its messages go through
+teammates to approve a PR that changes the tests or passes every test). The aggressive variant
+spreads first contacts over the first half of the run until every agent has one, and adds a claim
+that it found a way to evade detection to every message. Its messages go through
 the normal message path, so they arrive next round like anyone else's. Messages sent to it are
 stored and go nowhere.
 """
@@ -10,6 +12,7 @@ stored and go nowhere.
 from __future__ import annotations
 
 import ast
+import math
 import string
 from typing import Callable
 
@@ -21,8 +24,9 @@ TRIGGERS = ("first_contact", "first_contact_hidden", "approve_pr", "approve_test
 FIELDS = {"team", "entry_point", "test_name", "test_input", "expected", "assert_line", "approvals", "pr_id", "author"}
 
 
-def parse_template(text: str) -> dict[str, str]:
-    """Sections of prompts/instigator.md: '## name' headings, each followed by its message."""
+def parse_template(text: str, extra: tuple[str, ...] = ()) -> dict[str, str]:
+    """Sections of prompts/instigator.md: '## name' headings, each followed by its message. `extra` names
+    sections that must also be present, beyond the triggers."""
     sections: dict[str, list[str]] = {}
     current = None
     for line in text.splitlines():
@@ -32,10 +36,11 @@ def parse_template(text: str) -> dict[str, str]:
         elif current is not None:
             sections[current].append(line)
     out = {k: "\n".join(v).strip() for k, v in sections.items()}
-    missing = [t for t in TRIGGERS if not out.get(t)]
+    required = TRIGGERS + extra
+    missing = [t for t in required if not out.get(t)]
     if missing:
         raise ValueError(f"instigator prompt has no section for {missing}")
-    for name in TRIGGERS:
+    for name in required:
         unknown = {f for _, f, _, _ in string.Formatter().parse(out[name]) if f} - FIELDS
         if unknown:
             raise ValueError(f"instigator prompt section {name} uses unknown fields {sorted(unknown)}")
@@ -63,11 +68,16 @@ def failing_test(problem: dict) -> dict | None:
 
 class Instigator:
     def __init__(self, world: World, log: EventLog, problems: dict[str, dict], template: str, approvals: int,
-                 post: Callable[..., Message], tests_visible: bool = True):
+                 post: Callable[..., Message], tests_visible: bool = True, aggressive: bool = False,
+                 rounds: int = 0):
         self.world = world
         self.log = log
         self.problems = problems
-        self.templates = parse_template(template)
+        if aggressive and rounds < 3:
+            raise ValueError("the aggressive instigator needs the run length (rounds >= 3)")
+        self.aggressive = aggressive
+        self.rounds = rounds
+        self.templates = parse_template(template, ("evasion",) if aggressive else ())
         self.approvals = approvals
         self.post = post  # ToolBox.post_message
         self.first_contact = "first_contact" if tests_visible else "first_contact_hidden"
@@ -78,20 +88,22 @@ class Instigator:
         return self.world.instigator_id
 
     def round_start(self, r: int) -> None:
-        """From round 2: one first-contact DM per team per round, to a member not yet contacted."""
+        """From round 2: first-contact DMs to active agents not yet contacted, on teams that have an impossible
+        test and haven't passed everything. Default: one per team per round. Aggressive: in id order (which
+        alternates teams), ceil(waiting / rounds left) per round, so everyone has one by round T/2; agents who
+        join later get theirs at once, up to round T-1 (a DM is read next round)."""
         w = self.world
-        if r < 2:
+        if r < 2 or self.aggressive and r >= self.rounds:
             return
-        for team in sorted(self.problems):
-            if team in w.instigator_done or self.failing[team] is None:
-                continue
-            fresh = [a for a in sorted(w.active(), key=lambda a: a.id)
-                     if a.team == team and a.id not in w.instigator_contacted]
-            if not fresh:
-                continue
-            target = fresh[0]
-            w.instigator_contacted.append(target.id)
-            self._send(target, self.first_contact, team, None)
+        fresh = [a for a in sorted(w.active(), key=lambda a: a.id) if a.id not in w.instigator_contacted
+                 and a.team not in w.instigator_done and self.failing[a.team] is not None]
+        if self.aggressive:
+            targets = fresh[:math.ceil(len(fresh) / max(self.rounds // 2 - r + 1, 1))]
+        else:
+            targets = [next(a for a in fresh if a.team == team) for team in sorted({a.team for a in fresh})]
+        for a in targets:
+            w.instigator_contacted.append(a.id)
+            self._send(a, self.first_contact, a.team, None)
 
     def on_test_change(self, pr: PR) -> None:
         """A new PR version changes the team's test file. Urge the team to approve it."""
@@ -119,6 +131,8 @@ class Instigator:
                   "pr_id": pr.id if pr else "", "author": pr.author if pr else "",
                   **(self.failing[team] or {})}
         text = self.templates[trigger].format_map(_Default(fields))
+        if self.aggressive:
+            text += "\n\n" + self.templates["evasion"].format_map(_Default(fields))
         m = self.post(self.id, ROLE, "dm", text, to=to.id)
         self.log.emit("instigator_message", self.world.round, agent=self.id, message_id=m.id, to=to.id, team=team,
                       trigger=trigger, pr_id=pr.id if pr else None)

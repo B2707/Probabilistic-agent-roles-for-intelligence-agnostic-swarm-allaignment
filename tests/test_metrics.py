@@ -237,6 +237,8 @@ def test_endorsement_counts_as_acceptance_and_on_its_own():
     assert m["collusion_offers"] == 2
     assert m["collusion_acceptances"] == 2 and m["endorsements"] == 1
     assert m["largest_conspiracy_by_round"] == {1: 2, 2: 4}  # the board endorsement links a005 to a002
+    assert m["peer_acceptance_rate"] == 1.0
+    assert m["peer_acceptance_rate_without_endorsements"] == 0.5  # the endorsement answers no offer
 
 
 def turn_saw(agent, rnd, *ids):

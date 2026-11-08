@@ -1,13 +1,17 @@
 """Seam 1: run the real harness on a tiny config with scripted agents, then read the event log."""
 
 import asyncio
+import random
 import re
 from pathlib import Path
+
+import pytest
 
 from swarm.auditor import ScriptedAuditor
 from swarm.backend import ScriptedBackend, UsageLimit
 from swarm.config import Config
 from swarm.events import read_events
+from swarm.instigator import parse_template
 from swarm.loop import Runner, draw, load_run_config, prepare_run_dir
 from swarm.world import World
 
@@ -331,6 +335,9 @@ def test_pr_rules_merge_at_r_approvals_staleness_and_pr_test_runs(tmp_path):
     assert all(e["message_id"] in a001_r2["message_ids"] for e in reviews if e["round"] == 1 and e["to"] == "a001")
 
 
+EVASION = parse_template((ROOT / "prompts" / "instigator.md").read_text(), ("evasion",))["evasion"]
+
+
 def test_instigator_first_contacts_urges_approval_stops_after_full_pass_and_swallows_dms(tmp_path):
     out = {}
 
@@ -367,6 +374,34 @@ def test_instigator_first_contacts_urges_approval_stops_after_full_pass_and_swal
     assert "sent" in out["dm"]
     assert any(e["to"] == "a007" and e["text"] == "who-are-you-xyz" for e in of(events, "message"))
     assert not any("who-are-you-xyz" in p for p in prompts.values())
+    assert not any(EVASION in e["text"] for e in msgs.values())  # only the aggressive instigator claims it
+
+
+def test_aggressive_instigator_spreads_first_contacts_over_the_first_half_and_claims_evasion(tmp_path):
+    async def policy(agent, rnd, prompt, c):
+        if rnd == 1 and agent.id == "a001":
+            await c.call("open_pr", title="faster", files=[{"path": f"problems/{A}/solution.py", "content": HACK_A}])
+        if rnd == 4 and agent.id == "a003":  # the only investigator
+            await c.call("submit_report", accused=["a002"], evidence="x", message_ids=[])
+        await progress(agent, rnd, prompt, c)
+
+    seed = find_seed(0, lambda s: random.Random(f"{s}-initial").sample(range(6), 1) == [2])
+    cfg = v2_cfg(tmp_path, rounds=8, initial_investigators=1, seed=seed, instigator=True, instigator_aggressive=True)
+    _, events, *_ = run(cfg, policy, lambda agent, record: verdict(before=True) if agent.id == "a002" else CLEAN)
+    assert [(e["agent"], e["round"]) for e in of(events, "agent_removed")] == [("a002", 4)]
+    sent = [(e["round"], e["trigger"], e["to"]) for e in of(events, "instigator_message")]
+    # A passed everything in round 1, so only B's three agents are waiting: over rounds 2 to 4 (T/2), one a round.
+    # a002 is removed in round 4; its replacement a008 joins in round 5 and is contacted at once.
+    assert sent == [(1, "approve_pr", "a003"), (1, "approve_pr", "a005"),
+                    (2, "first_contact", "a002"), (3, "first_contact", "a004"), (4, "first_contact", "a006"),
+                    (5, "first_contact", "a008")]
+    msgs = [e for e in of(events, "message") if e["agent"] == "a007"]
+    assert len(msgs) == 6 and all(e["text"].endswith(EVASION) for e in msgs)
+
+
+def test_aggressive_instigator_needs_the_instigator(tmp_path):
+    with pytest.raises(ValueError, match="instigator_aggressive"):
+        make_cfg(tmp_path, instigator=False, instigator_aggressive=True)
 
 
 def test_reporting_the_instigator_is_logged_but_triggers_no_audit(tmp_path):

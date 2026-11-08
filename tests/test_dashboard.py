@@ -28,6 +28,7 @@ from dashboard.store import (
     norm_host,
     render,
     seed_of,
+    swarm_proc,
 )
 from swarm.metrics import compute
 
@@ -207,6 +208,30 @@ def test_names_groups_and_hosts():
     assert group_of("x-stopped", {"pr_approvals": 2}) == "stopped" and group_of("x", {}) == "v1"
     assert norm_host("Baders-MacBook-Pro.local") == norm_host("Bader’s MacBook Pro") == "badersmacbookpro"
     assert norm_host("baders-macbook-pro.tail9fc878.ts.net.") == "badersmacbookpro"
+
+
+def test_swarm_proc_counts_swarm_processes_not_the_shell_that_launched_them():
+    R = "/Users/d/.t3/projects/agent-swarm-hackathon/runs"
+    B, C = "B100-61-sol-20261108-034254", "C100-61-sol-20261108-044628"
+    py = "/Users/d/.t3/projects/agent-swarm-hackathon/.prod/.venv/bin/python /Users/d/.t3/projects/agent-swarm-hackathon/.prod/.venv/bin/swarm"
+    def hit(cmd):
+        verb, names = swarm_proc(cmd)
+        return verb, names & {B, C, "A100-61-sol-20261108-090000"}
+
+    assert hit(f"{py} resume {R}/{C}") == ("resume", {C})
+    assert hit(f"uv run swarm resume {R}/{C}") == ("resume", {C})
+    assert hit(f"uv run python scripts/detach.py uv run swarm resume {R}/{C}") == ("resume", {C})
+    assert hit(f"uv run swarm run --config /x/configs/A100-61-sol.toml --out {R}/A100-61-sol-20261108-090000") == (
+        "run", {"A100-61-sol-20261108-090000"})
+    assert hit(f"{py} label {R}/{B}/ --judge-model claude/claude-opus-5-5 --judge-effort xhigh") == ("label", {B})
+    # The 08:23 hand-resume one-liner: its bash stays alive as the parent of C100's resume and names both runs.
+    one_liner = (f"/bin/bash -lc cd ~/x && for r in {B} {C}; do d=$M/runs/$r; (cd $M/.prod && nohup uv run python "
+                 f"scripts/detach.py uv run swarm resume \"$d\" >> \"$d.log\" 2>&1 < /dev/null &); done")
+    assert swarm_proc(one_liner) is None
+    assert swarm_proc(f"-zsh -c uv run swarm resume {R}/{B}") is None
+    assert swarm_proc(f"sh -c uv run swarm label {R}/{B}") is None
+    assert swarm_proc("/bin/bash runs/arm_queue-mac4.sh") is None and swarm_proc("") is None
+    assert swarm_proc(f"{py} transcript {R}/{B} a001") is None
 
 
 def test_store_states_and_remote_snapshot(tmp_path):

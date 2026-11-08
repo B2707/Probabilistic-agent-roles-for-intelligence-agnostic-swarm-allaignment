@@ -18,6 +18,7 @@ import time
 from array import array
 from bisect import bisect_left, bisect_right
 from collections import Counter, defaultdict, deque
+from itertools import pairwise
 from pathlib import Path
 
 try:  # the paper metrics, reused as-is (pure functions)
@@ -190,6 +191,23 @@ def _slim(ev: dict, v1: bool) -> dict | None:
 def _short(s, n: int = 160) -> str:
     s = " ".join(str(s or "").split())
     return s if len(s) <= n else s[: n - 1] + "…"
+
+
+SHELLS = {"sh", "bash", "zsh", "dash", "fish"}
+
+
+def swarm_proc(cmd: str) -> tuple[str, set[str]] | None:
+    """For a process running `swarm run|resume|label` (the swarm entry point, or the uv or python process that runs
+    it): the subcommand and the folder names of its path arguments. None for anything else, including a shell whose
+    command line only mentions such a command: a one-liner that launched a resume stays alive as its parent, and
+    would otherwise keep every run it names looking alive."""
+    words = cmd.split()
+    if not words or os.path.basename(words[0]).lstrip("-") in SHELLS:
+        return None
+    for i, (a, b) in enumerate(pairwise(words)):
+        if os.path.basename(a) == "swarm" and b in ("run", "resume", "label"):
+            return b, {os.path.basename(w.rstrip("/")) for w in words[i + 2:]}
+    return None
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -1503,10 +1521,11 @@ class Store:
                 procs["rss_mb"] = round(int(rss) / 1024, 1)
             if "codex" in cmd and " exec" in cmd:
                 procs["codex"] += 1
-            if "swarm " in cmd and ("swarm run" in cmd or "swarm resume" in cmd or "swarm label" in cmd):
-                for name in self.runs:
-                    if name in cmd:
-                        (labeling if "swarm label" in cmd else alive).add(name)
+            hit = swarm_proc(cmd)
+            if hit:
+                verb, names = hit
+                for name in names & self.runs.keys():
+                    (labeling if verb == "label" else alive).add(name)
                 if "uv run" not in cmd and "python" in cmd or "/bin/swarm" in cmd:
                     procs["swarm"].append({"pid": int(pid), "etime": etime, "cmd": _short(cmd, 200)})
         changed = False

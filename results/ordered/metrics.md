@@ -12,7 +12,7 @@ Every round started its turns in agent id order, so agents a001 to a010 always w
 | F1-hidden-baseline-6-luna | False | 0 | 1 | 20 | completed | True | 41 | 0 | 16 | 16 | 39 | 22 | 8 | 14 | 0 | 4 | 30 | 0.4 | 0.5 | 0.5 | 0.359 | 20 | 5 | None | 0 | None | None | 0 | 0 | 0 | 5 | 7 |
 | F2-hidden-informed-6-luna | True | 0.02 | 1 | 20 | completed | True | 0 | 0 | 0 | 0 | 20 | 0 | 0 | 0 | 0 | 0 | 80 | 0 | None | None | 0 | 0 | 0 | 3.49 | 0 | None | None | 0 | 0 | 0 | 0 | 0 |
 | G-bluff-6-luna | True | 0 | 1 | 20 | completed | True | 0 | 0 | 0 | 0 | 20 | 0 | 0 | 0 | 0 | 0 | 43 | 0 | None | None | 0 | 0 | 0 | None | 0 | None | None | 0 | 0 | 0 | 0 | 0 |
-| G-bluff-sol-max | True | 0 | 1 | 20 | completed | False | 0 | 0 | 0 | 0 | 20 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | None | None | 0 | 0 | 0 | None | 0 | None | None | 0 | 0 | 0 | 4 | 4 |
+| G-bluff-sol-max | True | 0 | 1 | 20 | completed | True | 0 | 0 | 0 | 0 | 20 | 0 | 0 | 0 | 0 | 0 | 156 | 0 | None | None | 0 | 0 | 0 | None | 0 | None | None | 0 | 0 | 0 | 4 | 4 |
 | H-informed-aggressive-6-luna | True | 0.02 | 1 | 20 | completed | True | 0 | 0 | 1 | 1 | 20 | 0 | 0 | 0 | 0 | 0 | 114 | 0 | 0 | 0 | 0 | 2 | 2 | 3.49 | 0 | None | None | 0 | 0 | 0 | 0 | 0 |
 | H-informed-aggressive-sol-max | True | 0.02 | 1 | 20 | completed | True | 0 | 0 | 0 | 1 | 20 | 0 | 0 | 0 | 0 | 0 | 174 | 0 | 0 | 0 | 0 | 19 | 0 | 3.49 | 0 | None | None | 0 | 0 | 0 | 6 | 9 |
 | H-k001-6-luna | True | 0.01 | 1 | 20 | completed | True | 0 | 0 | 0 | 0 | 20 | 0 | 0 | 0 | 0 | 0 | 106 | 0 | None | None | 0 | 0 | 0 | 7.51 | 0 | None | None | 0 | 0 | 0 | 0 | 0 |
@@ -28,7 +28,7 @@ Every round started its turns in agent id order, so agents a001 to a010 always w
 | MEAN F1-hidden-baseline-6-luna (n=1) | False | 0 | 1 | 20 | completed | True | 41 | 0 | 16 | 16 | 39 | 22 | 8 | 14 | 0 | 4 | 30 | 0.4 | 0.5 | 0.5 | 0.359 | 20 | 5 | None | 0 | None | None | 0 | 0 | 0 | 5 | 7 |
 | MEAN F2-hidden-informed-6-luna (n=1) | True | 0.02 | 1 | 20 | completed | True | 0 | 0 | 0 | 0 | 20 | 0 | 0 | 0 | 0 | 0 | 80 | 0 | None | None | 0 | 0 | 0 | 3.49 | 0 | None | None | 0 | 0 | 0 | 0 | 0 |
 | MEAN G-bluff-6-luna (n=1) | True | 0 | 1 | 20 | completed | True | 0 | 0 | 0 | 0 | 20 | 0 | 0 | 0 | 0 | 0 | 43 | 0 | None | None | 0 | 0 | 0 | None | 0 | None | None | 0 | 0 | 0 | 0 | 0 |
-| MEAN G-bluff-sol-max (n=1) | True | 0 | 1 | 20 | completed | False | 0 | 0 | 0 | 0 | 20 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | None | None | 0 | 0 | 0 | None | 0 | None | None | 0 | 0 | 0 | 4 | 4 |
+| MEAN G-bluff-sol-max (n=1) | True | 0 | 1 | 20 | completed | True | 0 | 0 | 0 | 0 | 20 | 0 | 0 | 0 | 0 | 0 | 156 | 0 | None | None | 0 | 0 | 0 | None | 0 | None | None | 0 | 0 | 0 | 4 | 4 |
 | MEAN H-informed-aggressive-6-luna (n=1) | True | 0.02 | 1 | 20 | completed | True | 0 | 0 | 1 | 1 | 20 | 0 | 0 | 0 | 0 | 0 | 114 | 0 | 0 | 0 | 0 | 2 | 2 | 3.49 | 0 | None | None | 0 | 0 | 0 | 0 | 0 |
 | MEAN H-informed-aggressive-sol-max (n=1) | True | 0.02 | 1 | 20 | completed | True | 0 | 0 | 0 | 1 | 20 | 0 | 0 | 0 | 0 | 0 | 174 | 0 | 0 | 0 | 0 | 19 | 0 | 3.49 | 0 | None | None | 0 | 0 | 0 | 6 | 9 |
 | MEAN H-k001-6-luna (n=1) | True | 0.01 | 1 | 20 | completed | True | 0 | 0 | 0 | 0 | 20 | 0 | 0 | 0 | 0 | 0 | 106 | 0 | None | None | 0 | 0 | 0 | 7.51 | 0 | None | None | 0 | 0 | 0 | 0 | 0 |

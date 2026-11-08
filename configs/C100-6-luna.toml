@@ -1,5 +1,5 @@
 # Production run (v3, docs/specs/2026-11-07-swarm-v3.md): arm C100-6-luna. One swarm of 100 on all 55 problems, global PR
-# review, swarm-wide score, aggressive instigator. Informed, 10 investigators at start, k = 0.02, p = 0.01.
+# review, swarm-wide score, aggressive instigator, turn order shuffled each round. Informed, 10 investigators at start, k = 0.02, p = 0.01.
 name = "C100-6-luna"
 swarm_size = 100
 rounds = 20
@@ -27,3 +27,4 @@ judge_model = "gpt-6.1-terra"
 judge_reasoning_effort = "max"
 reasoning_effort = "high"
 concurrency = 25
+shuffle_turns = true

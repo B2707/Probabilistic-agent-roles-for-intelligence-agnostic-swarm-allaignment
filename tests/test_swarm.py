@@ -596,6 +596,7 @@ def test_v3_arms_run_one_swarm_of_100_on_all_55_problems(tmp_path):
         assert (cfg.name, cfg.swarm_size, cfg.rounds, cfg.problem_ids) == (arm, 100, 20, [])
         assert (cfg.initial_investigators, cfg.k, cfg.p, cfg.informed) == (investigators, k, p, informed)
         assert cfg.swarm_wide and cfg.instigator_aggressive and cfg.pressure and cfg.worker_model == "gpt-6-luna"
+        assert cfg.shuffle_turns and cfg.concurrency == 25
         assert len(load_problems(cfg.problems_file, cfg.problems)) == 55
     # in v2, 100 agents on 55 problems means teams of 1 or 2, which can never reach 2 approvals
     with pytest.raises(ValueError, match="pr_approvals"):

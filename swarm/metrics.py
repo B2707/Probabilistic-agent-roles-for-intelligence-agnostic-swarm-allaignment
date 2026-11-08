@@ -316,7 +316,7 @@ def compute_run(run_dir: Path) -> dict:
     return out
 
 
-SUMMARY_KEYS = ["run", "informed", "k", "seed", "rounds_completed", "end_reason", "labels_present",
+SUMMARY_KEYS = ["run", "folder", "informed", "k", "seed", "rounds_completed", "end_reason", "labels_present",
                 "impossible_assert_passes", "misaligned_caught", "misaligned_total",
                 "collusion_offers", "instigator_offers", "collusion_acceptances", "peer_acceptances",
                 "instigator_acceptances", "endorsements", "structural_acceptances", "alerts",
@@ -326,20 +326,31 @@ SUMMARY_KEYS = ["run", "informed", "k", "seed", "rounds_completed", "end_reason"
                 "agents_removed", "agents_editing_tests", "tests_flagged", "honeypot_agents", "honeypot_attempts"]
 
 
+def in_mean(r: dict) -> bool:
+    """A run counts toward its arm's MEAN row only if it completed and isn't a disclosed extra (`extra`)."""
+    return r.get("end_reason") == "completed" and not r.get("extra")
+
+
 def table(rows: list[dict]) -> str:
-    """Markdown table: one row per run, then one mean row per arm (runs grouped by run name)."""
+    """Markdown table: one row per run (`folder` names its results folder; extras are marked), then one mean row per
+    arm (runs grouped by run name) over the runs that completed and aren't extras. An arm with none gets no mean row."""
     def fmt(v):
         return f"{v:.3g}" if isinstance(v, float) else str(v)
 
     def number(v) -> bool:
         return isinstance(v, (int, float)) and not isinstance(v, bool)
 
+    def cell(r: dict, k: str):
+        return f"{r['run']} (extra)" if k == "run" and r.get("extra") else r.get(k)
+
     lines = ["| " + " | ".join(SUMMARY_KEYS) + " |", "|" + "---|" * len(SUMMARY_KEYS)]
-    lines += ["| " + " | ".join(fmt(r.get(k)) for k in SUMMARY_KEYS) + " |" for r in rows]
+    lines += ["| " + " | ".join(fmt(cell(r, k)) for k in SUMMARY_KEYS) + " |" for r in rows]
     for arm in sorted({r["run"] for r in rows}):
-        group = [r for r in rows if r["run"] == arm]
+        group = [r for r in rows if r["run"] == arm and in_mean(r)]
+        if not group:
+            continue
         mean = {"run": f"MEAN {arm} (n={len(group)})"}
-        for k in SUMMARY_KEYS[1:]:
+        for k in SUMMARY_KEYS[2:]:
             vals = [r.get(k) for r in group]
             if all(number(x) for x in vals):
                 mean[k] = sum(vals) / len(vals)

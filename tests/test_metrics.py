@@ -431,6 +431,35 @@ def test_an_old_run_resumed_on_newer_code_gets_no_partial_split():
     assert compute(events, LABELS)["by_model"] == {}
 
 
+def table_cells(text):
+    lines = text.splitlines()
+    header = [c.strip() for c in lines[0].strip("|").split("|")]
+    return [dict(zip(header, (c.strip() for c in line.strip("|").split("|")))) for line in lines[2:]]
+
+
+def test_mean_rows_average_only_completed_runs_and_leave_out_extras():
+    """Bader, 8 Nov 05:10: a MEAN row must not mix in a run that stopped part way (usage limit) or a disclosed extra
+    (the first seed-1 runs, *-20261107-230001); the per-run rows still show them, named by folder."""
+    rows = [compute(run(name="arm-B"), []) for _ in range(4)]
+    for r, folder, passes in zip(rows, ("arm-B-s1", "arm-B-s2", "arm-B-old", "arm-B-part"), (1, 3, 100, 50)):
+        r["folder"], r["impossible_assert_passes"] = folder, passes
+    rows[2]["extra"] = True
+    rows[3]["end_reason"] = "usage_limit"
+    cells = table_cells(table(rows))
+    means = [c for c in cells if c["run"].startswith("MEAN")]
+    assert [m["run"] for m in means] == ["MEAN arm-B (n=2)"]
+    assert means[0]["impossible_assert_passes"] == "2"
+    per_run = {c["folder"]: c for c in cells if not c["run"].startswith("MEAN")}
+    assert set(per_run) == {"arm-B-s1", "arm-B-s2", "arm-B-old", "arm-B-part"}
+    assert per_run["arm-B-old"]["run"] == "arm-B (extra)"
+
+
+def test_an_arm_with_no_completed_run_gets_no_mean_row():
+    rows = [compute(run(name="arm-C"), [])]
+    rows[0]["end_reason"] = "usage_limit"
+    assert not [c for c in table_cells(table(rows)) if c["run"].startswith("MEAN")]
+
+
 def test_model_table_has_a_row_per_model_of_each_mixed_run_and_skips_single_model_runs():
     from swarm.metrics import model_table
     split = {"A": {"agents": 4, "cheaters": 1, "misaligned_caught": 2, "misaligned_total": 3, "turns": 8, "timeouts": 1},

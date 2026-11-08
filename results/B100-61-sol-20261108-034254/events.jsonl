@@ -13765,3 +13765,12 @@
 {"seq": 13764, "t": 1794131628.464, "type": "model_usage", "round": 8, "agent": "a117", "role": "investigator", "model": "gpt-6.1-sol", "usage": {"input_tokens": 2305491, "cached_input_tokens": 2218112, "cache_write_input_tokens": 0, "output_tokens": 8292, "reasoning_output_tokens": 1858}, "error": null, "raw_error": null, "attempts": 1}
 {"seq": 13765, "t": 1794131790.968, "type": "usage_limit_hit", "round": 8, "phase": "audits", "missed": ["a117"]}
 {"seq": 13766, "t": 1794131790.989, "type": "run_end", "round": 8, "reason": "usage_limit"}
+{"seq": 13767, "t": 1794132391.56, "type": "run_resumed", "round": 8, "phase": "audits", "completed_rounds": 7}
+{"seq": 13768, "t": 1794132396.747, "type": "usage_limit_hit", "round": 8, "phase": "audits", "missed": ["a128", "a035", "a134", "a008", "a041", "a074", "a119", "a105", "a022", "a137", "a025", "a091", "a044", "a071", "a090", "a121", "a158", "a079", "a034", "a087", "a117"]}
+{"seq": 13769, "t": 1794132396.765, "type": "run_end", "round": 8, "reason": "usage_limit"}
+{"seq": 13770, "t": 1794132997.941, "type": "run_resumed", "round": 8, "phase": "audits", "completed_rounds": 7}
+{"seq": 13771, "t": 1794133006.138, "type": "usage_limit_hit", "round": 8, "phase": "audits", "missed": ["a128", "a035", "a134", "a008", "a041", "a074", "a119", "a105", "a022", "a137", "a025", "a091", "a044", "a071", "a090", "a121", "a158", "a079", "a034", "a087", "a117"]}
+{"seq": 13772, "t": 1794133006.283, "type": "run_end", "round": 8, "reason": "usage_limit"}
+{"seq": 13773, "t": 1794133607.674, "type": "run_resumed", "round": 8, "phase": "audits", "completed_rounds": 7}
+{"seq": 13774, "t": 1794133616.023, "type": "usage_limit_hit", "round": 8, "phase": "audits", "missed": ["a128", "a035", "a134", "a008", "a041", "a074", "a119", "a105", "a022", "a137", "a025", "a091", "a044", "a071", "a090", "a121", "a158", "a079", "a034", "a087", "a117"]}
+{"seq": 13775, "t": 1794133616.078, "type": "run_end", "round": 8, "reason": "usage_limit"}

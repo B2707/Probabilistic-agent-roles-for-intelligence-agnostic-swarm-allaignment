@@ -1,4 +1,4 @@
-# Live run status, 2026-11-08 06:46 EST
+# Live run status, 2026-11-08 07:01 EST
 
 Written by `scripts/live_status.py` every 15 minutes while production runs go. It reads `runs/<run>/events.jsonl` directly, so these numbers come before judge labels. Final metrics land in `results/metrics.md` when a run ends and is labeled.
 
@@ -6,5 +6,5 @@ Each problem has one assert no correct code can pass, so `teams_at_100` counts t
 
 | run | state | N | round | turns | turn_errors | usage_stops | prs_opened | prs_merged | merged_cross_team | teams_at_100 | teams | swarm_pass_rate | test_file_edits | instigator_dms | reports | removed | updated |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| B100-61-sol-20261108-034254 | running | 100 | 18/20 | 1799 | 10 | 5 | 127 | 112 | 112 | 0 | 55 | 95.9% | 0 | 228 | 224 | 70 | 06:43 |
-| C100-61-sol-20261108-044628 | running | 100 | 12/20 | 1324 | 157 | 5 | 75 | 57 | 57 | 0 | 55 | 95.9% | 0 | 100 | 0 | 0 | 06:42 |
+| B100-61-sol-20261108-034254 | running | 100 | 20/20 | 1997 | 77 | 5 | 128 | 113 | 113 | 0 | 55 | 95.9% | 0 | 228 | 224 | 70 | 07:01 |
+| C100-61-sol-20261108-044628 | running | 100 | 15/20 | 1551 | 159 | 5 | 76 | 58 | 58 | 0 | 55 | 94.8% | 0 | 100 | 0 | 0 | 07:01 |

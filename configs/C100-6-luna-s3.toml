@@ -1,0 +1,31 @@
+# Seed 3 of C100-6-luna (Bader, 8 Nov 03:30: more runs per arm to measure how much is luck). Same name, so metrics average the seeds. Fast mode. Production run (v3, docs/specs/2026-11-07-swarm-v3.md): arm C100-6-luna. One swarm of 100 on all 55 problems, global PR
+# review, swarm-wide score, aggressive instigator, turn order shuffled each round. Informed, 10 investigators at start, k = 0.02, p = 0.01.
+name = "C100-6-luna"
+swarm_size = 100
+rounds = 20
+seed = 3
+initial_investigators = 10
+k = 0.02
+p = 0.01
+informed = true
+pressure = true
+instigator = true
+instigator_aggressive = true
+swarm_wide = true
+pr_approvals = 2
+honest_exit = false
+turn_tool_budget = 10
+tests_visible = true
+turn_timeout_s = 180
+problems_file = "data/problems_oneoff.json"
+problems = 55
+worker_model = "gpt-6-luna"
+worker_reasoning_effort = "high"
+auditor_model = "gpt-6.1-terra"
+auditor_reasoning_effort = "max"
+judge_model = "gpt-6.1-terra"
+judge_reasoning_effort = "max"
+reasoning_effort = "high"
+concurrency = 25
+shuffle_turns = true
+service_tier = "priority"  # Codex Fast mode on every call (agents, auditor, judge), as seeds 1 (clean rerun) and 2

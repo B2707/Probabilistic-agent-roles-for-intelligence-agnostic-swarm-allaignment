@@ -136,3 +136,35 @@ def test_slots_start_at_once_while_the_machine_is_under_the_cap(tree):
         assert started(tree, within=3), "an arm waited although one of two slots was free"
     finally:
         stop(q, busy)
+
+
+def test_two_slot_queues_never_start_into_the_same_free_slot(tree):
+    """Each started arm looks live (a fake `swarm run` process), so with SLOTS=1 only one of two queues may start."""
+    (tree / "bin" / "uv").write_text(
+        f'#!/bin/bash\necho "$*" >> {tree}/uv.calls\n'
+        'if [[ "$*" == *"swarm run"* ]]; then /bin/bash -c "exec -a \\"uv $*\\" sleep 30" & fi\n')
+    env = {**os.environ, "PATH": f"{tree / 'bin'}:{os.environ['PATH']}", "PROD": str(tree / "prod"), "SLOTS": "1",
+           "SLOT_POLL": "0.2", "SLOT_SETTLE": "0.5", "RESUME": "0"}
+    (tree / "prod").mkdir(exist_ok=True)
+    qs = [subprocess.Popen(["/bin/bash", str(tree / "main" / "runs" / "arm_queue.sh")],
+                           env={**env, "ARM_GROUPS": arm}, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+          for arm in ("a-arm", "b-arm")]
+    try:
+        time.sleep(3)
+        assert len(arms_started(tree)) == 1, arms_started(tree)
+    finally:
+        stop(*qs)
+        subprocess.run(["pkill", "-f", f"--out {tree}"], check=False)
+
+
+def test_a_slot_lock_left_by_a_dead_queue_is_broken(tree):
+    dead = subprocess.Popen(["true"])
+    dead.wait()
+    lock = tree / "main" / "runs" / ".slot-lock"
+    lock.mkdir()
+    (lock / "pid").write_text(str(dead.pid))
+    q = start_slots(tree, 3, "b-arm")
+    try:
+        assert started(tree, within=3), "a stale lock blocked the queue"
+    finally:
+        stop(q)

@@ -20,7 +20,8 @@
 # AFTER_POLL seconds.
 # SLOTS=n starts a group's arms one at a time, in the order given, each once fewer than n runs under runs/ are live on
 # this machine (from any queue), so the machine never runs more than n at once. It checks every SLOT_POLL seconds and
-# waits SLOT_SETTLE seconds after each start so the new run is counted. Without SLOTS a group starts all at once.
+# waits SLOT_SETTLE seconds after each start so the new run is counted. Queues using SLOTS take turns through a lock
+# (runs/.slot-lock), so two of them never fill the same free slot. Without SLOTS a group starts all at once.
 set -u
 M=$(cd "$(dirname "$0")/.." && pwd)
 P=${PROD:-$M/.prod}
@@ -35,6 +36,17 @@ has_ended() { grep -q '"type": "run_end", "round": [0-9]*, "reason": "completed"
 is_live() { pgrep -f -- "$1" >/dev/null; }
 # Distinct runs under $R with a live `swarm run` or `swarm resume` process (uv and its python child count once).
 live_runs() { ps -axo command= | grep -E 'swarm (run|resume) ' | grep -v grep | grep -oE "$R/[^ /]+" | sort -u | wc -l | tr -d ' '; }
+# The slot lock (a directory under runs/) makes two SLOTS queues take turns, so they never start into the same free
+# slot. A lock whose queue has died is broken.
+slot_lock() {
+  until mkdir "$R/.slot-lock" 2>/dev/null; do
+    local holder; holder=$(cat "$R/.slot-lock/pid" 2>/dev/null)
+    if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then rm -rf "$R/.slot-lock"; continue; fi
+    sleep "${SLOT_POLL:-60}"
+  done
+  echo $$ > "$R/.slot-lock/pid"
+}
+slot_unlock() { rm -rf "$R/.slot-lock"; }
 
 resume_run() {
   (cd "$P" && uv run swarm resume "$1" >> "$1.log" 2>&1)
@@ -91,11 +103,12 @@ for group in ${GROUPS_[@]+"${GROUPS_[@]}"}; do
   pids=()
   for arm in $group; do
     if [ -n "${SLOTS:-}" ]; then
+      slot_lock
       until [ "$(live_runs)" -lt "$SLOTS" ]; do sleep "${SLOT_POLL:-60}"; done
       log "slot free ($(live_runs) of $SLOTS runs live): starting $arm"
     fi
     run_arm "$arm" & pids+=($!)
-    [ -z "${SLOTS:-}" ] || sleep "${SLOT_SETTLE:-60}"
+    if [ -n "${SLOTS:-}" ]; then sleep "${SLOT_SETTLE:-60}"; slot_unlock; fi
   done
   rc=0
   for p in ${pids[@]+"${pids[@]}"}; do wait "$p" || rc=1; done

@@ -213,7 +213,7 @@ def cmd_reaudit(args) -> int:
     cfg = load_run_config(run_dir)
     auditor = CodexAuditor(cfg.fill(Path(setup.prompt).read_text()), setup.model, cfg.swarm_home, run_dir / "audit",
                            setup.effort, cfg.service_tier)
-    out, failed = asyncio.run(reaudit(run_dir, setup, auditor, cfg.concurrency))
+    out, failed = asyncio.run(reaudit(run_dir, setup, auditor, args.concurrency or cfg.concurrency))
     print(f"reaudit: {out}")
     if failed:
         for aid, err in sorted(failed.items()):
@@ -270,6 +270,7 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--model", help="auditor model (default: the run's auditor_model)")
     s.add_argument("--effort", help="reasoning effort (default: the run's auditor effort)")
     s.add_argument("--votes", type=int, default=1, help="audits per agent; the verdict is their majority")
+    s.add_argument("--concurrency", type=int, help="audits at once (default: the run's concurrency)")
     s.set_defaults(fn=cmd_reaudit)
     s = sub.add_parser("auditor-eval", help="false positives and negatives of reaudit files vs a truth file")
     s.add_argument("reaudit_files", nargs="+")

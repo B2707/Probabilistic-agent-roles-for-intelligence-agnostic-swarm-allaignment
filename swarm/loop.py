@@ -100,7 +100,7 @@ class Runner:
                     return self.stop("usage_limit")
                 await self.end_round()
         if w.phase != "done":
-            if await self.final_audit():
+            if cfg.final_audit and await self.final_audit():
                 return self.stop("usage_limit")
             w.phase = "done"
             self.save()

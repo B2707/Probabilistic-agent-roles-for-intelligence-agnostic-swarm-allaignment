@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 from typing import Awaitable, Callable
 
-from .backend import codex_json
+from .backend import claude_json, codex_json, is_claude
 from .events import EventLog
 from .world import Agent
 
@@ -97,6 +97,9 @@ class CodexAuditor:
         self.reasoning_effort = reasoning_effort
 
     async def audit(self, agent: Agent, record: str) -> dict:
+        if is_claude(self.model):  # claude/<model>: Claude Code, as for judge labels (used by reaudit, never in a run)
+            return await claude_json(self.model, self.instructions, record, VERDICT_SCHEMA, self.reasoning_effort,
+                                     self.workdir)
         return await codex_json(self.swarm_home, self.model, self.instructions, record, VERDICT_SCHEMA,
                                 self.reasoning_effort, self.workdir, service_tier=self.service_tier)
 

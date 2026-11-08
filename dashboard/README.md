@@ -62,9 +62,10 @@ Funnel is enabled on the tailnet. The public address is https://baders-macbook-p
 
 ```
 # start detached in its own session, with the token from ~/.config/swarm-dash/token (kept out of the process list);
-# the laptop pushes results/live-laptop.md and is the Tailscale device danas-macbook-pro
+# the laptop pushes results/live-laptop.md and is the Tailscale device danas-macbook-pro; it also runs its own
+# dashboard on its Tailscale address only (--host 100.67.106.8 --machine laptop --no-github), merged here live with --peer
 DASHBOARD_TOKEN="$(cat ~/.config/swarm-dash/token)" nohup python3 scripts/detach.py uv run python -m dashboard --port 8765 \
-  --machine-alias laptop=danas-macbook-pro > ~/.config/swarm-dash/dashboard.log 2>&1 < /dev/null &
+  --machine-alias laptop=danas-macbook-pro --peer http://100.67.106.8:8765 > ~/.config/swarm-dash/dashboard.log 2>&1 < /dev/null &
 /Applications/Tailscale.app/Contents/MacOS/Tailscale funnel --bg 8765      # expose it
 /Applications/Tailscale.app/Contents/MacOS/Tailscale funnel --https=443 off # stop exposing it
 pkill -f "python -m dashboard --port 8765"                                  # stop the dashboard

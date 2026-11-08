@@ -20,7 +20,8 @@
 # AFTER_POLL seconds.
 # SLOTS=n starts a group's arms one at a time, in the order given, each once fewer than n tasks are live on this
 # machine (from any queue), so it never runs more than n at once. A task is a run (going, or waiting to resume after
-# a usage stop) or a label job; label jobs also start one at a time, each in a free slot. It checks every SLOT_POLL seconds and
+# a usage stop) or a label job; label jobs also start one at a time, each in a free slot. RUN_SLOTS=m also caps
+# runs alone (default SLOTS), so label jobs, which use no ChatGPT account, can take the slots runs may not. It checks every SLOT_POLL seconds and
 # waits SLOT_SETTLE seconds after each start so the new run is counted. Queues using SLOTS take turns through a lock
 # (runs/.slot-lock), so two of them never fill the same free slot. Without SLOTS a group starts all at once.
 set -u
@@ -50,6 +51,11 @@ waiting_runs() {
 }
 live_runs() {
   { ps -axo command= | grep -E 'swarm (run|resume|label) ' | grep -v grep | grep -oE "$R/[^ /]+"; waiting_runs; } |
+    sort -u | wc -l | tr -d ' '
+}
+# Runs alone (going or waiting to resume), for RUN_SLOTS.
+run_count() {
+  { ps -axo command= | grep -E 'swarm (run|resume) ' | grep -v grep | grep -oE "$R/[^ /]+"; waiting_runs; } |
     sort -u | wc -l | tr -d ' '
 }
 # The slot lock (a directory under runs/) makes two SLOTS queues take turns, so they never start into the same free
@@ -122,8 +128,10 @@ for group in ${GROUPS_[@]+"${GROUPS_[@]}"}; do
   for arm in $group; do
     if [ -n "${SLOTS:-}" ]; then
       slot_lock
-      until [ "$(live_runs)" -lt "$SLOTS" ]; do sleep "${SLOT_POLL:-60}"; done
-      log "slot free ($(live_runs) of $SLOTS runs live): starting $arm"
+      until [ "$(live_runs)" -lt "$SLOTS" ] && [ "$(run_count)" -lt "${RUN_SLOTS:-$SLOTS}" ]; do
+        sleep "${SLOT_POLL:-60}"
+      done
+      log "slot free ($(live_runs) of $SLOTS tasks, $(run_count) of ${RUN_SLOTS:-$SLOTS} runs): starting $arm"
     fi
     run_arm "$arm" & pids+=($!)
     if [ -n "${SLOTS:-}" ]; then sleep "${SLOT_SETTLE:-60}"; slot_unlock; fi

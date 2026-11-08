@@ -218,3 +218,23 @@ def test_labeling_takes_a_slot_and_counts_as_a_task(tree):
         if busy.poll() is None:
             stop(busy)
         subprocess.run(["pkill", "-f", f"swarm label {tree}"], check=False)
+
+
+def test_run_slots_cap_runs_while_a_label_job_may_still_take_a_task_slot(tree):
+    """SLOTS caps tasks (runs and label jobs), RUN_SLOTS caps runs alone (ChatGPT load per account)."""
+    busy = fake_live_run(tree, "busy-run")
+    time.sleep(0.3)
+    env = {**os.environ, "PATH": f"{tree / 'bin'}:{os.environ['PATH']}", "PROD": str(tree / "prod"),
+           "ARM_GROUPS": "b-arm", "SLOTS": "3", "RUN_SLOTS": "1", "SLOT_POLL": "0.2", "SLOT_SETTLE": "0.2",
+           "RESUME": "0"}
+    (tree / "prod").mkdir(exist_ok=True)
+    q = subprocess.Popen(["/bin/bash", str(tree / "main" / "runs" / "arm_queue.sh")], env=env,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    try:
+        assert not started(tree, within=1.5), "a second run started although RUN_SLOTS is 1"
+        stop(busy)
+        assert started(tree, within=3)
+    finally:
+        stop(q)
+        if busy.poll() is None:
+            stop(busy)

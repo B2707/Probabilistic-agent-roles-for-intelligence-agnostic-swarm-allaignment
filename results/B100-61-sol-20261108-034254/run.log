@@ -51,3 +51,4 @@ Traceback (most recent call last):
   File "/Users/danaasadi12gmail.com/.t3/projects/agent-swarm-hackathon/.prod/swarm/backend.py", line 266, in codex_json
     raise RuntimeError(f"codex call failed: {error}")
 RuntimeError: codex call failed: unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de8eeb63abcd-YYZ, request id: req_437d59e836e24394b7238288b52e1bde
+run ended: completed

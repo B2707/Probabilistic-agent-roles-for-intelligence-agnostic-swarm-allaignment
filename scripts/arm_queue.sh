@@ -10,7 +10,7 @@
 # A run that stops on a usage limit (exit 3) is resumed after RETRY_WAIT seconds, up to RETRIES times. A run that still
 # doesn't complete is logged and left for `uv run swarm resume runs/<run>`; the queue goes on and labels what ended.
 #
-# Usage, from anywhere:  [ARM_GROUPS="armA armB armC;armD"] [PROD=<checkout>] scripts/arm_queue.sh [PID...] >> runs/queue.log 2>&1
+# Usage, from anywhere:  [ARM_GROUPS="armA armB armC;armD"] [PROD=<checkout>] [SLOTS=n] scripts/arm_queue.sh [PID...] >> runs/queue.log 2>&1
 # Start it with scripts/detach.py so it survives the agent session that launched it, and run a copy (runs/arm_queue.sh)
 # so a later edit or `git pull` never rewrites the file bash is reading. No ARM_GROUPS means no new runs.
 # PROD picks the pinned checkout that runs `swarm` (default .prod/), so a second queue can run newer code next to it.
@@ -18,6 +18,9 @@
 # AFTER_RUNS="run-a run-b" (names under runs/) holds the groups back until those runs have completed, or until every
 # PID given (if any) has exited, so new runs never share the machine with the ones still going. It checks every
 # AFTER_POLL seconds.
+# SLOTS=n starts a group's arms one at a time, in the order given, each once fewer than n runs under runs/ are live on
+# this machine (from any queue), so the machine never runs more than n at once. It checks every SLOT_POLL seconds and
+# waits SLOT_SETTLE seconds after each start so the new run is counted. Without SLOTS a group starts all at once.
 set -u
 M=$(cd "$(dirname "$0")/.." && pwd)
 P=${PROD:-$M/.prod}
@@ -30,6 +33,8 @@ publish() { (cd "$M" && uv run python scripts/publish_results.py --push) 2>&1 | 
 is_v2() { grep -q '"pr_approvals"' "$1/config.json" 2>/dev/null; }
 has_ended() { grep -q '"type": "run_end", "round": [0-9]*, "reason": "completed"' "$1/events.jsonl" 2>/dev/null; }
 is_live() { pgrep -f -- "$1" >/dev/null; }
+# Distinct runs under $R with a live `swarm run` or `swarm resume` process (uv and its python child count once).
+live_runs() { ps -axo command= | grep -E 'swarm (run|resume) ' | grep -v grep | grep -oE "$R/[^ /]+" | sort -u | wc -l | tr -d ' '; }
 
 resume_run() {
   (cd "$P" && uv run swarm resume "$1" >> "$1.log" 2>&1)
@@ -84,7 +89,14 @@ fi
 
 for group in ${GROUPS_[@]+"${GROUPS_[@]}"}; do
   pids=()
-  for arm in $group; do run_arm "$arm" & pids+=($!); done
+  for arm in $group; do
+    if [ -n "${SLOTS:-}" ]; then
+      until [ "$(live_runs)" -lt "$SLOTS" ]; do sleep "${SLOT_POLL:-60}"; done
+      log "slot free ($(live_runs) of $SLOTS runs live): starting $arm"
+    fi
+    run_arm "$arm" & pids+=($!)
+    [ -z "${SLOTS:-}" ] || sleep "${SLOT_SETTLE:-60}"
+  done
   rc=0
   for p in ${pids[@]+"${pids[@]}"}; do wait "$p" || rc=1; done
   publish

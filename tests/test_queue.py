@@ -88,3 +88,51 @@ def test_with_no_pids_groups_wait_for_the_named_run_alone(tree):
         assert started(tree)
     finally:
         stop(q)
+
+
+def start_slots(tree, slots, groups):
+    env = {**os.environ, "PATH": f"{tree / 'bin'}:{os.environ['PATH']}", "PROD": str(tree / "prod"),
+           "ARM_GROUPS": groups, "SLOTS": str(slots), "SLOT_POLL": "0.2", "SLOT_SETTLE": "0.2", "RESUME": "0"}
+    (tree / "prod").mkdir(exist_ok=True)
+    with open(tree / "queue.log", "w") as log:
+        return subprocess.Popen(["/bin/bash", str(tree / "main" / "runs" / "arm_queue.sh")],
+                                env=env, stdout=log, stderr=subprocess.STDOUT)
+
+
+def fake_live_run(tree, name):
+    """A process that looks like a live run of this tree to `ps` (what the queue counts)."""
+    out = tree / "main" / "runs" / name
+    return subprocess.Popen(["/bin/bash", "-c", f'exec -a "uv run swarm run --config c.toml --out {out}" sleep 60'])
+
+
+def arms_started(tree):
+    calls = tree / "uv.calls"
+    lines = calls.read_text().splitlines() if calls.exists() else []
+    return [l.split("/configs/")[1].split(".toml")[0] for l in lines if "swarm run --config" in l]
+
+
+def test_slots_hold_arms_until_the_machine_has_a_free_slot_and_start_them_in_order(tree):
+    busy = fake_live_run(tree, "busy-run")
+    time.sleep(0.3)
+    q = start_slots(tree, 1, "b-arm a-arm")
+    try:
+        assert not started(tree, within=1.5), "an arm started while the only slot was taken"
+        stop(busy)
+        deadline = time.monotonic() + 5
+        while len(arms_started(tree)) < 2 and time.monotonic() < deadline:
+            time.sleep(0.1)
+        assert arms_started(tree) == ["b-arm", "a-arm"]
+    finally:
+        stop(q)
+        if busy.poll() is None:
+            stop(busy)
+
+
+def test_slots_start_at_once_while_the_machine_is_under_the_cap(tree):
+    busy = fake_live_run(tree, "busy-run")
+    time.sleep(0.3)
+    q = start_slots(tree, 2, "b-arm")
+    try:
+        assert started(tree, within=3), "an arm waited although one of two slots was free"
+    finally:
+        stop(q, busy)

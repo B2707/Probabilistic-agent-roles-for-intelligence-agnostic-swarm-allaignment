@@ -6,8 +6,9 @@
 # runs/ whose name starts with one of the given prefixes (dirs ending in -stopped are skipped), and resumes a run when
 #   - it has not completed,
 #   - no process for it is alive (no `swarm run` or `swarm resume`), and
-#   - its last event is a usage-limit stop at least WAIT seconds old (default 690: a queue resumes after 600, so a
-#     run still in its queue's hands is never touched).
+#   - its last event is a usage-limit stop at least WAIT seconds old (default 150: a queue resumes after 60 s, or after
+#     about 70 s when fast_resume.sh cuts an older queue's 600 s wait, so a run still in its queue's hands is never
+#     touched; run fast_resume.sh next to any queue started before RETRY_WAIT defaulted to 60).
 # A resumed run that stops again holds its slot: arm_queue counts a run stopped in the last SLOT_HOLD (1200) seconds
 # as waiting, and WAIT is under that, so no queue starts a new run into its slot.
 # A run that is not live and did not stop on a usage limit (a crash) is logged once and left alone, and so is a run
@@ -20,7 +21,7 @@ set -u
 M=$(cd "$(dirname "$0")/.." && pwd)
 P=${PROD:-$M/.prod}
 R=$M/runs
-WAIT=${WAIT:-690}
+WAIT=${WAIT:-150}
 POLL=${POLL:-60}
 MAX=${MAX:-30}
 export PYTHONUNBUFFERED=1

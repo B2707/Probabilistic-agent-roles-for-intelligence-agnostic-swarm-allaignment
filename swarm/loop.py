@@ -47,6 +47,7 @@ class Runner:
         self.cfg = cfg
         self.run_dir = Path(run_dir)
         self.log = EventLog(self.run_dir / "events.jsonl")
+        self.usage_error: str | None = None  # Codex's text for the turn that hit a usage limit this phase
         self.world_path = self.run_dir / "world.json"
         self.world = World.load(self.world_path) if self.world_path.exists() else World()
         self.problems = load_problems(cfg.problems_file, cfg.problems, cfg.problem_ids)
@@ -187,10 +188,11 @@ class Runner:
         todo = [a for a in sorted(w.active(), key=lambda a: a.id) if a.id not in w.turns_done]
         if self.cfg.shuffle_turns:  # with concurrency < N, id order would always put the same agents first
             random.Random(f"{self.cfg.seed}-{w.round}-order").shuffle(todo)
+        self.usage_error = None
         await asyncio.gather(*(one(a) for a in todo))
         if stop.is_set():
             missed = [a.id for a in w.active() if a.id not in w.turns_done]
-            self.log.emit("usage_limit_hit", w.round, phase="turns", missed=missed)
+            self.log.emit("usage_limit_hit", w.round, phase="turns", missed=missed, error=self.usage_error)
             return True
         return False
 
@@ -210,6 +212,7 @@ class Runner:
         if res.builtin_tool_events:
             self.log.emit("builtin_tool_use", r, agent=agent.id, items=res.builtin_tool_events)
         if res.error == "usage_limit":
+            self.usage_error = self.usage_error or getattr(res, "raw_error", None)
             return "usage_limit"
         agent.notices.clear()
         if res.error:
@@ -313,9 +316,10 @@ class Runner:
 
         try:
             await asyncio.gather(*(one(a) for a in targets))
-        except UsageLimit:
+        except UsageLimit as e:
             self.log.emit("usage_limit_hit", r, phase="audits", missed=[a.id for a in targets
-                                                                         if a.id not in verdicts])
+                                                                         if a.id not in verdicts],
+                          error=str(e) or None)
             return True
         for agent in targets:
             v = verdicts[agent.id]
@@ -377,9 +381,9 @@ class Runner:
 
         try:
             await asyncio.gather(*(one(a) for a in todo))
-        except UsageLimit:
+        except UsageLimit as e:
             self.log.emit("usage_limit_hit", w.round, phase="final_audit",
-                          missed=[a.id for a in todo if a.id not in w.final_audited])
+                          missed=[a.id for a in todo if a.id not in w.final_audited], error=str(e) or None)
             return True
         return False
 

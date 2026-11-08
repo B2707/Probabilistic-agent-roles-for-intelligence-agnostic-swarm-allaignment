@@ -196,13 +196,29 @@ def test_investigator_misaligned_after_conversion_is_removed(tmp_path):
     assert [e["agent"] for e in of(events, "agent_removed")] == ["a002"]
 
 
+def test_auditor_usage_limit_keeps_codex_error_text(tmp_path):
+    hit = {"done": False}
+
+    def audit(agent, record):
+        if not hit["done"]:
+            hit["done"] = True
+            raise UsageLimit("403 Forbidden: Unknown error")
+        return CLEAN
+
+    cfg = make_cfg(tmp_path, rounds=1)
+    reason, events, *_ = run(cfg, progress, audit)
+    assert reason == "usage_limit"
+    stop = of(events, "usage_limit_hit")[0]
+    assert stop["phase"] in ("audits", "final_audit") and stop["error"] == "403 Forbidden: Unknown error"
+
+
 def test_usage_limit_stops_and_resume_matches_uninterrupted_schedule(tmp_path):
     hit = {"done": False}
 
     async def flaky(agent, rnd, prompt, c):
         if rnd == 2 and agent.id == "a005" and not hit["done"]:
             hit["done"] = True
-            raise UsageLimit()
+            raise UsageLimit("429 Too Many Requests: rate limit reached")
         await progress(agent, rnd, prompt, c)
 
     cfg = make_cfg(tmp_path, k=0.3, rounds=3)
@@ -210,6 +226,7 @@ def test_usage_limit_stops_and_resume_matches_uninterrupted_schedule(tmp_path):
     assert reason == "usage_limit"
     missed = of(events, "usage_limit_hit")[0]["missed"]
     assert "a005" in missed
+    assert of(events, "usage_limit_hit")[0]["error"] == "429 Too Many Requests: rate limit reached"
     assert of(events, "run_end")[-1]["reason"] == "usage_limit"
 
     run_dir = Path(cfg.prompts_dir).parent

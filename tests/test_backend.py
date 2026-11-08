@@ -185,3 +185,15 @@ def test_claude_judge_retries_an_error_answer_then_gives_up(tmp_path, monkeypatc
         asyncio.run(B.claude_json("claude/claude-opus-5-5", "J", "P", {"type": "object"}, "xhigh", tmp_path / "j",
                                   retries=2))
     assert len((tmp_path / "n").read_text().splitlines()) == 3
+
+
+def test_usage_limit_keeps_codex_error_text(tmp_path, monkeypatch):
+    msg = "You've hit your usage limit. Try again at 9:12 AM."
+
+    async def fake(args, prompt, env, cwd, timeout, on_retry=None):
+        return B.TurnResult(error="usage_limit", raw_error=msg)
+
+    monkeypatch.setattr(B, "run_codex_retrying", fake)
+    with pytest.raises(B.UsageLimit, match="Try again at 9:12 AM"):
+        asyncio.run(B.codex_json(str(tmp_path / "home"), "gpt-6.1-terra", "Answer with JSON.", "Say ok.",
+                                 {"type": "object"}, "max", tmp_path / "audit"))

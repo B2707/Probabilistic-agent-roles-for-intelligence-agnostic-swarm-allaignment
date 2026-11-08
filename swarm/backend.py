@@ -85,7 +85,8 @@ def adaption_key() -> str:
 
 
 class UsageLimit(Exception):
-    pass
+    """The plan limit, or a rate limit, 403 or overload that outlasted the retries. str() is Codex's own error text
+    (may be empty), so the run's usage_limit_hit event can say which it was."""
 
 
 @dataclass
@@ -255,7 +256,7 @@ async def codex_json(swarm_home: str, model: str, instructions: str, prompt: str
     for _ in range(retries + 1):
         res = await run_codex_retrying(args, prompt, env, workdir, timeout)
         if res.error == "usage_limit":
-            raise UsageLimit()
+            raise UsageLimit(res.raw_error or "")
         if not res.error and res.messages:
             try:
                 return json.loads(res.messages[-1])
@@ -359,7 +360,8 @@ class ScriptedBackend:
         self.models[agent.id] = (model, effort)
         try:
             await self.policy(agent, rnd, prompt, MCPClient(self.server_url, agent.token))
-        except UsageLimit:
-            return TurnResult(session_id=agent.session_id or f"scripted-{agent.id}", error="usage_limit")
+        except UsageLimit as e:
+            return TurnResult(session_id=agent.session_id or f"scripted-{agent.id}", error="usage_limit",
+                              raw_error=str(e) or None)
         return TurnResult(session_id=agent.session_id or f"scripted-{agent.id}", messages=["(scripted)"],
                           usage={"input_tokens": 0, "output_tokens": 0})

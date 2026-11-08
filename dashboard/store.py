@@ -529,7 +529,8 @@ class RunState:
         self.end = None
 
     def on_usage_limit_hit(self, ev, r, aid, ts):
-        self.usage_stops.append({"t": ts, "round": r, "phase": ev.get("phase"), "missed": len(ev.get("missed") or [])})
+        self.usage_stops.append({"t": ts, "round": r, "phase": ev.get("phase"), "missed": len(ev.get("missed") or []),
+                                 "error": _short(ev.get("error"), 300) or None})
 
     def on_agent_joined(self, ev, r, aid, ts):
         a = self.agent(aid)
@@ -1989,6 +1990,8 @@ def render(ev: dict, run: RunState) -> dict:
     elif t == "usage_limit_hit":
         title = f"USAGE LIMIT in {ev.get('phase')}"
         body = f"{len(ev.get('missed') or [])} agents missed their turn"
+        if ev.get("error"):
+            body += f": {_short(ev.get('error'), 300)}"
         tags.append("error")
     elif t == "run_start":
         title = f"run started · {run.cfg.get('name')}"

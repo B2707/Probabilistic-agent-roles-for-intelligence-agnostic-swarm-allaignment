@@ -17,7 +17,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from dashboard.server import make_server
+from dashboard.server import Peer, main, make_server
 from dashboard.store import (
     RemoteStatus,
     RunState,
@@ -226,6 +226,33 @@ def test_store_states_and_remote_snapshot(tmp_path):
     assert snap["snapshot"] and snap["machine"] == "laptop" and snap["seed"] == 2 and snap["arm_base"] == "C100"
     assert (snap["round"], snap["problems_at_100"], snap["swarm_pass_rate"]) == (2, 1, 0.125)
     assert RemoteStatus.parse("| a | b |\n|---|---|\n| 1 | 2 |\n")[1] == [{"a": "1", "b": "2"}]
+    assert snap["machine_key"] == "laptop"  # no alias: the git name is its own machine
+
+
+def test_machine_alias_maps_a_git_machine_to_its_tailscale_device(tmp_path):
+    (tmp_path / "results").mkdir()
+    for m in ("laptop", "other"):
+        (tmp_path / "results" / f"live-{m}.md").write_text(
+            "# Live run status, 2026-11-08 01:45 EST\n\n| run | state | N | round |\n|---|---|---|---|\n"
+            f"| A100-6-luna-s2-{m}-20261108-014315 | running | 100 | 3/20 |\n")
+    st = Store(tmp_path, machine="testmac", scan_processes=False, fleet=False, github_poll=False,
+               aliases={"laptop": "danas-macbook-pro"})
+    st.remote.poll_local()
+    by = {s["machine"]: s for s in st.summaries()}
+    # the Fleet page and the overview find a run's device by machine_key; Tailscale gives this device these keys
+    assert by["laptop"]["machine_key"] == norm_host("danas-macbook-pro") == norm_host("dana’s MacBook Pro")
+    assert by["laptop"]["machine"] == "laptop"  # still labelled by its snapshot file
+    assert by["other"]["machine_key"] == "other"  # unmapped machines keep the "seen through git" section
+    with pytest.raises(SystemExit):
+        main(["--root", str(tmp_path), "--machine-alias", "laptop"])  # no "=DEVICE": refused before serving
+
+
+def test_peer_drops_runs_its_server_no_longer_lists():
+    calls = []
+    p = Peer("http://peer:8765", lambda: calls.append(1))
+    p._dispatch("summary", json.dumps([{"name": "a"}, {"name": "b"}]))
+    p._dispatch("runs", json.dumps(["b", "c"]))
+    assert set(p.runs) == {"b"} and len(calls) == 2
 
 
 # ----------------------------------------------------------------------------------------------- HTTP + SSE
@@ -313,3 +340,44 @@ def test_sse_pushes_new_events_within_two_seconds_and_writes_nothing(server):
     assert latency < 2.0
     changed = {k for k, v in snapshot(root).items() if before.get(k) != v}
     assert changed == {str(path)}  # only the line this test appended; the dashboard wrote nothing
+
+
+def test_sse_runs_event_lists_every_run_so_a_page_drops_the_ones_that_left(server):
+    base, root = server
+    live = root / "results" / "live-laptop.md"
+    live.parent.mkdir(exist_ok=True)
+
+    def table(names):
+        return ("# Live run status, 2026-11-08 01:45 EST\n\n| run | state | N | round |\n|---|---|---|---|\n"
+                + "".join(f"| {n} | running | 100 | 3/20 |\n" for n in names))
+
+    old = [f"{a}100-6-luna-s2-20261108-013719" for a in "ABC"]
+    new = [f"{a}100-6-luna-s2-20261108-014315" for a in "ABC"]
+    live.write_text(table(old))
+    for _ in range(50):
+        if set(old) <= {r["name"] for r in get(base + "/api/state")["runs"]}:
+            break
+        time.sleep(0.1)
+    lists: list = []
+
+    def listen():
+        req = urllib.request.Request(base + "/api/stream", headers={"Cookie": "swarm_dash=s3cret"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            ev = None
+            for raw in r:
+                line = raw.decode().rstrip("\n")
+                if line.startswith("event:"):
+                    ev = line[6:].strip()
+                elif line.startswith("data:") and ev == "runs":
+                    lists.append(json.loads(line[5:]))
+                    if len(lists) == 2:
+                        return
+
+    t = threading.Thread(target=listen, daemon=True)
+    t.start()
+    time.sleep(0.5)
+    live.write_text(table(new))
+    t.join(5)
+    assert len(lists) == 2, lists
+    assert lists[0] == sorted([NAME, *old])  # sent once on connect, so a reconnecting page resyncs too
+    assert lists[1] == sorted([NAME, *new])  # the old snapshot runs are gone; the local run stays

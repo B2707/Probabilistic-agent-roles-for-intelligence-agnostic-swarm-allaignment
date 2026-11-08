@@ -176,6 +176,7 @@ function connect(force = false) {
   setLive("connecting");
   es.addEventListener("hello", (e) => { const d = JSON.parse(e.data); S.offset = d.now - Date.now() / 1000; setLive("on"); });
   es.addEventListener("summary", (e) => onSummaries(JSON.parse(e.data)));
+  es.addEventListener("runs", (e) => onRunNames(JSON.parse(e.data)));
   es.addEventListener("events", (e) => onEvents(JSON.parse(e.data)));
   es.addEventListener("light", (e) => { const d = JSON.parse(e.data); S.light = d; S.fleet = (d.local || {}).fleet || S.fleet; renderMachines(); if (S.route.view === "fleet") renderFleet(true); });
   es.onerror = () => { setLive("off"); };
@@ -202,6 +203,14 @@ function onSummaries(list) {
     if (s.last_t && (!S.lastEvent || s.last_t > S.lastEvent) && s.state === "running") S.lastEvent = s.last_t;
   }
   rerenderView();
+}
+
+// the server's full run list: drop runs it no longer lists ("summary" only adds and updates)
+function onRunNames(names) {
+  const keep = new Set(names);
+  let dropped = false;
+  for (const name of [...S.runs.keys()]) if (!keep.has(name)) { S.runs.delete(name); dropped = true; }
+  if (dropped) rerenderView();
 }
 
 function notifyDiff(a, b) {
@@ -1079,7 +1088,7 @@ async function openRaw(run, seq) {
 function renderFleet(update = false) {
   const devs = ((S.fleet || {}).devices || []);
   const runs = [...S.runs.values()];
-  const runsOn = (d) => runs.filter((s) => (d.keys || []).includes(s.machine_key) && s.state === "running");
+  const runsOn = (d) => runs.filter((s) => (d.keys || []).includes(s.machine_key) && (s.state === "running" || s.snapshot));
   const html = [`<div class="section-title"><h2>Fleet</h2><span class="sub">devices from Tailscale; numbers from each Mac's fleet-statusd (port ${esc((S.fleet || {}).port || 7477)}), the same source as the menu bar app · refreshed every 15 s</span></div>
     <div class="grid g3">`];
   for (const d of devs) {
@@ -1096,11 +1105,11 @@ function renderFleet(update = false) {
         <div><b>${st.t3Running ? "yes" : "no"}</b><span>T3 Code running</span></div></div>
         <div class="muted" style="font-size:11.5px">sampled ${F.ago(st.time)}</div>`
       : `<div class="muted">${d.online ? esc(d.status_error ? "no stats: " + d.status_error : "online, no fleet-statusd numbers for " + (d.os || "this device")) : "offline" + (d.last_seen && !d.last_seen.startsWith("0001") ? " · last seen " + esc(new Date(d.last_seen).toLocaleString()) : "")}</div>`}
-      ${on.length ? `<h3 style="margin-top:10px">Runs here</h3>${on.map((s) => `<div><a href="#/run/${encodeURIComponent(s.name)}">${esc(armLabel(s))}</a> <span class="muted">${esc(modelLabel(s.model))} · R${s.round}/${s.rounds_total}</span></div>`).join("")}` : ""}
+      ${on.length ? `<h3 style="margin-top:10px">Runs here</h3>${on.map((s) => `<div><a href="#/run/${encodeURIComponent(s.name)}">${esc(armLabel(s))}</a>${s.snapshot ? " " + badge(s) : ""} <span class="muted">${esc(modelLabel(s.model))} · R${s.round}/${s.rounds_total}${s.snapshot ? ` · results/live-${esc(s.machine)}.md ${F.clock(s.snapshot_t)}` : ""}</span></div>`).join("")}` : ""}
     </div>`);
   }
   html.push("</div>");
-  const snaps = runs.filter((s) => s.snapshot);
+  const snaps = runs.filter((s) => s.snapshot && !deviceOf(s)); // --machine-alias maps a git machine to its device card
   if (snaps.length) {
     const ms = [...new Set(snaps.map((s) => s.machine))];
     html.push(`<div class="section-title"><h2>Machines seen through git</h2><span class="sub">not on Tailscale; status from results/live-&lt;machine&gt;.md</span></div><div class="grid g3">${ms.map((m) => {

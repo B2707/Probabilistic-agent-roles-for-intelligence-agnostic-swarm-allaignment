@@ -1137,9 +1137,11 @@ class RemoteStatus:
 
     HEAD = re.compile(r"^# Live run status, (\d{4}-\d{2}-\d{2} \d{2}:\d{2})")
 
-    def __init__(self, root: Path, github: tuple[str, str] | None, use_github: bool = True):
+    def __init__(self, root: Path, github: tuple[str, str] | None, use_github: bool = True,
+                 aliases: dict[str, str] | None = None):
         self.root = root
         self.github = github if use_github else None
+        self.aliases = aliases or {}  # git machine name -> Tailscale device (--machine-alias laptop=danas-macbook-pro)
         self.mtimes: dict[str, float] = {}
         self.local: dict[str, tuple[float, list[dict]]] = {}  # machine -> (as of, rows)
         self.remote: dict[str, tuple[float, list[dict]]] = {}
@@ -1238,7 +1240,8 @@ class RemoteStatus:
                     return _num(row.get(k))
                 state = r.get("state") or "?"
                 out.append({
-                    "name": name, "machine": machine, "machine_key": norm_host(machine), "origin": "snapshot",
+                    "name": name, "machine": machine, "machine_key": norm_host(self.aliases.get(machine) or machine),
+                    "origin": "snapshot",
                     "snapshot": True, "snapshot_t": asof, "snapshot_src": f"results/live-{machine}.md via {src}",
                     "published": [], "group": "v3" if r.get("swarm_wide") == "True" or num("N") == 100 else "v2-shuffled",
                     "arm": STAMP.sub("", name), "arm_base": arm_base(name), "seed": seed_of(name, {}),
@@ -1301,7 +1304,7 @@ class Store:
     """Every run under runs/ and results/, tailed by one background thread."""
 
     def __init__(self, root: Path, machine: str | None = None, tick: float = 1.0, scan_processes: bool = True,
-                 fleet: bool = True, github_poll: bool = True):
+                 fleet: bool = True, github_poll: bool = True, aliases: dict[str, str] | None = None):
         self.root = Path(root).resolve()
         self.machine = machine or hostname()
         self.tick_s = tick
@@ -1325,7 +1328,7 @@ class Store:
         self.github = _github_base(self.root)
         self.thread: threading.Thread | None = None
         self.fleet = Fleet(enabled=fleet)
-        self.remote = RemoteStatus(self.root, self.github, use_github=github_poll)
+        self.remote = RemoteStatus(self.root, self.github, use_github=github_poll, aliases=aliases)
 
     # ---------------------------------------------------------------- discovery
     def _sources(self) -> list[tuple[str, Path, str]]:

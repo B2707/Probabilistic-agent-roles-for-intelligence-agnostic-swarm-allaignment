@@ -15,6 +15,8 @@
 # so a later edit or `git pull` never rewrites the file bash is reading. No ARM_GROUPS means no new runs.
 # PROD picks the pinned checkout that runs `swarm` (default .prod/), so a second queue can run newer code next to it.
 # Pass a running queue's PID to make this one label only after that queue is done, so two queues never label one run.
+# AFTER_RUNS="run-a run-b" (names under runs/) holds the groups back until those runs have completed, or until every
+# PID given has exited, so new runs never share the machine with the ones still going. It checks every AFTER_POLL seconds.
 set -u
 M=$(cd "$(dirname "$0")/.." && pwd)
 P=${PROD:-$M/.prod}
@@ -67,6 +69,17 @@ for d in "$R"/*/; do
   fi
 done
 for p in ${pids[@]+"${pids[@]}"}; do wait "$p"; done
+
+if [ -n "${AFTER_RUNS:-}" ]; then
+  log "groups wait for runs to complete: $AFTER_RUNS (or for PIDs to exit: $*)"
+  while :; do
+    left=0; for r in $AFTER_RUNS; do has_ended "$R/$r" || left=1; done
+    alive=0; for pid in "$@"; do kill -0 "$pid" 2>/dev/null && alive=1; done
+    [ $left -eq 0 ] || [ $alive -eq 0 ] && break
+    sleep "${AFTER_POLL:-60}"
+  done
+  log "groups start"
+fi
 
 for group in ${GROUPS_[@]+"${GROUPS_[@]}"}; do
   pids=()

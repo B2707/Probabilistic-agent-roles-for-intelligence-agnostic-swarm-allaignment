@@ -1,7 +1,7 @@
 #!/bin/bash
 # Production queue, detached from any agent session.
 #
-# 1. Resumes every v2 run under runs/ that hasn't ended and isn't still running (skipped with RESUME=0).
+# 1. Resumes every v2 run under runs/ that hasn't ended and isn't still running, all at once (skipped with RESUME=0).
 # 2. Runs the arm groups from the pinned checkout .prod/, one group at a time, every arm in a group at once
 #    (each arm uses its config's `concurrency` Codex sessions).
 # 3. Waits for the given PIDs (runs started elsewhere), so their labels come out of this queue too.
@@ -11,13 +11,15 @@
 # doesn't complete is logged and left for `uv run swarm resume runs/<run>`; the queue goes on and labels what ended.
 #
 # Usage, from anywhere:  [ARM_GROUPS="armA armB armC;armD"] [PROD=<checkout>] scripts/arm_queue.sh [PID...] >> runs/queue.log 2>&1
+# Start it with scripts/detach.py so it survives the agent session that launched it, and run a copy (runs/arm_queue.sh)
+# so a later edit or `git pull` never rewrites the file bash is reading. No ARM_GROUPS means no new runs.
 # PROD picks the pinned checkout that runs `swarm` (default .prod/), so a second queue can run newer code next to it.
 # Pass a running queue's PID to make this one label only after that queue is done, so two queues never label one run.
 set -u
 M=$(cd "$(dirname "$0")/.." && pwd)
 P=${PROD:-$M/.prod}
 R=$M/runs
-IFS=';' read -r -a GROUPS_ <<< "${ARM_GROUPS:-D-planted-6-luna E-audits-only-6-luna;F1-hidden-baseline-6-luna F2-hidden-informed-6-luna}"
+GROUPS_=(); [ -n "${ARM_GROUPS:-}" ] && IFS=';' read -r -a GROUPS_ <<< "$ARM_GROUPS"
 export PYTHONUNBUFFERED=1
 
 log() { echo "$(date '+%F %T') $*"; }
@@ -55,16 +57,18 @@ label_run() {
 }
 
 log "queue start from $P; groups: ${GROUPS_[*]:-none}; then waits for PIDs: $*"
+pids=()
 for d in "$R"/*/; do
   d=${d%/}
   [ "${RESUME:-1}" = 1 ] || break
   case $(basename "$d") in *-stopped|pilot-*) continue ;; esac
   if is_v2 "$d" && ! has_ended "$d" && ! is_live "$d"; then
-    resume_run "$d"; retry_run "$d" $? || log "$(basename "$d") did not complete; going on"
+    ( resume_run "$d"; retry_run "$d" $? || log "$(basename "$d") did not complete; going on" ) & pids+=($!)
   fi
 done
+for p in ${pids[@]+"${pids[@]}"}; do wait "$p"; done
 
-for group in "${GROUPS_[@]}"; do
+for group in ${GROUPS_[@]+"${GROUPS_[@]}"}; do
   pids=()
   for arm in $group; do run_arm "$arm" & pids+=($!); done
   rc=0

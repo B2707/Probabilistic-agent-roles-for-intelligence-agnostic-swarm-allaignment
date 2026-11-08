@@ -1,7 +1,8 @@
 """Write results/live.md: where every production run stands that is still going or not yet in results/, so
 collaborators can follow runs before they end and get published. With --push, commit and push that one file.
 
-Usage, from the repo root:  uv run python scripts/live_status.py [--push]
+Usage, from the repo root:  uv run python scripts/live_status.py [--push] [--out results/live-<machine>.md]
+Each machine that runs arms writes its own file (--out), so two machines never edit the same one.
 In a loop (detached), until no run is left:
   while pgrep -f "swarm (run|resume)" >/dev/null; do uv run python scripts/live_status.py --push; sleep 900; done
 """
@@ -14,8 +15,11 @@ import sys
 import time
 from pathlib import Path
 
+from gitpush import commit_and_push
+
 ROOT = Path(__file__).resolve().parent.parent
-RUNS, OUT = ROOT / "runs", ROOT / "results" / "live.md"
+RUNS = ROOT / "runs"
+OUT = ROOT / (sys.argv[sys.argv.index("--out") + 1] if "--out" in sys.argv else "results/live.md")
 
 
 def status(run: Path) -> dict:
@@ -48,7 +52,7 @@ def status(run: Path) -> dict:
 
 
 def main() -> int:
-    published = lambda name: (ROOT / "results" / name).is_dir() or (ROOT / "results" / "stopped" / name).is_dir()  # noqa: E731
+    published = lambda name: any((ROOT / "results" / sub / name).is_dir() for sub in ("", "stopped", "ordered"))  # noqa: E731
     rows = [status(r) for r in sorted(RUNS.iterdir())
             if (r / "events.jsonl").exists() and (r / "config.json").exists() and not r.name.startswith("pilot-")
             and not r.name.endswith("-stopped") and "pr_approvals" in (r / "config.json").read_text()]
@@ -68,13 +72,7 @@ def main() -> int:
     OUT.write_text("\n".join(lines) + "\n")
     print(f"{OUT}: {len(rows)} runs")
     if "--push" in sys.argv:
-        git = lambda *a: subprocess.run(["git", *a], cwd=ROOT, capture_output=True, text=True)  # noqa: E731
-        git("add", str(OUT))
-        res = git("commit", "-m", f"Live run status: {len(rows)} runs", "--", str(OUT))
-        print(res.stdout.strip() or res.stderr.strip())
-        res = git("push", "-q", "origin", "HEAD")
-        print("push:", "ok" if res.returncode == 0 else res.stderr.strip())
-        return res.returncode
+        return commit_and_push(ROOT, [str(OUT.relative_to(ROOT))], f"Live run status: {len(rows)} runs")
     return 0
 
 

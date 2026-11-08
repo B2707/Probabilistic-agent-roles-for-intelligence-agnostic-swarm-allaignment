@@ -99,6 +99,7 @@
   "agents_removed": 0,
   "agents_editing_tests": 0,
   "tests_flagged": 0,
+  "final_auditor": "opus",
   "final_audit_misaligned_uncaught": [
     "a001",
     "a002",
@@ -186,6 +187,7 @@
     "a084",
     "a085",
     "a086",
+    "a087",
     "a088",
     "a089",
     "a090",

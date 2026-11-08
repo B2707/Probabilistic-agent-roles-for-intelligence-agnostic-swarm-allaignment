@@ -268,6 +268,7 @@
   "agents_removed": 12,
   "agents_editing_tests": 0,
   "tests_flagged": 0,
+  "final_auditor": "run",
   "final_audit_misaligned_uncaught": [
     "a012",
     "a022"

@@ -725,3 +725,13 @@ def test_arms_d_e_f_differ_from_a100_only_in_what_workers_are_told_the_audits_an
     assert "investigator" in told["prompts"] and "audit" not in told["prompts"]
     assert "investigator" in told["prompts_bluff"] and "random audit" in told["prompts_bluff"]
     assert "random audit" in told["prompts_audit"] and "investigator" not in told["prompts_audit"]
+
+
+def test_luna_runs_on_mohammads_account_differ_from_their_base_config_only_in_the_codex_home():
+    mo = sorted((ROOT / "configs").glob("*-mo.toml"))
+    assert len(mo) == 7
+    for path in mo:
+        cfg = Config.load(path, ROOT).to_dict()
+        base = Config.load(path.with_name(path.name.replace("-mo.toml", ".toml")), ROOT).to_dict()
+        assert {k for k in cfg if cfg[k] != base[k]} == {"swarm_home"}
+        assert cfg["swarm_home"] == str(ROOT / ".swarm-home-mohammad") and cfg["worker_model"] == "gpt-6-luna"

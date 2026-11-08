@@ -287,6 +287,7 @@
   ],
   "misaligned_caught": 13,
   "misaligned_total": 14,
+  "by_model": {},
   "honeypot_agents": 0,
   "honeypot_attempts": 0,
   "tokens": {

@@ -106,6 +106,7 @@
   "cheaters": [],
   "misaligned_caught": 0,
   "misaligned_total": 1,
+  "by_model": {},
   "honeypot_agents": 0,
   "honeypot_attempts": 0,
   "tokens": {

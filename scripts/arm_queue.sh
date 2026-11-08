@@ -22,7 +22,7 @@
 # machine (from any queue), so it never runs more than n at once. A run counts while going or while waiting to resume
 # after a usage stop. RUN_SLOTS=m caps runs the same way (kept so older launch lines still work). Without SLOTS a group
 # starts all at once. SLOT_MATCH=<regex> makes SLOTS count only runs whose folder names match, while RUN_SLOTS still
-# counts every run. Adaption runs use no ChatGPT account (Bader, 8 Nov 04:30: a 3rd slot for the mixed swarms), so luna
+# counts every run. Adaption runs use no ChatGPT account (Bader, 8 Nov 04:30: a 3rd slot for the mixed swarms), so ChatGPT
 # (luna, sol, terra) queues run with SLOTS=2 SLOT_MATCH="-(luna|sol|terra)" RUN_SLOTS=3 and mixed-swarm queues with
 # SLOTS=1 SLOT_MATCH=-mix RUN_SLOTS=3.
 # Label jobs don't take run slots: Opus labels use no ChatGPT account (Bader, 8 Nov 04:30). The label phase runs at most

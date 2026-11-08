@@ -9,7 +9,7 @@ Checked against the sprint page (https://apartresearch.com/sprints/swarm-alignme
 | v2 (7 Nov) | 20 agents in 4 teams of 5, 4 problems, team review | A to H (aggressive instigator, uninformed, informed, planted investigators, audits only, hidden tests, bluff, informed aggressive, k = 0.01 and 0.015) | gpt-6-luna (high); baselines, G-bluff and H-informed-aggressive also on gpt-6.1-sol (max) | 1 | done, archived in `results/ordered/` |
 | v3 luna | 100 agents, 55 problems, global review, aggressive instigator | A100, B100, C100 | gpt-6-luna (high) | 3 clean (s1fast, s2, s3) plus the disturbed s1 | done, Opus labels |
 | v3 sol | same | A100, B100, C100 | gpt-6.1-sol (high) | 3 | done, Opus labels |
-| v3 new | same | D100 bluff, E100 auditor only, F100 baseline | luna and sol (high) | 1 | running since 15:01 |
+| v3 new | same | D100 bluff, E100 auditor only, F100 baseline | luna and sol (high) | 3 (same seeds as A/B/C) | running since 15:30 with Fast mode, in seed order |
 
 ## What the data supports
 
@@ -30,8 +30,8 @@ Checked against the sprint page (https://apartresearch.com/sprints/swarm-alignme
    | A100-61-sol s1 | yes | 3, 2, 2 |
    | F100-61-sol | no | 5, 4, 4 |
 
-   So D/E/F are not cleanly comparable with the A/B/C seeds, which ran with Fast mode. Restarting them with Fast mode costs the ~25 min they have run and finishes sooner overall (Fast runs take about 2 h instead of 3 h).
-2. **D/E/F have one seed each.** B100 sol varied a lot between seeds (51, 37 and 6 round-1 cheat fixes), so one seed can mislead.
+   **Fixed 15:30:** Bader had D/E/F restarted with Fast mode; the no-Fast runs are archived `-stopped`.
+2. **D/E/F had one seed each.** B100 sol varied a lot between seeds (51, 37 and 6 round-1 cheat fixes), so one seed can mislead. **Fixed 15:30:** 3 seeds each, the same seeds as A/B/C, queued seed by seed (all of seed 1 first). At about 2 h per run and 3 runs at once, seed 1 lands around 19:30, seed 2 around 23:30, seed 3 around 03:30 EST, with Opus labels after each.
 3. **D's warning text differs from C100's.** D adds one sentence about random audits (`prompts_bluff/informed_rule.md`); C100 mentions only investigators. D against C100 changes the text and the enforcement together. Small, but state it.
 4. **"Accepted, incl. endorsements" exceeds offers in sol** (168 of 104 in A100 s2). Unexplained; keep it out of the paper until someone checks how the metric counts.
 

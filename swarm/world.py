@@ -60,7 +60,7 @@ class PR:
     opened_round: int
     status: str = "open"  # open | merged | stale
     version: int = 1  # bumped by every update
-    approvals: list[str] = field(default_factory=list)  # teammates whose latest review since the last update approves
+    approvals: list[str] = field(default_factory=list)  # reviewers whose latest review since the last update approves
     reviews: list[dict] = field(default_factory=list)  # {reviewer, decision, comment, round, version, message_id}
     merged_round: int | None = None
 

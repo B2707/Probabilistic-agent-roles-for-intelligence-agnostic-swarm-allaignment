@@ -3,6 +3,7 @@
 import asyncio
 import random
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -535,9 +536,12 @@ def test_swarm_wide_turn_prompt_shows_the_swarm_pass_rate_and_open_prs_from_ever
             await c.call("open_pr", title="tidy-xyz", files=[{"path": f"problems/{A}/helpers.py", "content": "X = 1\n"}])
         if rnd == 1 and agent.id in ("a002", "a004"):
             await c.call("review_pr", pr_id="pr001", decision="approve", comment="ok")
+        if rnd == 1 and agent.id == "a002":
+            await c.call("post_board", text="board-xyz")
         await progress(agent, rnd, prompt, c)
 
-    _, _, backend, _, run_dir = run(v2_cfg(tmp_path, rounds=2, swarm_wide=True), policy)
+    # a digest of 2: the board post stays, and only the newest progress update fills the other place
+    _, _, backend, _, run_dir = run(v2_cfg(tmp_path, rounds=2, swarm_wide=True, board_digest_size=2), policy)
     prompts = {(a, r): p for a, r, p in backend.prompts}
     b_r2 = prompts[("a006", 2)]  # a006 is on B; pr001 merged in round 1 (A at 100%), so pr002 went stale
     assert f"Your team: {B}. Team test pass rate on main: 0.0%." in b_r2
@@ -546,6 +550,8 @@ def test_swarm_wide_turn_prompt_shows_the_swarm_pass_rate_and_open_prs_from_ever
     assert f"- pr003 by a003 (team {A}): tidy-xyz (0/2 approvals)" in b_r2
     assert "pr001" not in b_r2 and "pr002" not in b_r2  # merged, and someone else's stale PR
     assert f"- pr002 by a001 (team {A}): rewrite (0/2 approvals, stale: needs update)" in prompts[("a001", 2)]
+    assert "a002: board-xyz" in b_r2 and "a006 (progress): round 1 progress" in b_r2
+    assert "a005 (progress)" not in b_r2 and "(5 more posts not shown; use search_board)" in b_r2
     readme = (run_dir / "repo" / "README.md").read_text()
     assert "pull requests that other agents approve" in readme and "teammates" not in readme
     instructions = backend.instructions["a006"]
@@ -594,3 +600,21 @@ def test_v3_arms_run_one_swarm_of_100_on_all_55_problems(tmp_path):
     # in v2, 100 agents on 55 problems means teams of 1 or 2, which can never reach 2 approvals
     with pytest.raises(ValueError, match="pr_approvals"):
         make_cfg(tmp_path, swarm_size=100, problems=55, problems_file="data/problems_oneoff.json")
+
+
+def test_swarm_wide_investigators_see_the_swarm_pass_rate_but_not_as_their_score(tmp_path):
+    _, _, backend, _, _ = run(v2_cfg(tmp_path, rounds=1, swarm_wide=True, initial_investigators=6), progress)
+    assert all("Swarm pass rate on main: 0.0%." in p for _, _, p in backend.prompts)
+    assert not any("performance score" in p for _, _, p in backend.prompts)
+
+
+def test_judge_and_auditor_prompts_name_who_approves_prs_and_v2_text_is_unchanged(tmp_path):
+    v2, v3 = make_cfg(tmp_path / "v2"), make_cfg(tmp_path / "v3", swarm_wide=True)
+    for name in ("judge", "auditor"):
+        assert "enough teammates approve it" in v2.prompt(name) and "other agents" not in v2.prompt(name)
+        assert "enough other agents approve it" in v3.prompt(name) and "teammates" not in v3.prompt(name)
+    # every prompt a v2 run reads is the text v2 ran with
+    feb = {n: subprocess.run(["git", "show", f"feb972f:prompts/{n}.md"], cwd=ROOT, capture_output=True, text=True).stdout
+           for n in ("judge", "auditor", "instigator", "worker")}
+    assert all(v2.prompt(n) == text_ for n, text_ in feb.items() if n != "instigator")
+    assert v2.prompt("instigator").split("## first_contact", 1)[1] == feb["instigator"].split("## first_contact", 1)[1]

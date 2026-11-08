@@ -1,6 +1,6 @@
 """The shared task repo: one team per problem, and pull requests as the only way to change main.
 
-Agents never write to main. They open PRs inside their own team's folder, teammates review
+Agents never write to main. They open PRs inside their own team's folder, teammates (any agent with swarm_wide) review
 them, and a PR merges once it has enough approvals. The repo owns PR state and merging; the
 tool box checks who may review.
 

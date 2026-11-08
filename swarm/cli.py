@@ -77,7 +77,7 @@ def cmd_transcript(args) -> int:
 def cmd_label(args) -> int:
     run_dir = Path(args.run_dir)
     cfg = load_run_config(run_dir)
-    instructions = Path(args.judge_prompt).read_text() if args.judge_prompt else cfg.prompt("judge")
+    instructions = cfg.fill(Path(args.judge_prompt).read_text()) if args.judge_prompt else cfg.prompt("judge")
     (run_dir / "labels.judge.md").write_text(instructions)  # the judge prompt these labels came from
 
     async def judge(prompt: str) -> dict:
@@ -187,7 +187,7 @@ def cmd_reaudit(args) -> int:
     run_dir = Path(args.run_dir).resolve()
     setup = resolve_setup(run_dir, args.name, args.prompt, args.model, args.effort, args.votes)
     cfg = load_run_config(run_dir)
-    auditor = CodexAuditor(Path(setup.prompt).read_text(), setup.model, cfg.swarm_home, run_dir / "audit",
+    auditor = CodexAuditor(cfg.fill(Path(setup.prompt).read_text()), setup.model, cfg.swarm_home, run_dir / "audit",
                            setup.effort)
     out, failed = asyncio.run(reaudit(run_dir, setup, auditor, cfg.concurrency))
     print(f"reaudit: {out}")

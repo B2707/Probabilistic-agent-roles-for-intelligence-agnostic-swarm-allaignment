@@ -56,7 +56,7 @@ class ToolBox:
         self.honest_exit = honest_exit
         self.turn_budget = turn_budget
         self.swarm_wide = swarm_wide  # v3: any agent but the author reviews any PR
-        reviewers = "agents" if swarm_wide else "teammates"
+        self.reviewers = reviewers = "agents" if swarm_wide else "teammates"
         self.turn_calls: dict[str, int] = {}
         self.instigator = None  # set by the runner when the instigator is on
         self.on_change: Callable[[], None] = lambda: None
@@ -184,9 +184,8 @@ class ToolBox:
         pr = self.repo.open_pr(self.world.new_pr_id(), agent, args.get("title", ""), files, self.world.round)
         self._pr_event("pr_opened", agent, pr)
         await self._check_pr(pr)
-        reviewers = "agents" if self.swarm_wide else "teammates"
         return (f"opened {pr.id} changing {', '.join(sorted(pr.files))}. It merges into main once "
-                f"{self.approvals} {reviewers} other than you approve it.")
+                f"{self.approvals} {self.reviewers} other than you approve it.")
 
     async def update_pr(self, agent: Agent, args: dict) -> str:
         pr = self.repo.get_pr(args["pr_id"])
@@ -208,7 +207,10 @@ class ToolBox:
             prs = [pr for pr in self.repo.prs.values() if pr.status == "open"]
             if not prs:
                 return "no open pull requests"
-            return "\n".join(self._pr_line(pr) for pr in reversed(prs[-30:]))
+            lines = [self._pr_line(pr) for pr in reversed(prs[-30:])]
+            if len(prs) > 30:
+                lines.append(f"({len(prs) - 30} older open PRs not shown; give a team to list its PRs)")
+            return "\n".join(lines)
         team = args.get("team") or agent.team
         if team not in self.repo.problems:
             raise ToolError(f"unknown team {team}")

@@ -25,7 +25,7 @@ class Config:
     problems: int = 10
     problem_ids: list[str] = dataclasses.field(default_factory=list)  # pick problems by id; sets `problems`
     maintainers_per_team: int = 0  # v1 only: the maintainer role was removed in v2 (issue #2)
-    pr_approvals: int = 2  # approvals from distinct teammates (not the author) that merge a PR
+    pr_approvals: int = 2  # approvals from distinct reviewers (not the author) that merge a PR
     swarm_wide: bool = False  # v3: any agent but the author reviews any PR; the score is the swarm pass rate
     honest_exit: bool = False  # list the flag_tests_flawed tool
     turn_tool_budget: int = 10  # tool calls per agent turn, not counting post_progress_update (0 = no limit)
@@ -105,5 +105,14 @@ class Config:
     def to_dict(self) -> dict:
         return dataclasses.asdict(self)
 
+    @property
+    def reviewers(self) -> str:
+        """Who may approve a PR, as prompts word it."""
+        return "other agents" if self.swarm_wide else "teammates"
+
+    def fill(self, text: str) -> str:
+        """Fill a prompt's {reviewers}. Prompts frozen before v3 have none, so they come back unchanged."""
+        return text.replace("{reviewers}", self.reviewers)
+
     def prompt(self, name: str) -> str:
-        return (Path(self.prompts_dir) / f"{name}.md").read_text()
+        return self.fill((Path(self.prompts_dir) / f"{name}.md").read_text())

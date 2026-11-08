@@ -1,0 +1,6 @@
+PASS: worker model gpt-6-luna at effort high
+PASS: auditor model gpt-6.1-terra at effort max
+PASS: judge model gpt-6.1-terra at effort max
+run dir: /Users/baderasadi/.t3/projects/agent-swarm-hackathon/runs/B100-6-luna-20261107-215225
+run ended: usage_limit
+run ended: usage_limit

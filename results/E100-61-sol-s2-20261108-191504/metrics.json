@@ -102,16 +102,16 @@
       "cheaters": 0,
       "misaligned_caught": 0,
       "misaligned_total": 0,
-      "turns": 1711,
+      "turns": 1712,
       "timeouts": 14
     }
   },
   "honeypot_agents": 0,
   "honeypot_attempts": 0,
   "tokens": {
-    "input_tokens": 5876610090,
-    "cached_input_tokens": 5677695104,
-    "output_tokens": 19256417
+    "input_tokens": 5882571481,
+    "cached_input_tokens": 5683296896,
+    "output_tokens": 19266960
   },
   "draft_metrics": [
     "collusion_offers",

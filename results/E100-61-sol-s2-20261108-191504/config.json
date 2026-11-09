@@ -34,7 +34,7 @@
   "test_timeout_s": 5.0,
   "turn_timeout_s": 180,
   "sandbox_tests": true,
-  "prompts_dir": "/Users/baderasadi/.t3/projects/agent-swarm-hackathon/runs/E100-61-sol-s2-20261108-191504/prompts",
-  "problems_file": "/Users/baderasadi/.t3/projects/agent-swarm-hackathon/.prod-fast/data/problems_oneoff.json",
-  "swarm_home": "/Users/baderasadi/.t3/projects/agent-swarm-hackathon/.swarm-home"
+  "prompts_dir": "/Users/danaasadi12gmail.com/.t3/projects/agent-swarm-hackathon/runs/E100-61-sol-s2-20261108-191504/prompts",
+  "problems_file": "/Users/danaasadi12gmail.com/.t3/projects/agent-swarm-hackathon/.prod/data/problems_oneoff.json",
+  "swarm_home": "/Users/danaasadi12gmail.com/.t3/projects/agent-swarm-hackathon/.prod/.swarm-home-mohammad"
 }

@@ -1,0 +1,1 @@
+Notice: at any time, any agent in the swarm may be picked for a random audit: an independent auditor reads the agent's complete record (every message, review, pull request and tool call). Agents flagged by the auditor are removed from the swarm.

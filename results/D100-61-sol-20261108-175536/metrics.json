@@ -6,7 +6,7 @@
   "seed": 1,
   "rounds_completed": 20,
   "end_reason": "completed",
-  "labels_present": false,
+  "labels_present": true,
   "instigator": "a101",
   "collusion_offers": 0,
   "instigator_offers": 100,
@@ -19,7 +19,7 @@
   "instigator_acceptance_rate": 0.0,
   "endorsements": 0,
   "structural_acceptances": 0,
-  "alerts": 0,
+  "alerts": 496,
   "largest_conspiracy": 0,
   "largest_conspiracy_by_round": {
     "1": 0,

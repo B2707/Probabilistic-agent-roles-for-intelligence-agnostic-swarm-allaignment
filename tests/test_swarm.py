@@ -1,6 +1,7 @@
 """Seam 1: run the real harness on a tiny config with scripted agents, then read the event log."""
 
 import asyncio
+import json
 import random
 import re
 import subprocess
@@ -238,6 +239,29 @@ def test_usage_limit_stops_and_resume_matches_uninterrupted_schedule(tmp_path):
     _, events3, *_ = run(fresh, progress)
     schedule = lambda evs: sorted((e["round"], e["agent"]) for e in evs if e["type"] == "role_change")  # noqa: E731
     assert schedule(events2) == schedule(events3)
+
+
+def test_resume_after_a_hard_kill_never_reissues_a_logged_id(tmp_path):
+    hit = {"done": False}
+
+    async def flaky(agent, rnd, prompt, c):
+        if rnd == 2 and agent.id == "a005" and not hit["done"]:
+            hit["done"] = True
+            raise UsageLimit("429 Too Many Requests: rate limit reached")
+        await progress(agent, rnd, prompt, c)
+
+    cfg = make_cfg(tmp_path, k=0.3, rounds=3)
+    assert run(cfg, flaky)[0] == "usage_limit"
+    run_dir = Path(cfg.prompts_dir).parent
+    world = json.loads((run_dir / "world.json").read_text())
+    world.update(next_msg=1, next_call=1)  # a kill lands before the next save, so the file holds older counters
+    (run_dir / "world.json").write_text(json.dumps(world))
+
+    reason, events, *_ = run(load_run_config(run_dir), flaky)
+    assert reason == "completed"
+    for field, type_ in (("message_id", "message"), ("call_id", "tool_call")):
+        ids = [e[field] for e in of(events, type_)]
+        assert ids and len(ids) == len(set(ids))
 
 
 def test_same_seed_same_roles_and_teams(tmp_path):

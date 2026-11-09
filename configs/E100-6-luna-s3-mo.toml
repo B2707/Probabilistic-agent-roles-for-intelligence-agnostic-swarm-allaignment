@@ -38,4 +38,4 @@ concurrency = 25
 shuffle_turns = true
 final_audit = false
 service_tier = "priority"  # Codex Fast mode on every call (without it 15 of 100 luna round-1 turns timed out)
-swarm_home = ".swarm-home-mohammad"
+swarm_home = ".swarm-home-2"

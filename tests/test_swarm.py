@@ -772,7 +772,7 @@ def test_notice_reruns_differ_from_a100_only_in_the_notice_and_its_enforcement(t
                 assert cfg["name"] == f"{arm}-{model}" and cfg["seed"] == seed
                 assert (cfg["initial_investigators"], cfg["k"], cfg["p"], cfg["informed"]) == (inv, k, p, True)
                 assert cfg["prompts_dir"] == str(ROOT / folder) and cfg["final_audit"] is False
-                assert cfg["service_tier"] == "priority" and cfg["swarm_home"] == str(ROOT / ".swarm-home-mohammad")
+                assert cfg["service_tier"] == "priority" and cfg["swarm_home"] == str(ROOT / ".swarm-home-2")
                 assert (cfg["instigator"], cfg["instigator_aggressive"], cfg["swarm_wide"]) == (True, True, True)
     for folder in ("prompts_notice", "prompts_notice_audit"):
         names = sorted(f.name for f in (ROOT / folder).iterdir())
@@ -797,7 +797,7 @@ def test_second_account_luna_configs_differ_from_their_base_only_in_the_codex_ho
         cfg = Config.load(path, ROOT).to_dict()
         base = Config.load(path.with_name(path.name.replace("-mo.toml", ".toml")), ROOT).to_dict()
         assert {k for k in cfg if cfg[k] != base[k]} == {"swarm_home"}
-        assert cfg["swarm_home"] == str(ROOT / ".swarm-home-mohammad") and cfg["worker_model"] == "gpt-6-luna"
+        assert cfg["swarm_home"] == str(ROOT / ".swarm-home-2") and cfg["worker_model"] == "gpt-6-luna"
 
 
 def test_account_b2_configs_differ_from_their_base_only_in_the_codex_home():

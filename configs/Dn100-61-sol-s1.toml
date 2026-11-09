@@ -34,4 +34,4 @@ concurrency = 25
 shuffle_turns = true
 final_audit = false
 service_tier = "priority"  # Codex Fast mode on every call
-swarm_home = ".swarm-home-mohammad"
+swarm_home = ".swarm-home-2"

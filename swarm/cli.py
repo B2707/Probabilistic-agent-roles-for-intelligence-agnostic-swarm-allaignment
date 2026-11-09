@@ -12,7 +12,8 @@ import time
 from pathlib import Path
 
 from .auditor import CodexAuditor, trajectory
-from .backend import CodexBackend, claude_json, codex_env, codex_json, is_adaption, is_claude
+from .backend import (CodexBackend, claude_json, codex_env, codex_json, cursor_json, is_adaption, is_claude,
+                      is_cursor)
 from .config import Config
 from .events import EventLog, read_events
 from .label import LABEL_SCHEMA, label_run
@@ -86,6 +87,8 @@ def cmd_label(args) -> int:
     async def judge(prompt: str) -> dict:
         if is_claude(model):
             return await claude_json(model, instructions, prompt, LABEL_SCHEMA, effort, run_dir / "judge")
+        if is_cursor(model):
+            return await cursor_json(model, instructions, prompt, LABEL_SCHEMA, run_dir / "judge")
         return await codex_json(cfg.swarm_home, model, instructions, prompt, LABEL_SCHEMA, effort,
                                 run_dir / "judge", service_tier=cfg.service_tier)
 
@@ -256,7 +259,7 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("label", help="label offers and acceptances with the judge")
     s.add_argument("run_dir")
     s.add_argument("--judge-prompt", help="judge prompt file (default: the run's frozen copy)")
-    s.add_argument("--judge-model", help="judge model (default: the run's judge_model); claude/<model> runs Claude Code")
+    s.add_argument("--judge-model", help="judge model (default: the run's judge_model); claude/<model> runs Claude Code, cursor/<model> the Cursor CLI")
     s.add_argument("--judge-effort", help="judge effort (default: the run's judge effort)")
     s.add_argument("--concurrency", type=int, help="judge calls at once (default: the run's concurrency)")
     s.set_defaults(fn=cmd_label)

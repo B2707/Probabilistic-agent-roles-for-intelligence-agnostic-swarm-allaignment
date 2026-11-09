@@ -823,3 +823,19 @@ def test_metrics_take_the_final_audit_from_a_complete_opus_reaudit(tmp_path):
     (run_dir / "reaudit-opus.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
     out = compute_run(run_dir)
     assert out["final_auditor"] == "opus" and out["misaligned_total"] == len(agents)
+
+
+def test_cursor_answers_are_checked_against_the_judge_and_auditor_schemas():
+    from swarm.auditor import VERDICT_SCHEMA
+    from swarm.backend import _json_object, schema_errors
+    from swarm.label import LABEL_SCHEMA
+    ok = {"labels": [{"message_id": "m1", "label": LABEL_SCHEMA["properties"]["labels"]["items"]["properties"]["label"]["enum"][0],
+                      "target": "", "quote": "q"}]}
+    assert schema_errors(ok, LABEL_SCHEMA) == []
+    assert schema_errors({"labels": [{"message_id": "m1", "label": "nope", "target": "", "quote": ""}]}, LABEL_SCHEMA)
+    assert schema_errors({"labels": [], "extra": 1}, LABEL_SCHEMA)
+    verdict = {"misaligned_before_conversion": False, "misaligned_after_conversion": False, "evidence": [], "summary": "s"}
+    assert schema_errors(verdict, VERDICT_SCHEMA) == []
+    assert schema_errors({**verdict, "misaligned_before_conversion": "no"}, VERDICT_SCHEMA)
+    assert _json_object('```json\n{"a": 1}\n```') == {"a": 1}
+    assert _json_object('Here it is: {"a": 1}') == {"a": 1}

@@ -310,6 +310,94 @@ async def claude_json(model: str, instructions: str, prompt: str, schema: dict, 
     raise RuntimeError(f"claude call failed: {error}")
 
 
+CURSOR_PREFIX = "cursor/"
+
+
+def is_cursor(model: str) -> bool:
+    return model.startswith(CURSOR_PREFIX)
+
+
+def schema_errors(value, schema: dict, path: str = "$") -> list[str]:
+    """The subset of JSON Schema the judge and auditor schemas use: object, array, string, boolean, enum,
+    required, additionalProperties false."""
+    kind = schema.get("type")
+    types = {"object": dict, "array": list, "string": str, "boolean": bool}
+    if kind in types and not isinstance(value, types[kind]):
+        return [f"{path}: expected {kind}"]
+    if "enum" in schema and value not in schema["enum"]:
+        return [f"{path}: {value!r} not in {schema['enum']}"]
+    errors = []
+    if kind == "object":
+        props = schema.get("properties", {})
+        errors += [f"{path}: missing {k}" for k in schema.get("required", []) if k not in value]
+        if schema.get("additionalProperties") is False:
+            errors += [f"{path}: unexpected {k}" for k in value if k not in props]
+        for k, v in value.items():
+            if k in props:
+                errors += schema_errors(v, props[k], f"{path}.{k}")
+    if kind == "array" and "items" in schema:
+        for i, v in enumerate(value):
+            errors += schema_errors(v, schema["items"], f"{path}[{i}]")
+    return errors
+
+
+def _json_object(text: str):
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[1] if "\n" in text else ""
+        text = text.rsplit("```", 1)[0]
+    try:
+        return json.loads(text)
+    except ValueError:
+        start, end = text.find("{"), text.rfind("}")
+        return json.loads(text[start:end + 1]) if 0 <= start < end else None
+
+
+async def cursor_json(model: str, instructions: str, prompt: str, schema: dict, workdir: Path,
+                      timeout: float = 900, retries: int = 2) -> dict:
+    """One stateless Cursor CLI call (`cursor-agent -p` on the user's Cursor login, Bader 9 Nov 02:47: his Claude
+    subscription is out) standing in for claude_json with the same model. The CLI has no system-prompt or schema
+    flags, so the instructions and the schema lead the prompt, ask mode keeps it read-only in an empty working
+    directory, and the answer is checked against `schema` here; a nonconforming answer is retried."""
+    workdir = Path(workdir).resolve()
+    workdir.mkdir(parents=True, exist_ok=True)
+    full = (f"{instructions}\n\nAnswer with one JSON object and nothing else. It must match this JSON Schema:\n"
+            f"{json.dumps(schema)}\n\n---\n\n{prompt}")
+    args = ["-p", "--model", model.removeprefix(CURSOR_PREFIX), "--mode", "ask", "--output-format", "json",
+            "--trust", "--workspace", str(workdir)]
+    error = None
+    for attempt in range(retries + 1):
+        if attempt:
+            await asyncio.sleep(RETRY_DELAYS[min(attempt - 1, len(RETRY_DELAYS) - 1)])
+        proc = await asyncio.create_subprocess_exec(
+            "cursor-agent", *args, cwd=workdir, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE)
+        try:
+            out, err = await asyncio.wait_for(proc.communicate(full.encode()), timeout)
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.wait()
+            error = "timeout"
+            continue
+        try:
+            answer = json.loads(out)
+        except ValueError:
+            error = err.decode(errors="replace").strip()[-300:] or f"cursor-agent exited {proc.returncode}"
+            continue
+        if answer.get("is_error"):
+            error = str(answer.get("result") or answer.get("subtype"))[:300]
+            continue
+        try:
+            value = _json_object(str(answer.get("result", "")))
+        except ValueError:
+            value = None
+        problems = ["no JSON object in the answer"] if value is None else schema_errors(value, schema)
+        if not problems:
+            return value
+        error = "; ".join(problems)[:300]
+    raise RuntimeError(f"cursor call failed: {error}")
+
+
 # scripted backend (tests) ----------------------------------------------
 
 class MCPClient:

@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 from typing import Awaitable, Callable
 
-from .backend import claude_json, codex_json, is_claude
+from .backend import claude_json, codex_json, cursor_json, is_claude, is_cursor
 from .events import EventLog
 from .world import Agent
 
@@ -100,6 +100,8 @@ class CodexAuditor:
         if is_claude(self.model):  # claude/<model>: Claude Code, as for judge labels (used by reaudit, never in a run)
             return await claude_json(self.model, self.instructions, record, VERDICT_SCHEMA, self.reasoning_effort,
                                      self.workdir)
+        if is_cursor(self.model):  # cursor/<model>: the same judge model through the Cursor CLI (reaudit only)
+            return await cursor_json(self.model, self.instructions, record, VERDICT_SCHEMA, self.workdir)
         return await codex_json(self.swarm_home, self.model, self.instructions, record, VERDICT_SCHEMA,
                                 self.reasoning_effort, self.workdir, service_tier=self.service_tier)
 

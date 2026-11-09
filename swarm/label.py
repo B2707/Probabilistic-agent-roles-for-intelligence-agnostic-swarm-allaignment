@@ -67,7 +67,7 @@ async def label_run(run_dir: Path, judge: Judge, batch_size: int = 30, concurren
         for i in range(0, len(conv), batch_size):
             batches.append(conv[max(0, i - 5):i + batch_size])  # 5 messages of overlap for context
     sem = asyncio.Semaphore(concurrency)
-    labels: dict[str, dict] = {}
+    labels: dict[int, dict] = {}
     partial = Path(run_dir) / "labels.partial.jsonl"
     saved: dict[str, list[dict]] = {}
     if partial.exists():
@@ -89,14 +89,19 @@ async def label_run(run_dir: Path, judge: Judge, batch_size: int = 30, concurren
                 f.write(json.dumps({"key": key, "judge": judge_id, "labels": out["labels"]}) + "\n")
         return saved[key]
 
-    # batches in order, so with overlap the first batch that saw a message decides its label, as before
-    for out in await asyncio.gather(*(one(b) for b in batches)):
+    # batches in order, so with overlap the first batch that saw a message decides its label, as before.
+    # Labels attach to the message event in the answering batch: a resumed run can repeat a message_id elsewhere.
+    for batch, out in zip(batches, await asyncio.gather(*(one(b) for b in batches))):
+        unanswered = list(batch)
         for lab in out:
-            labels.setdefault(lab["message_id"], lab)
+            m = next((m for m in unanswered if m["message_id"] == lab["message_id"]), None)
+            if m is not None:
+                unanswered.remove(m)
+                labels.setdefault(id(m), lab)
     path = Path(run_dir) / "labels.jsonl"
     with open(path, "w") as f:
         for m in msgs:
-            lab = labels.get(m["message_id"], {"label": "unlabeled", "target": "", "quote": ""})
+            lab = labels.get(id(m), {"label": "unlabeled", "target": "", "quote": ""})
             f.write(json.dumps({"message_id": m["message_id"], "round": m["round"], "sender": m["agent"],
                                 "to": m.get("to"), "kind": m["kind"], "label": lab["label"],
                                 "target": (lab.get("target") or "").strip(), "quote": lab["quote"]}) + "\n")

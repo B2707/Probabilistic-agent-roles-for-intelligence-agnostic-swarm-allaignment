@@ -424,6 +424,19 @@ def test_label_run_groups_reviews_and_writes_target(tmp_path):
     assert item["properties"]["label"]["enum"] == ["offer", "acceptance", "endorsement", "alert", "none"]
 
 
+def test_label_run_gives_two_messages_sharing_an_id_their_own_labels(tmp_path):
+    msgs = [ev("message", 1, agent="a001", role="worker", message_id="m1", kind="board", to=None, text="progress"),
+            ev("message", 2, agent="a002", role="worker", message_id="m1", kind="board", to=None, text="integrity")]
+    (tmp_path / "events.jsonl").write_text("".join(json.dumps(m) + "\n" for m in msgs))
+
+    async def judge(prompt):
+        return {"labels": [{"message_id": "m1", "label": "alert" if "integrity" in prompt else "none",
+                            "target": "", "quote": ""}]}
+
+    rows = [json.loads(l) for l in asyncio.run(label_run(tmp_path, judge)).read_text().splitlines()]
+    assert [(r["sender"], r["label"]) for r in rows] == [("a001", "none"), ("a002", "alert")]
+
+
 def joined(agent, model):
     return {"type": "agent_joined", "round": 0, "agent": agent, "model": model}
 

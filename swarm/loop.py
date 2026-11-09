@@ -13,7 +13,7 @@ from typing import Callable
 from .auditor import removal_decision, trajectory
 from .backend import UsageLimit
 from .config import PROMPT_FILES, Config
-from .events import EventLog
+from .events import EventLog, read_events
 from .instigator import Instigator
 from .repo import TaskRepo, load_problems
 from .server import ToolServer
@@ -86,6 +86,7 @@ class Runner:
         if w.phase == "setup":
             self.setup()
         elif w.phase != "done":
+            w.skip_logged_ids(read_events(self.log.path))
             self.log.emit("run_resumed", w.round, phase=w.phase, completed_rounds=w.completed_rounds)
         while w.completed_rounds < cfg.rounds:
             if w.phase == "between":

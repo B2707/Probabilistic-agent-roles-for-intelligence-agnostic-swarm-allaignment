@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import secrets
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -116,6 +117,14 @@ class World:
         cid = f"c{self.next_call:06d}"
         self.next_call += 1
         return cid
+
+    def skip_logged_ids(self, events: list[dict]) -> None:
+        """A hard kill loses the counters since the last save, so move them past every id the event log has used."""
+        counters = {"message_id": "next_msg", "pr_id": "next_pr", "report_id": "next_report", "call_id": "next_call"}
+        for event in events:
+            for name, counter in counters.items():
+                if event.get(name):
+                    setattr(self, counter, max(getattr(self, counter), int(re.sub(r"\D", "", event[name])) + 1))
 
     # queries ---------------------------------------------------------
     def active(self) -> list[Agent]:

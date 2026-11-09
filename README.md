@@ -1,5 +1,5 @@
 
-# Oversight in a 100-agent coding swarm
+# Probabilistic Agent Roles For Intelligence Agnostic Swarm Allaignment
 
 A testbed for one question: when 100 coding agents share a repository and the work cannot be finished honestly, what kind of oversight stops them from cheating?
 

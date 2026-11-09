@@ -17,7 +17,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from dashboard.server import App, Peer, main, make_server
+from dashboard.server import HOME_PATH, App, Peer, main, make_server
 from dashboard.store import (
     RemoteStatus,
     RunState,
@@ -206,8 +206,8 @@ def test_names_groups_and_hosts():
     assert group_of("x", {"pr_approvals": 2}, ["ordered"]) == "v2-archive"
     assert group_of("x", {"pr_approvals": 2, "shuffle_turns": True}) == "v2-shuffled"
     assert group_of("x-stopped", {"pr_approvals": 2}) == "stopped" and group_of("x", {}) == "v1"
-    assert norm_host("Baders-MacBook-Pro.local") == norm_host("Bader’s MacBook Pro") == "badersmacbookpro"
-    assert norm_host("baders-macbook-pro.tail9fc878.ts.net.") == "badersmacbookpro"
+    assert norm_host("Alexs-MacBook-Pro.local") == norm_host("Alex’s MacBook Pro") == "alexsmacbookpro"
+    assert norm_host("alexs-macbook-pro.example.net.") == "alexsmacbookpro"
 
 
 def test_swarm_proc_counts_swarm_processes_not_the_shell_that_launched_them():
@@ -241,7 +241,7 @@ def test_store_states_and_remote_snapshot(tmp_path):
     (tmp_path / "results" / "live-laptop.md").write_text(
         "# Live run status, 2026-11-08 00:07 EST\n\n| run | state | N | round | turns | teams_at_100 | swarm_pass_rate |\n"
         "|---|---|---|---|---|---|---|\n| C100-6-luna-s2-20261107-235039 | running | 100 | 2/20 | 55 | 1 | 12.5% |\n")
-    st = Store(tmp_path, machine="testmac", scan_processes=False, fleet=False, github_poll=False)
+    st = Store(tmp_path, machine="testmac", scan_processes=False, github_poll=False)
     st.initial_load()
     st.remote.poll_local()
     by = {s["name"]: s for s in st.summaries()}
@@ -254,18 +254,18 @@ def test_store_states_and_remote_snapshot(tmp_path):
     assert snap["machine_key"] == "laptop"  # no alias: the git name is its own machine
 
 
-def test_machine_alias_maps_a_git_machine_to_its_tailscale_device(tmp_path):
+def test_machine_alias_maps_a_git_machine_to_its_device(tmp_path):
     (tmp_path / "results").mkdir()
     for m in ("laptop", "other"):
         (tmp_path / "results" / f"live-{m}.md").write_text(
             "# Live run status, 2026-11-08 01:45 EST\n\n| run | state | N | round |\n|---|---|---|---|\n"
             f"| A100-6-luna-s2-{m}-20261108-014315 | running | 100 | 3/20 |\n")
-    st = Store(tmp_path, machine="testmac", scan_processes=False, fleet=False, github_poll=False,
-               aliases={"laptop": "danas-macbook-pro"})
+    st = Store(tmp_path, machine="testmac", scan_processes=False, github_poll=False,
+               aliases={"laptop": "alexs-macbook-pro"})
     st.remote.poll_local()
     by = {s["machine"]: s for s in st.summaries()}
-    # the Fleet page and the overview find a run's device by machine_key; Tailscale gives this device these keys
-    assert by["laptop"]["machine_key"] == norm_host("danas-macbook-pro") == norm_host("dana’s MacBook Pro")
+    # a run is matched to its device by machine_key
+    assert by["laptop"]["machine_key"] == norm_host("alexs-macbook-pro") == norm_host("alex’s MacBook Pro")
     assert by["laptop"]["machine"] == "laptop"  # still labelled by its snapshot file
     assert by["other"]["machine_key"] == "other"  # unmapped machines keep the "seen through git" section
     with pytest.raises(SystemExit):
@@ -295,7 +295,7 @@ def test_snapshot_rows_lose_to_stopped_runs_and_reachable_peers(tmp_path):
     # a machine never shows its own status file as snapshot rows: it reads those runs from runs/
     assert rs.summaries(set(), {"laptop"}) == []
 
-    st = Store(tmp_path, machine="testmac", scan_processes=False, fleet=False, github_poll=False)
+    st = Store(tmp_path, machine="testmac", scan_processes=False, github_poll=False)
     st.remote.poll_local()
     app = App(st, ["http://laptop:8765"], None)
     peer = app.peers[0]
@@ -323,7 +323,7 @@ def test_snapshot_rows_lose_to_stopped_runs_and_reachable_peers(tmp_path):
 def server(tmp_path):
     write_run(tmp_path, events()[:-5], labels=True)  # still "running": the run hasn't ended
     srv, app = make_server(tmp_path, port=0, token="s3cret", machine="testmac", tick=0.2, scan_processes=False,
-                           fleet=False, github_poll=False)
+                           github_poll=False)
     app.start()
     threading.Thread(target=srv.serve_forever, kwargs={"poll_interval": 0.1}, daemon=True).start()
     base = f"http://127.0.0.1:{srv.server_address[1]}"
@@ -442,3 +442,15 @@ def test_sse_runs_event_lists_every_run_so_a_page_drops_the_ones_that_left(serve
     assert len(lists) == 2, lists
     assert lists[0] == sorted([NAME, *old])  # sent once on connect, so a reconnecting page resyncs too
     assert lists[1] == sorted([NAME, *new])  # the old snapshot runs are gone; the local run stays
+
+
+def test_account_suffixes_are_not_part_of_the_model_or_seed():
+    assert model_of("Cn100-6-luna-s3-b2-20261109-020712", {}) == "gpt-6-luna"
+    assert seed_of("Cn100-6-luna-s3-b2-20261109-020712", {}) == 3
+    assert model_of("D100-61-sol-s2-mo-20261108-182755", {}) == "gpt-6.1-sol"
+    assert seed_of("D100-61-sol-s2-mo-20261108-182755", {}) == 2
+    assert seed_of("A100-6-luna-s1fast-20261108-030213", {}) == 1
+
+
+def test_served_json_never_carries_a_home_directory():
+    assert HOME_PATH.sub(b"~", b'{"p":"/Users/someone/repo/a","q":"/home/other/b"}') == b'{"p":"~/repo/a","q":"~/b"}'

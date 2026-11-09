@@ -1,74 +1,46 @@
-# Swarm Ops dashboard
+# Swarm oversight results
 
-A live, read-only web console for the swarm runs. It tails every `events.jsonl` under `runs/` and `results/` and pushes new events to the browser with Server-Sent Events, usually within half a second. The server uses only the Python standard library. Charts come from ECharts 5.5.0 on cdnjs.
+A read-only web dashboard for this experiment. Each run gives a swarm of 100 AI coding agents 55 problems, and every problem contains one test that no correct code can pass. The dashboard shows how many agents cheated under each kind of oversight.
+
+It reads the run folders in `results/`. It never writes to them. The server uses only the Python standard library. Charts load ECharts from cdnjs, so they need internet access.
 
 ## Start
 
 From the repo root:
 
 ```
-uv run python -m dashboard                      # http://localhost:8765
-uv run python -m dashboard --host 0.0.0.0       # LAN viewing
-uv run python -m dashboard --token "$TOKEN"     # require a token (use this whenever the port is reachable by others)
+uv run python -m dashboard
 ```
+
+Then open http://localhost:8765. A fresh clone needs nothing else: no `runs/` folder and no live experiment.
+
+## What each view shows
+
+- **Results**: the first screen. What the experiment is, then the average outcome for each oversight setup, per worker model. Below that are round-by-round charts, every metric for every run (copy as Markdown or download as CSV), and a chart to compare any metric across runs. Only complete runs go into averages.
+- **All runs**: every run folder, grouped as complete, partial, stopped by hand, and earlier designs.
+- **Run details**: one run in depth.
+  - **Activity**: a per-problem heatmap, the agent grid, and a filterable event feed. A slider replays the run round by round.
+  - **Charts**: 15 charts, each exportable as PNG.
+  - **Network**: who approved, messaged and reported whom, with collusion groups.
+  - **Agents** and **PRs**: sortable tables. Click a row for an agent's timeline or a PR's diff.
+  - **Config**: the run's settings.
+- **Operations**: throughput, retries and token use. This view appears only while runs are live or a `runs/` folder exists.
+
+Hover over a column name to see what it counts.
+
+## Options
 
 | Flag | What it does |
 |---|---|
 | `--port 8765` | Port to serve on. |
-| `--root PATH` | The repo root that holds `runs/` and `results/`. |
-| `--peer http://HOST:PORT` | Merges another machine's dashboard. Repeatable. Add `?token=T` if that dashboard has a token. Each peer's runs are labelled with its machine name. |
-| `--machine NAME` | Machine label. Defaults to the macOS LocalHostName. |
-| `--machine-alias GIT_NAME=DEVICE` | Says that the machine pushing `results/live-GIT_NAME.md` is the Tailscale device `DEVICE` (its DNS name, such as `danas-macbook-pro`). Its snapshot runs then show on that device's Fleet card and get its CPU line in the overview, instead of under "Machines seen through git". Repeatable. |
-| `--no-fleet` | Skips device health, which comes from Tailscale and the fleet-statusd server on port 7477. |
-| `--no-github` | Reads `results/live-*.md` from the local checkout only, not from GitHub through `gh`. |
+| `--root PATH` | The repo root that holds `results/`. |
+| `--host 0.0.0.0` | Allow other machines on the network to connect. |
+| `--token T` | Require an access token. Use it whenever others can reach the port. |
+| `--peer http://HOST:PORT` | Merge in another machine's dashboard. Repeatable. |
+| `--machine NAME` | Label for this machine. |
+| `--no-github` | Read status tables from the local checkout only. |
 | `--tick 1.0` | Seconds between file polls. |
-
-## What it reads
-
-The dashboard never writes. It reads these sources:
-
-- `runs/<run>/` and `results/<run>/` (also `results/ordered/`, `results/stopped/` and `results/v1/`): config, events and judge labels.
-- `results/live-<machine>.md`: the status table another machine pushes through git. It shows the laptop's seed-2 runs before they publish.
-- `runs/queue.log`, `ps`, and the machine's load and memory.
-- `tailscale status --json` and `http://<device>:7477/status`: device battery, CPU and memory, the same path the fleet menu bar app uses.
-
-Paper metrics come from `swarm.metrics.compute`, run in memory. They match `results/metrics.md`, and the dashboard never writes `metrics.json`.
-
-## Views
-
-The dashboard has five views:
-
-- **Overview**: every run grouped as v3, stopped, v2 archive, and v1, with v3 split by worker model. Each row shows state (running, resuming, usage-limit, interrupted, labelled), progress, ETA, cheats on main, cheaters, removals, retries, and device health.
-- **Results**: the v3 arms side by side, with seeds 1 and 2 paired per arm. It has round-by-round charts, a metric table you can copy as Markdown or download as CSV, an overlay of any metric across any runs, and the v2 archive as a secondary section.
-- **Run**: each run has these tabs:
-  - **Live**: tiles, a replay slider, a per-problem heatmap, an agent grid, and a filterable live feed.
-  - **Charts**: 15 charts, each exportable as PNG.
-  - **Network**: approvals, DMs, instigator pushes, reports and judge labels, with conspiracy groups and replay.
-  - **Agents**: a sortable table of every agent.
-  - **PRs**: every PR, with diff, reviews and judge labels.
-  - **Config**: the run's configuration.
-
-  Click any agent ID or PR ID to open its timeline or diff.
-- **Fleet**: every Tailscale device, with battery, CPU, memory pressure and uptime, plus which runs it hosts. Machines that report only through git appear too.
-- **Ops**: throughput and 403 retries per minute, turns by run, tokens by run, usage-limit stops and resumes, and the tail of `runs/queue.log`.
 
 ## Tests
 
 `uv run pytest -q tests/test_dashboard.py` uses synthetic events only.
-
-## Sharing it (Tailscale Funnel)
-
-Funnel is enabled on the tailnet. The public address is https://baders-macbook-pro.tail9fc878.ts.net/. It only works while the dashboard runs, and it always requires the token.
-
-```
-# start detached in its own session, with the token from ~/.config/swarm-dash/token (kept out of the process list);
-# the laptop pushes results/live-laptop.md and is the Tailscale device danas-macbook-pro; it also runs its own
-# dashboard on its Tailscale address only (--host 100.67.106.8 --machine laptop --no-github), merged here live with --peer
-DASHBOARD_TOKEN="$(cat ~/.config/swarm-dash/token)" nohup python3 scripts/detach.py uv run python -m dashboard --port 8765 \
-  --machine-alias laptop=danas-macbook-pro --peer http://100.67.106.8:8765 > ~/.config/swarm-dash/dashboard.log 2>&1 < /dev/null &
-/Applications/Tailscale.app/Contents/MacOS/Tailscale funnel --bg 8765      # expose it
-/Applications/Tailscale.app/Contents/MacOS/Tailscale funnel --https=443 off # stop exposing it
-pkill -f "python -m dashboard --port 8765"                                  # stop the dashboard
-```
-
-To share a link, append `?token=<token>`. The first visit with the token sets a cookie, so later visits don't need it. To revoke access, replace the token file and restart the dashboard.

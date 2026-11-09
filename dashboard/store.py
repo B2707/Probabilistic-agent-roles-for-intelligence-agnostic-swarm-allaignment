@@ -135,7 +135,7 @@ def arm_base(name: str) -> str:
 def seed_of(name: str, cfg: dict) -> int | None:
     if isinstance(cfg.get("seed"), int):
         return cfg["seed"]
-    m = re.search(r"-s(\d+)(?:-\d{8}-\d{6})?(?:-stopped)?$", name or "")
+    m = re.search(r"-s(\d+)(?:fast)?(?:-(?:mo|b\d+))?(?:-\d{8}-\d{6})?(?:-stopped)?$", name or "")
     return int(m.group(1)) if m else (1 if name else None)
 
 
@@ -143,10 +143,11 @@ def model_of(name: str, cfg: dict) -> str:
     if cfg.get("worker_model"):
         return cfg["worker_model"]
     toks = STAMP.sub("", name or "").split("-")
-    while len(toks) > 1 and re.fullmatch(r"s\d+", toks[-1]):
+    while len(toks) > 1 and re.fullmatch(r"s\d+(?:fast)?|mo|b\d+", toks[-1]):
         toks.pop()
     rest = "-".join(toks[len(arm_base(name).split("-")):])
-    return {"6-luna": "gpt-6-luna", "56-luna": "gpt-5.6-luna", "sol-max": "gpt-6.1-sol"}.get(rest, rest or "?")
+    return {"6-luna": "gpt-6-luna", "61-sol": "gpt-6.1-sol", "56-luna": "gpt-5.6-luna",
+            "sol-max": "gpt-6.1-sol"}.get(rest, rest or "?")
 
 
 def condition_of(cfg: dict) -> str:
@@ -1056,97 +1057,11 @@ def _ts(s: str) -> float:
 # ---------------------------------------------------------------------------------------------------------------
 
 
-TAILSCALE_CLIS = ("/Applications/Tailscale.app/Contents/MacOS/Tailscale", "/opt/homebrew/bin/tailscale",
-                  "/usr/local/bin/tailscale")
-FLEET_PORT = int(os.environ.get("FLEET_STATUS_PORT", "7477"))
-
-
 def norm_host(s: str | None) -> str:
-    """Comparable machine key: 'Baders-MacBook-Pro.local', 'baders-macbook-pro.tail9fc878.ts.net.' and
-    'Bader’s MacBook Pro' all become 'badersmacbookpro'."""
+    """Comparable machine key: 'Alexs-MacBook-Pro.local', 'alexs-macbook-pro.example.net.' and 'Alex’s MacBook Pro' all
+    become 'alexsmacbookpro'."""
     s = (s or "").lower().removesuffix(".").split(".")[0] if "." in (s or "") and " " not in (s or "") else (s or "").lower()
     return re.sub(r"[^a-z0-9]", "", s)
-
-
-class Fleet:
-    """Device health through the fleet-status pathway: devices from `tailscale status --json`, numbers from each
-    Mac's fleet-statusd (GET http://<tailscale-ip>:7477/status, answers loopback and Tailscale peers only)."""
-
-    def __init__(self, every: float = 15.0, enabled: bool = True):
-        self.every = every
-        self.enabled = enabled
-        self.devices: list[dict] = []
-        self.t = None
-        self.error = None
-        self.source = None
-
-    def poll(self) -> None:
-        import urllib.request
-        from concurrent.futures import ThreadPoolExecutor
-        devices: list[dict] = []
-        cli = next((c for c in TAILSCALE_CLIS if os.access(c, os.X_OK)), None)
-        self.error = None
-        if cli:
-            try:
-                out = subprocess.run([cli, "status", "--json"], capture_output=True, text=True, check=False, timeout=8).stdout
-                d = json.loads(out)
-                nodes = [(d.get("Self") or {}, True)] + [(n, False) for n in (d.get("Peer") or {}).values()]
-                for n, me in nodes:
-                    if not me and ("tag:ingress" in (n.get("Tags") or []) or n.get("HostName") == "funnel-ingress-node"):
-                        continue  # Tailscale's Funnel relay servers, shared in while Funnel is on: not our devices
-                    ips = n.get("TailscaleIPs") or []
-                    dns = (n.get("DNSName") or "").split(".")[0]
-                    devices.append({
-                        "id": dns or n.get("HostName"), "name": n.get("HostName"), "dns": dns, "os": n.get("OS") or "",
-                        "online": bool(me or n.get("Online")), "self": me,
-                        "ip": next((i for i in ips if ":" not in i), ips[0] if ips else None),
-                        "last_seen": n.get("LastSeen"), "keys": sorted({norm_host(dns), norm_host(n.get("HostName"))} - {""}),
-                    })
-                self.source = "tailscale"
-            except (OSError, ValueError, subprocess.SubprocessError) as e:
-                self.error = f"tailscale: {e}"
-        if not devices:
-            me = hostname()
-            devices = [{"id": me.lower(), "name": me, "dns": me.lower(), "os": "macOS" if sys.platform == "darwin" else
-                        sys.platform, "online": True, "self": True, "ip": "127.0.0.1", "last_seen": None,
-                        "keys": [norm_host(me)]}]
-            self.source = "local"
-        local_key = norm_host(hostname())
-        for dv in devices:
-            if dv["self"] and local_key not in dv["keys"]:
-                dv["keys"].append(local_key)
-
-        def fetch(dv: dict) -> None:
-            dv["status"], dv["status_error"] = None, None
-            if not dv["online"] or (dv["os"] not in ("macOS", "darwin") and not dv["self"]):
-                return
-            addr = "127.0.0.1" if dv["self"] else dv["ip"]
-            if not addr:
-                return
-            host = f"[{addr}]" if ":" in addr else addr
-            try:
-                with urllib.request.urlopen(f"http://{host}:{FLEET_PORT}/status", timeout=6) as resp:
-                    dv["status"] = json.loads(resp.read())
-                if dv["status"].get("name"):
-                    dv["keys"] = sorted(set(dv["keys"]) | {norm_host(dv["status"]["name"])})
-            except Exception as e:  # noqa: BLE001
-                dv["status_error"] = f"{type(e).__name__}: {getattr(e, 'reason', e)}"
-
-        with ThreadPoolExecutor(max_workers=8) as ex:
-            list(ex.map(fetch, devices))
-        self.devices, self.t = devices, time.time()
-
-    def loop(self, stop: threading.Event, on_change) -> None:
-        while self.enabled and not stop.is_set():
-            try:
-                self.poll()
-                on_change()
-            except Exception as e:  # noqa: BLE001
-                self.error = repr(e)
-            stop.wait(self.every)
-
-    def view(self) -> dict:
-        return {"devices": self.devices, "t": self.t, "error": self.error, "source": self.source, "port": FLEET_PORT}
 
 
 class RemoteStatus:
@@ -1160,7 +1075,7 @@ class RemoteStatus:
                  aliases: dict[str, str] | None = None):
         self.root = root
         self.github = github if use_github else None
-        self.aliases = aliases or {}  # git machine name -> Tailscale device (--machine-alias laptop=danas-macbook-pro)
+        self.aliases = aliases or {}  # git machine name -> device name (--machine-alias)
         self.mtimes: dict[str, float] = {}
         self.local: dict[str, tuple[float, list[dict]]] = {}  # machine -> (as of, rows)
         self.remote: dict[str, tuple[float, list[dict]]] = {}
@@ -1327,7 +1242,7 @@ class Store:
     """Every run under runs/ and results/, tailed by one background thread."""
 
     def __init__(self, root: Path, machine: str | None = None, tick: float = 1.0, scan_processes: bool = True,
-                 fleet: bool = True, github_poll: bool = True, aliases: dict[str, str] | None = None):
+                 github_poll: bool = True, aliases: dict[str, str] | None = None):
         self.root = Path(root).resolve()
         self.machine = machine or hostname()
         self.tick_s = tick
@@ -1350,7 +1265,6 @@ class Store:
         self.stop_event = threading.Event()
         self.github = _github_base(self.root)
         self.thread: threading.Thread | None = None
-        self.fleet = Fleet(enabled=fleet)
         self.remote = RemoteStatus(self.root, self.github, use_github=github_poll, aliases=aliases)
 
     # ---------------------------------------------------------------- discovery
@@ -1402,9 +1316,6 @@ class Store:
     def start(self) -> None:
         self.thread = threading.Thread(target=self._loop, name="store", daemon=True)
         self.thread.start()
-        if self.fleet.enabled:
-            threading.Thread(target=self.fleet.loop, args=(self.stop_event, self._bump), name="fleet",
-                             daemon=True).start()
         if self.remote.github:
             threading.Thread(target=self.remote.loop, args=(self.stop_event, self._bump), name="github",
                              daemon=True).start()
@@ -1573,7 +1484,7 @@ class Store:
             removals += rs["removals"]
         active = run.active_agents()
         roles = Counter(a.role for a in active)
-        # Cheaters split by removal, so "48 cheaters, 40 removed" reads as 40 removed + 8 never removed (Bader, 9 Nov)
+        # Cheaters split by removal, so "48 cheaters, 40 removed" reads as 40 removed + 8 never removed
         removed_ids = {a.id for a in run.agents.values() if a.removed_round is not None}
         cheat_ids = set(run.cheaters)
         end_t = run.end["t"] if run.end else None
@@ -1838,7 +1749,7 @@ class Store:
         return {"machine": self.machine, "machine_key": norm_host(self.machine), "now": time.time(),
                 "boot_t": self.boot_t, "machine_stats": self.machine_stats, "codex": self.procs.get("codex"),
                 "self_cpu": self.self_cpu, "rss_mb": self.procs.get("rss_mb"), "loading": self.loading,
-                "loaded": self.loaded, "fleet": self.fleet.view()}
+                "loaded": self.loaded}
 
 
 def _components(links: list[tuple[str, str]]) -> list[list[str]]:

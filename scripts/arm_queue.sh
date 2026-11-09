@@ -7,8 +7,8 @@
 # 3. Waits for the given PIDs (runs started elsewhere), so their labels come out of this queue too.
 # 4. Labels every ended v2 run that has no labels yet, LABEL_FIRST first, at most LABEL_JOBS at once (see below).
 # 5. Publishes results/ and pushes after every step (scripts/publish_results.py --push).
-# A run that stops on a usage limit (exit 3) is resumed after RETRY_WAIT seconds (default 60; Bader, 8 Nov 10:2x: a
-# stopped run must not sit stale for 10 minutes), up to RETRIES times. A run that still
+# A run that stops on a usage limit (exit 3) is resumed after RETRY_WAIT seconds (default 60, so a
+# stopped run does not sit stale for 10 minutes), up to RETRIES times. A run that still
 # doesn't complete is logged and left for `uv run swarm resume runs/<run>`; the queue goes on and labels what ended.
 #
 # Usage, from anywhere:  [ARM_GROUPS="armA armB armC;armD"] [PROD=<checkout>] [SLOTS=n] scripts/arm_queue.sh [PID...] >> runs/queue.log 2>&1
@@ -23,10 +23,10 @@
 # machine (from any queue), so it never runs more than n at once. A run counts while going or while waiting to resume
 # after a usage stop. RUN_SLOTS=m caps runs the same way (kept so older launch lines still work). Without SLOTS a group
 # starts all at once. SLOT_MATCH=<regex> makes SLOTS count only runs whose folder names match, while RUN_SLOTS still
-# counts every run. Adaption runs use no ChatGPT account (Bader, 8 Nov 04:30: a 3rd slot for the mixed swarms), so ChatGPT
+# counts every run. Adaption runs use no ChatGPT account (which gives a third slot for the mixed swarms), so ChatGPT
 # (luna, sol, terra) queues run with SLOTS=2 SLOT_MATCH="-(luna|sol|terra)" RUN_SLOTS=3 and mixed-swarm queues with
 # SLOTS=1 SLOT_MATCH=-mix RUN_SLOTS=3.
-# Label jobs don't take run slots: Opus labels use no ChatGPT account (Bader, 8 Nov 04:30). The label phase runs at most
+# Label jobs don't take run slots: Opus labels use no ChatGPT account. The label phase runs at most
 # LABEL_JOBS (default 2) label jobs at once on this machine, counting other queues' jobs. LABEL_FIRST="run-a run-b"
 # (names under runs/) labels those first, then every other run in name order.
 # It checks every SLOT_POLL seconds and waits SLOT_SETTLE seconds after each start so the new task is counted. Queues

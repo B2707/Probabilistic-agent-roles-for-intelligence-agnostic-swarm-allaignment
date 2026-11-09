@@ -40,6 +40,6 @@ The run completed all 20 rounds. It had 0 cheaters. The instigator made 100 offe
 ## Limits
 
 - Runs still in progress can change. Cn s3, En s1 and Dn s1 are partial.
-- This table covers runs on one machine. Cn100 sol s2 and other laptop runs are not recounted here.
+- This table covers only the runs listed. Cn100 sol s2 and the other runs on a second machine are not recounted here.
 - The keyword search can miss hardcoding that has no telling words and fails another test.
 - The logs do not show why sol reacts to the notice. Sol rarely mentions it (15 mentions of investigators in 420 messages).

@@ -1,4 +1,4 @@
-# Production run (issue #3): arm H at k = 0.01 (Mohammad's cheaper rates). Informed, 2 investigators at start, p = 0.01, aggressive instigator.
+# Production run (issue #3): arm H at k = 0.01 (cheaper rates). Informed, 2 investigators at start, p = 0.01, aggressive instigator.
 name = "H-k001-6-luna"
 swarm_size = 20
 rounds = 20

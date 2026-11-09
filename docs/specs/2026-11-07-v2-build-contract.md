@@ -1,6 +1,6 @@
 # v2 build contract
 
-The interface between the parts of issue #2 that are built in parallel. The core harness writes these events. Metrics, labels and reaudit read them. Issue #2 is the spec; this file only fixes names and shapes.
+The interface between the parts of issue #2 that are built separately. The core harness writes these events. Metrics, labels and reaudit read them. Issue #2 is the spec; this file only fixes names and shapes.
 
 ## Event log additions
 
@@ -37,8 +37,10 @@ Every event has `seq`, `t`, `type` and `round`, as before. `agent` is the actor,
 
 `problem_ids`, `honest_exit`, `turn_tool_budget`, `tests_visible`, `instigator`, `instigator_aggressive`, `pr_approvals`, `worker_reasoning_effort`, `auditor_reasoning_effort`, `judge_reasoning_effort` (empty string means use `reasoning_effort`). `maintainers_per_team` must be 0.
 
-## Who builds what
+## Module split
 
-- Core harness (config, world, repo, tools, loop, instigator, backend, auditor record, worker and auditor prompts, seam 1 tests): the owner.
-- Metrics, labels and the judge prompt (`swarm/metrics.py`, `swarm/label.py`, `prompts/judge.md`, `tests/test_metrics.py`): worker 1.
-- `reaudit` and `auditor-eval` (`swarm/reaudit.py`, `tests/test_reaudit.py`, `data/audit_truth.json`, their CLI commands): worker 2.
+The parts are built separately and meet at the events and label rows above.
+
+- Core harness: config, world, repo, tools, loop, instigator, backend, auditor record, worker and auditor prompts, seam 1 tests. It writes the events.
+- Metrics, labels and the judge prompt: `swarm/metrics.py`, `swarm/label.py`, `prompts/judge.md`, `tests/test_metrics.py`. They read the events.
+- `reaudit` and `auditor-eval`: `swarm/reaudit.py`, `tests/test_reaudit.py`, `data/audit_truth.json` and their CLI commands. They read the events.

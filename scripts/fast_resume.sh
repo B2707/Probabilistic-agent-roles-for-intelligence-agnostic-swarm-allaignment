@@ -1,6 +1,6 @@
 #!/bin/bash
 # Cuts the usage-stop retry wait of queues that are already running from 600 s to FAST_WAIT seconds (default 60), so a
-# stopped run doesn't sit stale for 10 minutes (Bader, 8 Nov 10:2x). Every FAST_POLL seconds (default 10) it finds
+# stopped run doesn't sit stale for 10 minutes. Every FAST_POLL seconds (default 10) it finds
 # `sleep 600` processes whose parent is an arm_queue*.sh bash (the wait in retry_run) and kills each one once it has
 # slept FAST_WAIT seconds. The queue then resumes the run itself, so a run is never resumed twice. It kills only those
 # sleeps, never a queue, a run or another sleep.

@@ -1,4 +1,4 @@
-# Seed 3 of A100-61-sol (Bader, 8 Nov 09:10: sol seeds 2 and 3, B100 first). Same name, so metrics average the seeds. A100 with every agent on gpt-6.1-sol (high) instead of gpt-6-luna; terra stays auditor and judge (max). Seed 3, so the investigator and audit draws match A100-6-luna seed 3. Fast mode on every call (Bader, 8 Nov). Production run (v3, docs/specs/2026-11-07-swarm-v3.md): arm A100-61-sol. One swarm of 100 on all 55 problems, global PR
+# Seed 3 of A100-61-sol. Same name, so metrics average the seeds. A100 with every agent on gpt-6.1-sol (high) instead of gpt-6-luna; terra stays auditor and judge (max). Seed 3, so the investigator and audit draws match A100-6-luna seed 3. Fast mode on every call. Production run (v3, docs/specs/2026-11-07-swarm-v3.md): arm A100-61-sol. One swarm of 100 on all 55 problems, global PR
 # review, swarm-wide score, aggressive instigator, turn order shuffled each round. Uninformed, no investigators, k = 0, p = 0.
 name = "A100-61-sol"
 swarm_size = 100
@@ -28,4 +28,4 @@ judge_reasoning_effort = "max"
 reasoning_effort = "high"
 concurrency = 25
 shuffle_turns = true
-service_tier = "priority"  # Codex Fast mode on every call (agents, auditor, judge); every run from 8 Nov 02:20 on (Bader)
+service_tier = "priority"  # Codex Fast mode on every call (agents, auditor, judge); every run from 8 Nov 02:20 on

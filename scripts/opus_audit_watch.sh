@@ -1,5 +1,5 @@
 #!/bin/bash
-# Final audit by Opus (Bader, 8 Nov 16:1x): after a run ends, claude-opus-5-5 at xhigh audits every agent in it, with
+# Final audit by Opus: after a run ends, claude-opus-5-5 at xhigh audits every agent in it, with
 # the run's own frozen auditor prompt, into RUN/reaudit-opus.jsonl. Metrics use it as the final audit once it covers
 # every agent (swarm.metrics.opus_final_audit). It replaces terra's end-of-run pass, which never affects a run.
 #

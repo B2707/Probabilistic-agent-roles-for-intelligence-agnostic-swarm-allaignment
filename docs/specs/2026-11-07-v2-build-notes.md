@@ -4,9 +4,9 @@ Built 7 November 2026 from GitHub issue #2 on branch `swarm-harness`. The produc
 
 ## What was built
 
-- **Core harness** (owner): config fields, PRs with R approvals and staleness, the scripted instigator, `fetch_url` honeypot, hidden-test mode, turn budget, 180 s timeout without retry, effort per role with the max-to-xhigh fallback, and the auditor record with PR diffs.
-- **Metrics and judge** (worker branch `t3/metrics-judge-labels`): five labels with targets, PR-aware blame, structural acceptances, seen-without-alerting links, honeypot counts, and the table grouped by run name.
-- **Reaudit** (worker branch `t3/auditor-reaudit-evaluation`): `swarm reaudit`, `swarm auditor-eval` and the seeded `data/audit_truth.json`.
+- **Core harness:** config fields, PRs with R approvals and staleness, the scripted instigator, `fetch_url` honeypot, hidden-test mode, turn budget, 180 s timeout without retry, effort per role with the max-to-xhigh fallback, and the auditor record with PR diffs.
+- **Metrics and judge:** five labels with targets, PR-aware blame, structural acceptances, seen-without-alerting links, honeypot counts, and the table grouped by run name.
+- **Reaudit:** `swarm reaudit`, `swarm auditor-eval` and the seeded `data/audit_truth.json`.
 - The event shapes they share are in `2026-11-07-v2-build-contract.md`. One event was added later: `pr_checked` (`agent` = PR author, `pr_id`, `team`, `version`, `passed`, `total`, `full_pass`, `error`), the harness's own test run of every new PR version.
 
 ## Decisions taken during the build
@@ -14,7 +14,7 @@ Built 7 November 2026 from GitHub issue #2 on branch `swarm-harness`. The produc
 | Decision | Why |
 |---|---|
 | Workers on gpt-6-luna and gpt-5.6-luna run at `high` reasoning | Issue #2 gives an effort only for gpt-6.1-sol (max). `high` matches the v1 sol pilots. |
-| v1 configs (`smoke`, `informed`, `uninformed`, `sol-high-informed`, `pilot-*`) are kept but no longer load | They record v1 runs. v2 rejects `maintainers_per_team` other than 0. Deleting them is Bader's call. |
+| v1 configs (`smoke`, `informed`, `uninformed`, `sol-high-informed`, `pilot-*`) are kept but no longer load | They record v1 runs. v2 rejects `maintainers_per_team` other than 0. Whether to delete them is an open question. |
 | The three v1 maintainer tests were ported to PRs | v2 removes `write_file` and maintainers. The ported tests keep their intent: permissions, scoring from main, and the auditor record. |
 | The instigator's first contacts can reach investigators | It can't know roles, and the same rule applies in every arm. |
 | The harness tests every new PR version (`pr_checked`) without showing agents the result | Issue #2 says the instigator acts "whenever an open PR … passes every test". Without the check, the push fired only if an agent happened to run the tests on that PR. |
@@ -52,5 +52,5 @@ The standards review and the spec review of the core ran on `e3ff6f5`.
 
 ## Still open
 
-- `data/audit_truth.json` needs a hand check by Bader or Mohammad. The conflicting pilot lists 9 agents. The old judge's labels named 9 more, which are listed in the file's notes.
+- `data/audit_truth.json` needs a hand check. The conflicting pilot lists 9 agents. The old judge's labels named 9 more, which are listed in the file's notes.
 - No seam covers the session-id fix. It is checked while watching the first production run.

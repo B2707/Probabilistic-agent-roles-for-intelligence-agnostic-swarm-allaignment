@@ -4,8 +4,8 @@
 # Every POLL seconds it looks for v2 runs under runs/ that completed and have no labels.jsonl and no live label job
 # (dirs ending in -stopped and pilot-* are skipped), LABEL_FIRST (names under runs/) first, then the rest in name order.
 # It starts one label job per free label slot: at most LABEL_JOBS (default 2) `swarm label` jobs at once on this
-# machine, counting jobs from any queue. Label jobs don't take run slots (Opus labels use no ChatGPT account, Bader,
-# 8 Nov 04:30). Starts go through the slot lock (runs/.slot-lock), like scripts/arm_queue.sh, so the two never start
+# machine, counting jobs from any queue. Label jobs don't take run slots (Opus labels use no ChatGPT account).
+# Starts go through the slot lock (runs/.slot-lock), like scripts/arm_queue.sh, so the two never start
 # into the same free slot. After each job it publishes results/ and pushes. A run whose labeling failed MAX_FAILS
 # times (default 2) is logged and left alone; labels.partial.jsonl keeps finished batches, so a retry costs little.
 # It never exits on its own; kill its PID.

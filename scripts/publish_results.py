@@ -32,7 +32,7 @@ from gitpush import commit_and_push  # noqa: E402
 
 
 # Disclosed extras: listed in the table, left out of the MEAN rows. The first seed-1 v3 runs hit the 7 Nov 23:21 freeze
-# and 403 stops and ran without Fast mode; the clean rerun (*-6-luna-s1fast) is seed 1 (Bader, 8 Nov 03:00).
+# and 403 stops and ran without Fast mode; the clean rerun (*-6-luna-s1fast) is seed 1.
 EXTRAS = {"A100-6-luna-20261107-230001", "B100-6-luna-20261107-230001", "C100-6-luna-20261107-230001"}
 
 

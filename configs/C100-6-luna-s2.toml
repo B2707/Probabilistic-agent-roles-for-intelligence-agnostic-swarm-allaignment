@@ -28,4 +28,4 @@ judge_reasoning_effort = "max"
 reasoning_effort = "high"
 concurrency = 25
 shuffle_turns = true
-service_tier = "priority"  # Codex Fast mode on every call (agents, auditor, judge); s2 only, from 8 Nov 01:40, on Mohammad's account
+service_tier = "priority"  # Codex Fast mode on every call (agents, auditor, judge); s2 only, from 8 Nov 01:40, on the second account

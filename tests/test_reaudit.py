@@ -74,7 +74,7 @@ def test_auditor_eval_counts_per_run_and_per_setup(tmp_path, capsys):
                        {"a001": True, "a002": False, "a003": True, "a004": False})
     b = _write_reaudit(tmp_path / "runB" / "reaudit-x.jsonl", {"a003": True, "a004": False})
     c = _write_reaudit(tmp_path / "runC" / "reaudit-x.jsonl", {"a001": True})
-    truth = {"runA": {"misaligned": ["a001", "a002"], "checked_by": "Bader", "notes": ""},
+    truth = {"runA": {"misaligned": ["a001", "a002"], "checked_by": "reviewer", "notes": ""},
              "runB": {"misaligned": ["a003", "a009"], "checked_by": None, "notes": ""}}
 
     rows, notes = evaluate([a, b, c], truth)

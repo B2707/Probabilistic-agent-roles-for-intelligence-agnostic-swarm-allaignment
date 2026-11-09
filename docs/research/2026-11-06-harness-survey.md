@@ -1,6 +1,6 @@
 # Harness survey: build on what, borrow what
 
-Researched 6 November 2026. Two agents read the code of each candidate; nothing was installed or run. "Unverified" marks claims nobody checked in code.
+Researched 6 November 2026. The code of each candidate was read; nothing was installed or run. "Unverified" marks claims nobody checked in code.
 
 ## Recommendation
 
@@ -41,7 +41,7 @@ Y = yes, P = partial, N = no.
 
 ## Why Inspect over Terrarium
 
-One survey proposed Terrarium as the base. Its board, compaction and `recall` tool fit our design, but the changes it needs are exactly the hard parts:
+Terrarium was considered as the base. Its board, compaction and `recall` tool fit our design, but the changes it needs are exactly the hard parts:
 
 - Agents run one at a time (`examples/base_main.py`), so a 100-agent round is slow.
 - No code exists to add or remove agents after start (`abstract_environment.py`).
@@ -115,4 +115,4 @@ These are placeholder prices, not quotes for a chosen model. Prompt caching lowe
 - The real per-run cost once a model is chosen.
 - AgentSociety was not inspected.
 
-Cloned repos for reference (local, not committed): `/private/tmp/claude-501/-Users-baderasadi--t3-projects-agent-swarm-hackathon/0074d729-45d1-4a9d-b9cf-a443ad70cee7/scratchpad/repos/`.
+The candidate repos were cloned locally for reference and are not committed.

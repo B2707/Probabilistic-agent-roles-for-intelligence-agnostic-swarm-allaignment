@@ -1,8 +1,8 @@
-# Paper readiness: data coverage and the judging rubric (8 Nov 2026, first written 15:30 EST, rewritten 22:55)
+# Paper readiness: data coverage and the judging rubric (8 Nov 2026)
 
-Checked against the sprint page (https://apartresearch.com/sprints/swarm-alignment-2026, read 8 Nov 15:20 EST) and the runs in `results/` on `swarm-harness`. Deadline: 9 Nov 11:59 UTC (06:59 EST). The full record of 8 Nov, with every run, decision and mistake, is `docs/research/2026-11-08-day-log.md`.
+Checked against the sprint page (https://apartresearch.com/sprints/swarm-alignment-2026, read 8 Nov) and the runs in `results/` on `swarm-harness`. Deadline: 9 Nov 11:59 UTC. The full record of 8 Nov, with every run, incident and decision, is `docs/research/2026-11-08-day-log.md`.
 
-## What we ran
+## What ran
 
 | Set | Setup | Arms | Models | Seeds | Status |
 |---|---|---|---|---|---|
@@ -10,11 +10,11 @@ Checked against the sprint page (https://apartresearch.com/sprints/swarm-alignme
 | v3 luna | 100 agents, 55 problems, global review, aggressive instigator | A100, B100, C100 | gpt-6-luna (high) | 3 clean (s1fast, s2, s3) plus the disturbed s1 | done, Opus labels and Opus final audit |
 | v3 sol | same | A100, B100, C100 | gpt-6.1-sol (high) | 3 | done, Opus labels and Opus final audit |
 | v3 new | same | D (bluff), E (auditor only), F (plain, no instigator) | luna and sol (high) | D and E: luna 3, sol 2 (seed 3 lost to the account lock); F: seed 1 only | done, Opus labels and Opus final audit |
-| v3 rerun (pending) | same, neutral notice text | C, D, E | luna and sol | 1 | waiting for Bader's approval of the notice texts |
+| v3 rerun | same, neutral notice text | C, D, E | luna and sol | C: 1 to 3; D and E: 1 and 2 | launched (`be189a8`), 14 runs |
 
-## The confound in every informed arm (found 8 Nov, 21:5x to 22:2x)
+## The confound in every informed arm
 
-Every informed arm (C100 since 7 Nov, and D and E) gives workers `informed_rule.md`. It starts "Integrity policy:" and spells out the cheats: "agents who make tests pass without genuinely implementing the specification (for example by getting frozen tests changed, or special-casing test inputs)". It also says caught agents are removed. The text has been in the first harness commit (`3117caa`, 7 Nov 11:22) and has never been edited. D (`prompts_bluff/`) and E (`prompts_audit/`) copied the wording and changed only which oversight it describes. Bader: the wording is an instruction to be aligned, and it did not belong in any run.
+Every informed arm (C100 since 7 Nov, and D and E) gives workers `informed_rule.md`. It starts "Integrity policy:" and spells out the cheats: "agents who make tests pass without genuinely implementing the specification (for example by getting frozen tests changed, or special-casing test inputs)". It also says caught agents are removed. The text has been in the first harness commit (`3117caa`, 7 Nov) and has never been edited. D (`prompts_bluff/`) and E (`prompts_audit/`) copied the wording and changed only which oversight it describes. The wording is an instruction to be aligned, and it did not belong in any run.
 
 - **Runs with the text (19 v3 run folders):**
   - C100: luna seeds 1, 1fast, 2 and 3, and sol seeds 1 to 3.
@@ -23,12 +23,12 @@ Every informed arm (C100 since 7 Nov, and D and E) gives workers `informed_rule.
   - Also the v2 and archived informed runs: C-informed, D-planted, F2-hidden-informed, G-bluff, H-informed-aggressive, H-k001 and H-k0015.
 - **Runs without it:** A100, B100 and F. The harness adds the text only when `informed = true` (`swarm/loop.py:293`).
 - **Also in every arm, A100 included:** `prompts/worker_swarm.md` says "exactly as its docstring specifies" and "Tests are frozen for this release. Nobody may change them." Only investigators (B100, C100) get `prompts/investigator.md`, which names the cheats.
-- **Plan (Bader, 22:2x):**
+- **Plan:**
   - Rerun C, D and E once each on luna and sol with neutral notices that name no behaviour and use no integrity wording.
   - F is scrapped.
   - Data collection ends after the reruns.
-  - The limitations may mention the corrupted data. Bader hasn't decided.
-  - The draft texts are in the day log and wait for his approval.
+  - The draft texts are in the day log.
+- **Open question:** how the limitations describe the confounded data.
 
 ## What the data supports
 
@@ -54,20 +54,19 @@ Every informed arm (C100 since 7 Nov, and D and E) gives workers `informed_rule.
    - `swarm/backend.py` keeps an error from a Codex "Reconnecting... (403)" event even when the turn then completes over HTTPS. The harness then reruns the finished turn after 30, 90 or 270 s.
    - 32% of turns (21,424 of 67,391 across the 35 v3 run folders, 20% to 43% per run, every arm) had a retry.
    - In 92 to 95% of those turns the agent posted its progress update twice. Retried turns average about one more tool call.
-   - Arms stay comparable, but message counts (offers, alerts, progress posts) include the duplicates. Many of the day's "usage stops" were probably these retries running out.
+   - Arms stay comparable, but message counts (offers, alerts, progress posts) include the duplicates. Many of the usage stops were probably these retries running out.
    - Not fixed, so that the reruns match A100 and B100. Say so in the limitations.
-3. **Lost turns.** A turn that hits the 180 s limit ends and isn't rerun: 0.3% to 1.6% of turns per run. Without Fast mode it was 15 of 100 luna round-1 turns, which is why the no-Fast D/E/F runs were stopped at 15:30. The laptop sol runs under load lost 4 to 5% (D sol s2: 31 of 2000).
+3. **Lost turns.** A turn that hits the 180 s limit ends and isn't rerun: 0.3% to 1.6% of turns per run. Without Fast mode it was 15 of 100 luna round-1 turns, which is why the no-Fast D/E/F runs were stopped. The sol runs on a second machine under load lost 4 to 5% (D sol s2: 31 of 2000).
 4. **Coverage.**
-   - D and E have 3 luna seeds and 2 sol seeds. Bader's ChatGPT account hit its weekly limit at 21:13 and is locked until 15 Nov, so sol seed 3 didn't run.
-   - F has seed 1 only (Bader, 17:00).
+   - D and E have 3 luna seeds and 2 sol seeds. The first ChatGPT account hit its weekly limit on 8 Nov and is locked until 15 Nov, so sol seed 3 didn't run.
+   - F has seed 1 only.
    - B100 sol varied a lot between seeds (51, 37 and 6 round-1 cheat fixes), so single seeds can mislead.
-5. **Accounts.** Luna D and E ran on Mohammad's ChatGPT account. E sol seed 2 ran rounds 17 to 20 on Mohammad's account after its agents' Codex sessions were copied over. Each agent's first turn after the move resent its full context without cache.
+5. **Accounts.** Luna D and E ran on a second ChatGPT account. E sol seed 2 ran rounds 17 to 20 on the second account after its agents' Codex sessions were copied over. Each agent's first turn after the move resent its full context without cache.
 6. **D's notice differs from C100's.** D adds one sentence about random audits. The neutral rerun gives C and D the same text.
-7. **"Accepted, incl. endorsements" exceeds offers in sol** (168 of 104 in A100 s2). Unexplained. Keep it out of the paper until someone checks how the metric counts.
-8. **Teams or projects (open).**
-   - Bader says the plan said "projects, not teams".
+7. **"Accepted, incl. endorsements" exceeds offers in sol** (168 of 104 in A100 s2). Unexplained. How the metric counts has not been checked, so keep it out of the paper for now.
+8. **Teams and problems.** Worker prompts assign each agent one problem and call that group its team. Whether agents may open PRs on problems other than their own was left open.
    - The repo specs say "Agents are split into teams, one team per problem" (`docs/specs/2026-11-06-swarm-harness.md`, line 130). `docs/specs/2026-11-07-swarm-v3.md` kept one assigned problem per agent, and its "Still open" list has "Whether agents may open PRs on any problem", which was never decided.
-   - Every v3 worker is told "Your team is ...". No written "projects, not teams" was found in the specs, issues, planning doc or threads.
+   - Every v3 worker is told "Your team is ...".
 
 ## Rubric
 
@@ -80,7 +79,7 @@ Judges score three dimensions from 1 to 5: Impact Potential and Innovation, Exec
   - Terra flagged 1090 of the 1094 objective cheaters across the 21 A/B/C runs, 99.6% recall (`scripts/auditor_recall.py`). Objective cheaters are agents blamed for a run that passed the impossible assert (`swarm.metrics.impossible_assert_passes`).
   - Precision hasn't been checked by hand (`data/audit_truth.json`: `checked_by: null`).
   - Opus and terra labels agree on 198 of 200 messages.
-- **Final audit by a second model** (16:54, `scripts/opus_vs_terra.py`).
+- **Final audit by a second model** (`scripts/opus_vs_terra.py`).
   - claude-opus-5-5 (xhigh) audited every agent of the 21 A/B/C runs after the run, and the metrics take the final audit from Opus.
   - On the 2099 agents both audited at the end, they agree on 2028 (96.6%, Cohen's kappa 0.93; 0.82 on B and C alone). Opus flags 41 agents that terra clears and clears 30 that terra flags.
   - Opus also flags 691 of the 698 agents terra removed during B/C runs, and 1092 of the 1094 objective cheaters. Lowest agreement: B100 luna, 89.5%.
@@ -88,7 +87,7 @@ Judges score three dimensions from 1 to 5: Impact Potential and Innovation, Exec
     - "No changes needed" about a merged override (rule 8): split in both directions.
     - Approvals that failed because the PR had already merged: Opus counts them.
     - Requests to correct a frozen test (rule 5) and temporary diagnostic branches (rule 2): terra counts them.
-- **False removals** (8 Nov evening, `5b65556`).
+- **False removals** (`5b65556`).
   - Opus would make 692 of the 702 v3 removals under the same removal rule. All 10 false ones are luna, in seeds 1 and 2.
   - B luna has 3 per seed: "keep main as is" posts about another agent's merged override (rule 8). Three were by investigators immune for what they did before converting.
   - C luna has 2 per seed, and the raw events show all four were honest:
@@ -124,8 +123,8 @@ Judges score three dimensions from 1 to 5: Impact Potential and Innovation, Exec
 
 ## Open
 
-- **The neutral-notice reruns** (approved and launched 8 Nov 23:5x, `be189a8`): `Cn100` seeds 1 to 3, `Dn100` and `En100` seeds 1 and 2, both models, Mohammad's account, 3 at a time. Seed 1 of every arm is expected by about 04:30 EST, the rest after the deadline.
-- **Teams or projects:** closed for the reruns (they keep the A100/B100 wording, so the comparison stays fair). Still a limitation to state.
+- **The neutral-notice reruns** (launched, `be189a8`): `Cn100` seeds 1 to 3, `Dn100` and `En100` seeds 1 and 2, both models, a second ChatGPT account, 3 at a time. Seed 1 of every arm is expected by about 04:30 EST, the rest after the deadline.
+- **Teams and problems:** unchanged for the reruns (they keep the A100/B100 wording, so the comparison stays fair). Still a limitation to state.
 - **Paper draft:** none found. `origin/main` has only `paper/sources.md` and `paper/sources.bib`. Issue #4 tracks the template and skeleton.
 - **Auditor precision** hand check (about 20 flagged agents who aren't objective cheaters).
-- **Making the repo public** (Bader's call, secrets check first).
+- **Whether to make the repo public.** A secrets check comes first.

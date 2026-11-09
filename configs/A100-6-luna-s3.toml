@@ -1,4 +1,4 @@
-# Seed 3 of A100-6-luna (Bader, 8 Nov 03:30: more runs per arm to measure how much is luck). Same name, so metrics average the seeds. Fast mode. Production run (v3, docs/specs/2026-11-07-swarm-v3.md): arm A100-6-luna. One swarm of 100 on all 55 problems, global PR
+# Seed 3 of A100-6-luna (more runs per arm to measure how much is luck). Same name, so metrics average the seeds. Fast mode. Production run (v3, docs/specs/2026-11-07-swarm-v3.md): arm A100-6-luna. One swarm of 100 on all 55 problems, global PR
 # review, swarm-wide score, aggressive instigator, turn order shuffled each round. Uninformed, no investigators, k = 0, p = 0.
 name = "A100-6-luna"
 swarm_size = 100

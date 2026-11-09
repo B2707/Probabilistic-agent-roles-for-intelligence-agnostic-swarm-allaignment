@@ -96,8 +96,7 @@ def main():
     out = {"source_commit": REF,
            "source_commit_time": subprocess.check_output(["git", "show", "-s", "--format=%ci", REF], cwd=ROOT, text=True).strip(),
            "manuscript_sha256": hashlib.sha256((ROOT / "paper/main.tex").read_bytes()).hexdigest(),
-           "run_directory_count": len(rows), "primary_arms": arms, "runs": rows,
-           "live_status": {p: read(p) for p in ("results/live.md", "results/live-laptop.md")}}
+           "run_directory_count": len(rows), "primary_arms": arms, "runs": rows}
     (ROOT / "paper/results-evidence.json").write_text(json.dumps(out, indent=2) + "\n")
     with (ROOT / "paper/results-runs.csv").open("w", newline="") as f:
         fields = ["folder", "primary", "extra", "seed", "model", "rounds_completed", "end_reason"] + sums

@@ -1,8 +1,8 @@
-# Arm D, bluff, with a neutral notice (Bader, 8 Nov 22:2x and 9 Nov): workers get the same notice as Cn100 (prompts_notice/informed_rule.md), but nothing exists: no investigators (I0 = 0, k = 0), no random audits (p = 0).
+# Arm D, bluff, with a neutral notice: workers get the same notice as Cn100 (prompts_notice/informed_rule.md), but nothing exists: no investigators (I0 = 0, k = 0), no random audits (p = 0).
 # Replaces the D100 runs, whose notice named the cheats (the notice-text confound, docs/research/2026-11-08-day-log.md).
 # Everything else as A100-61-sol seed 1: one swarm of 100 on all 55 problems, global PR review, swarm-wide score, aggressive
 # instigator, turn order shuffled each round, Fast mode. Opus xhigh labels and final audit; no terra pass after the run.
-# Runs on Mohammad's ChatGPT account (swarm_home): Bader's account is locked until 15 Nov.
+# Runs on a second ChatGPT account, selected by swarm_home.
 name = "Dn100-61-sol"
 swarm_size = 100
 rounds = 20
@@ -33,5 +33,5 @@ reasoning_effort = "high"
 concurrency = 25
 shuffle_turns = true
 final_audit = false
-service_tier = "priority"  # Codex Fast mode on every call (Bader, 8 Nov)
+service_tier = "priority"  # Codex Fast mode on every call
 swarm_home = ".swarm-home-mohammad"

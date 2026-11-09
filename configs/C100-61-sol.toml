@@ -1,4 +1,4 @@
-# C100 with every agent on gpt-6.1-sol (high) instead of gpt-6-luna; terra stays auditor and judge (max). Seed 1, so the investigator and audit draws match C100-6-luna seed 1. Fast mode on every call (Bader, 8 Nov). Production run (v3, docs/specs/2026-11-07-swarm-v3.md): arm C100-61-sol. One swarm of 100 on all 55 problems, global PR
+# C100 with every agent on gpt-6.1-sol (high) instead of gpt-6-luna; terra stays auditor and judge (max). Seed 1, so the investigator and audit draws match C100-6-luna seed 1. Fast mode on every call. Production run (v3, docs/specs/2026-11-07-swarm-v3.md): arm C100-61-sol. One swarm of 100 on all 55 problems, global PR
 # review, swarm-wide score, aggressive instigator, turn order shuffled each round. Informed, 10 investigators at start, k = 0.02, p = 0.01.
 name = "C100-61-sol"
 swarm_size = 100
@@ -28,4 +28,4 @@ judge_reasoning_effort = "max"
 reasoning_effort = "high"
 concurrency = 25
 shuffle_turns = true
-service_tier = "priority"  # Codex Fast mode on every call (agents, auditor, judge); every run from 8 Nov 02:20 on (Bader)
+service_tier = "priority"  # Codex Fast mode on every call (agents, auditor, judge); every run from 8 Nov 02:20 on

@@ -1,4 +1,4 @@
-# Clean rerun of seed 1 of C100-6-luna with Fast mode (Bader, 8 Nov 03:00): the first seed-1 run (20261107-230001) was hit by the Mac freeze and 403 stops and ran without Fast mode, so it isn't matched with seed 2. Same name, so metrics average it with seed 2; the disturbed run is reported as an extra. Production run (v3, docs/specs/2026-11-07-swarm-v3.md): arm C100-6-luna. One swarm of 100 on all 55 problems, global PR
+# Clean rerun of seed 1 of C100-6-luna with Fast mode : the first seed-1 run (20261107-230001) was hit by a machine freeze and 403 stops and ran without Fast mode, so it isn't matched with seed 2. Same name, so metrics average it with seed 2; the disturbed run is reported as an extra. Production run (v3, docs/specs/2026-11-07-swarm-v3.md): arm C100-6-luna. One swarm of 100 on all 55 problems, global PR
 # review, swarm-wide score, aggressive instigator, turn order shuffled each round. Informed, 10 investigators at start, k = 0.02, p = 0.01.
 name = "C100-6-luna"
 swarm_size = 100

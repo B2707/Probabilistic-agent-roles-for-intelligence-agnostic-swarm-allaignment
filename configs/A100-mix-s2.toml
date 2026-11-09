@@ -1,4 +1,4 @@
-# Seed 2 of A100-mix (same name, so the metrics table averages the two seeds), on the second laptop. Production run (v3, docs/specs/2026-11-07-swarm-v3.md): arm A100-mix. One swarm of 100 on all 55 problems, global PR
+# Seed 2 of A100-mix (same name, so the metrics table averages the two seeds), on a second machine. Production run (v3, docs/specs/2026-11-07-swarm-v3.md): arm A100-mix. One swarm of 100 on all 55 problems, global PR
 # review, swarm-wide score, aggressive instigator, turn order shuffled each round. Uninformed, no investigators, k = 0, p = 0.
 # Mixed swarm on Adaption credits (docs/specs/2026-11-07-swarm-v3.md, "8 Nov: Adaption models"): half the agents
 # run deepseek-v4-flash (high), half gemma-4-31b-it (high; it replaced qwen3.8-27b, down on 8 Nov). Auditor and judge run on glm-53-flash,

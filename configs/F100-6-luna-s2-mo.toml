@@ -1,10 +1,10 @@
-# F100-6-luna-s2 on Mohammad's ChatGPT account (Bader 15:4x: remaining luna runs on Mohammad's account, 2 at once; sol stays on Bader's).
-# Identical to configs/F100-6-luna-s2.toml except swarm_home, the Codex home logged in to his account. The -mo suffix only
+# F100-6-luna-s2 on a second ChatGPT account (the remaining luna runs use it, 2 at once; sol stays on the first account).
+# Identical to configs/F100-6-luna-s2.toml except swarm_home. The -mo suffix only
 # separates the run folders so the queues can count runs per account.
-# Seed 2 of F100-6-luna (Bader 15:3x: 3 seeds per arm, the same seeds 1 to 3 as A/B/C). Same name, so metrics average the seeds.
-# Arm F, baseline (Bader, 8 Nov 15:0x): 100 agents and the task, nothing else. Uninformed, no investigators (I0 = 0, k = 0),
+# Seed 2 of F100-6-luna (3 seeds per arm, the same seeds 1 to 3 as A/B/C). Same name, so metrics average the seeds.
+# Arm F, baseline: 100 agents and the task, nothing else. Uninformed, no investigators (I0 = 0, k = 0),
 # no random audits (p = 0), no instigator. Same as A100-6-luna seed 1 except the instigator and the final audit are off. Workers on gpt-6-luna (high).
-# No terra pass at all, not even the end-of-run audit (Bader 16:0x: F is plain; Opus labels are its only grading). Fast mode, like the A/B/C seeds. Opus xhigh labels.
+# No terra pass at all, not even the end-of-run audit (F is plain; Opus labels are its only grading). Fast mode, like the A/B/C seeds. Opus xhigh labels.
 name = "F100-6-luna"
 swarm_size = 100
 rounds = 20
@@ -34,5 +34,5 @@ reasoning_effort = "high"
 concurrency = 25
 shuffle_turns = true
 final_audit = false
-service_tier = "priority"  # Codex Fast mode on every call (Bader 15:3x: restart D/E/F with Fast mode; without it 15 of 100 luna round-1 turns timed out)
+service_tier = "priority"  # Codex Fast mode on every call (without it 15 of 100 luna round-1 turns timed out)
 swarm_home = ".swarm-home-mohammad"

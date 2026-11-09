@@ -214,7 +214,7 @@ def wait_for(cond, within=3.0):
 
 
 def test_label_jobs_run_at_most_LABEL_JOBS_at_once_with_LABEL_FIRST_first(tree):
-    """Opus label jobs don't use the ChatGPT account, so they don't wait for run slots (Bader, 8 Nov 04:30). The
+    """Opus label jobs don't use the ChatGPT account, so they don't wait for run slots. The
     label phase runs at most LABEL_JOBS of them at once on the machine, LABEL_FIRST runs first, then the rest in order."""
     for name in ("done-1", "done-2", "done-3"):
         ended_run(tree, name)

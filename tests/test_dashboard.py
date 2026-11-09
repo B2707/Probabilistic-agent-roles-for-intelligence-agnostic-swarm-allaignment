@@ -17,7 +17,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from dashboard.server import make_server
+from dashboard.server import App, Peer, main, make_server
 from dashboard.store import (
     RemoteStatus,
     RunState,
@@ -28,6 +28,7 @@ from dashboard.store import (
     norm_host,
     render,
     seed_of,
+    swarm_proc,
 )
 from swarm.metrics import compute
 
@@ -209,6 +210,30 @@ def test_names_groups_and_hosts():
     assert norm_host("baders-macbook-pro.tail9fc878.ts.net.") == "badersmacbookpro"
 
 
+def test_swarm_proc_counts_swarm_processes_not_the_shell_that_launched_them():
+    R = "/Users/d/.t3/projects/agent-swarm-hackathon/runs"
+    B, C = "B100-61-sol-20261108-034254", "C100-61-sol-20261108-044628"
+    py = "/Users/d/.t3/projects/agent-swarm-hackathon/.prod/.venv/bin/python /Users/d/.t3/projects/agent-swarm-hackathon/.prod/.venv/bin/swarm"
+    def hit(cmd):
+        verb, names = swarm_proc(cmd)
+        return verb, names & {B, C, "A100-61-sol-20261108-090000"}
+
+    assert hit(f"{py} resume {R}/{C}") == ("resume", {C})
+    assert hit(f"uv run swarm resume {R}/{C}") == ("resume", {C})
+    assert hit(f"uv run python scripts/detach.py uv run swarm resume {R}/{C}") == ("resume", {C})
+    assert hit(f"uv run swarm run --config /x/configs/A100-61-sol.toml --out {R}/A100-61-sol-20261108-090000") == (
+        "run", {"A100-61-sol-20261108-090000"})
+    assert hit(f"{py} label {R}/{B}/ --judge-model claude/claude-opus-5-5 --judge-effort xhigh") == ("label", {B})
+    # The 08:23 hand-resume one-liner: its bash stays alive as the parent of C100's resume and names both runs.
+    one_liner = (f"/bin/bash -lc cd ~/x && for r in {B} {C}; do d=$M/runs/$r; (cd $M/.prod && nohup uv run python "
+                 f"scripts/detach.py uv run swarm resume \"$d\" >> \"$d.log\" 2>&1 < /dev/null &); done")
+    assert swarm_proc(one_liner) is None
+    assert swarm_proc(f"-zsh -c uv run swarm resume {R}/{B}") is None
+    assert swarm_proc(f"sh -c uv run swarm label {R}/{B}") is None
+    assert swarm_proc("/bin/bash runs/arm_queue-mac4.sh") is None and swarm_proc("") is None
+    assert swarm_proc(f"{py} transcript {R}/{B} a001") is None
+
+
 def test_store_states_and_remote_snapshot(tmp_path):
     write_run(tmp_path, events(), labels=True)
     write_run(tmp_path, events()[:20], name="B100-6-luna-20261108-010000")  # no run_end, no process
@@ -226,6 +251,69 @@ def test_store_states_and_remote_snapshot(tmp_path):
     assert snap["snapshot"] and snap["machine"] == "laptop" and snap["seed"] == 2 and snap["arm_base"] == "C100"
     assert (snap["round"], snap["problems_at_100"], snap["swarm_pass_rate"]) == (2, 1, 0.125)
     assert RemoteStatus.parse("| a | b |\n|---|---|\n| 1 | 2 |\n")[1] == [{"a": "1", "b": "2"}]
+    assert snap["machine_key"] == "laptop"  # no alias: the git name is its own machine
+
+
+def test_machine_alias_maps_a_git_machine_to_its_tailscale_device(tmp_path):
+    (tmp_path / "results").mkdir()
+    for m in ("laptop", "other"):
+        (tmp_path / "results" / f"live-{m}.md").write_text(
+            "# Live run status, 2026-11-08 01:45 EST\n\n| run | state | N | round |\n|---|---|---|---|\n"
+            f"| A100-6-luna-s2-{m}-20261108-014315 | running | 100 | 3/20 |\n")
+    st = Store(tmp_path, machine="testmac", scan_processes=False, fleet=False, github_poll=False,
+               aliases={"laptop": "danas-macbook-pro"})
+    st.remote.poll_local()
+    by = {s["machine"]: s for s in st.summaries()}
+    # the Fleet page and the overview find a run's device by machine_key; Tailscale gives this device these keys
+    assert by["laptop"]["machine_key"] == norm_host("danas-macbook-pro") == norm_host("dana’s MacBook Pro")
+    assert by["laptop"]["machine"] == "laptop"  # still labelled by its snapshot file
+    assert by["other"]["machine_key"] == "other"  # unmapped machines keep the "seen through git" section
+    with pytest.raises(SystemExit):
+        main(["--root", str(tmp_path), "--machine-alias", "laptop"])  # no "=DEVICE": refused before serving
+
+
+def test_peer_drops_runs_its_server_no_longer_lists():
+    calls = []
+    p = Peer("http://peer:8765", lambda: calls.append(1))
+    p._dispatch("summary", json.dumps([{"name": "a"}, {"name": "b"}]))
+    p._dispatch("runs", json.dumps(["b", "c"]))
+    assert set(p.runs) == {"b"} and len(calls) == 2
+
+
+def test_snapshot_rows_lose_to_stopped_runs_and_reachable_peers(tmp_path):
+    b_old, c_old, a_new, b_live = ("B100-61-sol-20261108-025059", "C100-61-sol-20261108-032801",
+                                   "A100-61-sol-20261108-040000", "B100-61-sol-20261108-034254")
+    (tmp_path / "results").mkdir()
+    (tmp_path / "results" / "live-laptop.md").write_text(
+        "# Live run status, 2026-11-08 03:30 EST\n\n| run | state | N | round |\n|---|---|---|---|\n"
+        f"| {b_old} | ended: usage_limit | 100 | 2/20 |\n| {c_old} | running | 100 | 1/20 |\n"
+        f"| {a_new} | running | 100 | 1/20 |\n")
+    rs = RemoteStatus(tmp_path, None, use_github=False)
+    rs.poll_local()
+    # a run archived as <run>-stopped is no longer shown from the snapshot
+    assert {s["name"] for s in rs.summaries({b_old + "-stopped"})} == {c_old, a_new}
+    # a machine never shows its own status file as snapshot rows: it reads those runs from runs/
+    assert rs.summaries(set(), {"laptop"}) == []
+
+    st = Store(tmp_path, machine="testmac", scan_processes=False, fleet=False, github_poll=False)
+    st.remote.poll_local()
+    app = App(st, ["http://laptop:8765"], None)
+    peer = app.peers[0]
+    peer.machine = "laptop"
+    real = lambda n, state, ev: {"name": n, "origin": "runs", "state": state, "events": ev, "machine": "laptop"}  # noqa: E731
+    peer.runs = {b_old + "-stopped": real(b_old + "-stopped", "stopped", 900),
+                 c_old + "-stopped": real(c_old + "-stopped", "stopped", 400), b_live: real(b_live, "running", 50),
+                 # an old peer build still sends its own stale snapshot row for an archived run
+                 c_old: {"name": c_old, "origin": "snapshot", "machine": "laptop", "machine_key": "laptop", "events": 0}}
+
+    peer.ok = False  # unreachable: snapshots stay, except for runs the peer has archived
+    names = {s["name"] for s in app.merged()}
+    assert b_old not in names and c_old not in names and a_new in names and b_live in names
+
+    peer.ok = True  # reachable: its live list wins over every git snapshot of that machine
+    rows = app.merged()
+    assert [s["name"] for s in rows if s.get("origin") == "snapshot"] == []
+    assert {b_old + "-stopped", c_old + "-stopped", b_live} <= {s["name"] for s in rows}
 
 
 # ----------------------------------------------------------------------------------------------- HTTP + SSE
@@ -313,3 +401,44 @@ def test_sse_pushes_new_events_within_two_seconds_and_writes_nothing(server):
     assert latency < 2.0
     changed = {k for k, v in snapshot(root).items() if before.get(k) != v}
     assert changed == {str(path)}  # only the line this test appended; the dashboard wrote nothing
+
+
+def test_sse_runs_event_lists_every_run_so_a_page_drops_the_ones_that_left(server):
+    base, root = server
+    live = root / "results" / "live-laptop.md"
+    live.parent.mkdir(exist_ok=True)
+
+    def table(names):
+        return ("# Live run status, 2026-11-08 01:45 EST\n\n| run | state | N | round |\n|---|---|---|---|\n"
+                + "".join(f"| {n} | running | 100 | 3/20 |\n" for n in names))
+
+    old = [f"{a}100-6-luna-s2-20261108-013719" for a in "ABC"]
+    new = [f"{a}100-6-luna-s2-20261108-014315" for a in "ABC"]
+    live.write_text(table(old))
+    for _ in range(50):
+        if set(old) <= {r["name"] for r in get(base + "/api/state")["runs"]}:
+            break
+        time.sleep(0.1)
+    lists: list = []
+
+    def listen():
+        req = urllib.request.Request(base + "/api/stream", headers={"Cookie": "swarm_dash=s3cret"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            ev = None
+            for raw in r:
+                line = raw.decode().rstrip("\n")
+                if line.startswith("event:"):
+                    ev = line[6:].strip()
+                elif line.startswith("data:") and ev == "runs":
+                    lists.append(json.loads(line[5:]))
+                    if len(lists) == 2:
+                        return
+
+    t = threading.Thread(target=listen, daemon=True)
+    t.start()
+    time.sleep(0.5)
+    live.write_text(table(new))
+    t.join(5)
+    assert len(lists) == 2, lists
+    assert lists[0] == sorted([NAME, *old])  # sent once on connect, so a reconnecting page resyncs too
+    assert lists[1] == sorted([NAME, *new])  # the old snapshot runs are gone; the local run stays

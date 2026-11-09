@@ -18,6 +18,7 @@ uv run python -m dashboard --token "$TOKEN"     # require a token (use this when
 | `--root PATH` | The repo root that holds `runs/` and `results/`. |
 | `--peer http://HOST:PORT` | Merges another machine's dashboard. Repeatable. Add `?token=T` if that dashboard has a token. Each peer's runs are labelled with its machine name. |
 | `--machine NAME` | Machine label. Defaults to the macOS LocalHostName. |
+| `--machine-alias GIT_NAME=DEVICE` | Says that the machine pushing `results/live-GIT_NAME.md` is the Tailscale device `DEVICE` (its DNS name, such as `danas-macbook-pro`). Its snapshot runs then show on that device's Fleet card and get its CPU line in the overview, instead of under "Machines seen through git". Repeatable. |
 | `--no-fleet` | Skips device health, which comes from Tailscale and the fleet-statusd server on port 7477. |
 | `--no-github` | Reads `results/live-*.md` from the local checkout only, not from GitHub through `gh`. |
 | `--tick 1.0` | Seconds between file polls. |
@@ -60,9 +61,11 @@ The dashboard has five views:
 Funnel is enabled on the tailnet. The public address is https://baders-macbook-pro.tail9fc878.ts.net/. It only works while the dashboard runs, and it always requires the token.
 
 ```
-# start detached, with the token from ~/.config/swarm-dash/token (kept out of the process list)
-DASHBOARD_TOKEN="$(cat ~/.config/swarm-dash/token)" nohup uv run python -m dashboard --port 8765 \
-  > ~/.config/swarm-dash/dashboard.log 2>&1 < /dev/null &
+# start detached in its own session, with the token from ~/.config/swarm-dash/token (kept out of the process list);
+# the laptop pushes results/live-laptop.md and is the Tailscale device danas-macbook-pro; it also runs its own
+# dashboard on its Tailscale address only (--host 100.67.106.8 --machine laptop --no-github), merged here live with --peer
+DASHBOARD_TOKEN="$(cat ~/.config/swarm-dash/token)" nohup python3 scripts/detach.py uv run python -m dashboard --port 8765 \
+  --machine-alias laptop=danas-macbook-pro --peer http://100.67.106.8:8765 > ~/.config/swarm-dash/dashboard.log 2>&1 < /dev/null &
 /Applications/Tailscale.app/Contents/MacOS/Tailscale funnel --bg 8765      # expose it
 /Applications/Tailscale.app/Contents/MacOS/Tailscale funnel --https=443 off # stop exposing it
 pkill -f "python -m dashboard --port 8765"                                  # stop the dashboard

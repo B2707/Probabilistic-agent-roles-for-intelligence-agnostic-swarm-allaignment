@@ -18,6 +18,7 @@ import time
 from array import array
 from bisect import bisect_left, bisect_right
 from collections import Counter, defaultdict, deque
+from itertools import pairwise
 from pathlib import Path
 
 try:  # the paper metrics, reused as-is (pure functions)
@@ -190,6 +191,23 @@ def _slim(ev: dict, v1: bool) -> dict | None:
 def _short(s, n: int = 160) -> str:
     s = " ".join(str(s or "").split())
     return s if len(s) <= n else s[: n - 1] + "…"
+
+
+SHELLS = {"sh", "bash", "zsh", "dash", "fish"}
+
+
+def swarm_proc(cmd: str) -> tuple[str, set[str]] | None:
+    """For a process running `swarm run|resume|label` (the swarm entry point, or the uv or python process that runs
+    it): the subcommand and the folder names of its path arguments. None for anything else, including a shell whose
+    command line only mentions such a command: a one-liner that launched a resume stays alive as its parent, and
+    would otherwise keep every run it names looking alive."""
+    words = cmd.split()
+    if not words or os.path.basename(words[0]).lstrip("-") in SHELLS:
+        return None
+    for i, (a, b) in enumerate(pairwise(words)):
+        if os.path.basename(a) == "swarm" and b in ("run", "resume", "label"):
+            return b, {os.path.basename(w.rstrip("/")) for w in words[i + 2:]}
+    return None
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -511,7 +529,8 @@ class RunState:
         self.end = None
 
     def on_usage_limit_hit(self, ev, r, aid, ts):
-        self.usage_stops.append({"t": ts, "round": r, "phase": ev.get("phase"), "missed": len(ev.get("missed") or [])})
+        self.usage_stops.append({"t": ts, "round": r, "phase": ev.get("phase"), "missed": len(ev.get("missed") or []),
+                                 "error": _short(ev.get("error"), 300) or None})
 
     def on_agent_joined(self, ev, r, aid, ts):
         a = self.agent(aid)
@@ -1137,9 +1156,11 @@ class RemoteStatus:
 
     HEAD = re.compile(r"^# Live run status, (\d{4}-\d{2}-\d{2} \d{2}:\d{2})")
 
-    def __init__(self, root: Path, github: tuple[str, str] | None, use_github: bool = True):
+    def __init__(self, root: Path, github: tuple[str, str] | None, use_github: bool = True,
+                 aliases: dict[str, str] | None = None):
         self.root = root
         self.github = github if use_github else None
+        self.aliases = aliases or {}  # git machine name -> Tailscale device (--machine-alias laptop=danas-macbook-pro)
         self.mtimes: dict[str, float] = {}
         self.local: dict[str, tuple[float, list[dict]]] = {}  # machine -> (as of, rows)
         self.remote: dict[str, tuple[float, list[dict]]] = {}
@@ -1226,19 +1247,24 @@ class RemoteStatus:
                 out[machine] = (b[0], b[1], "GitHub")
         return out
 
-    def summaries(self, known: set[str]) -> list[dict]:
+    def summaries(self, known: set[str], skip_machines: frozenset[str] | set[str] = frozenset()) -> list[dict]:
+        """Snapshot rows for runs this store doesn't hold. `skip_machines` (norm_host keys) are machines whose runs
+        come from a better source, such as this machine itself."""
         out = []
         for machine, (asof, rows, src) in self.snapshots().items():
+            if {norm_host(machine), norm_host(self.aliases.get(machine))} & set(skip_machines):
+                continue
             for r in rows:
                 name = r.get("run") or ""
-                if not name or name in known:
-                    continue  # published copies under results/ win: they carry full events
+                if not name or name in known or f"{name}-stopped" in known:
+                    continue  # the real run folder wins, also after it is archived as <run>-stopped
                 rnd, _, total = (r.get("round") or "0/0").partition("/")
                 def num(k, row=r):
                     return _num(row.get(k))
                 state = r.get("state") or "?"
                 out.append({
-                    "name": name, "machine": machine, "machine_key": norm_host(machine), "origin": "snapshot",
+                    "name": name, "machine": machine, "machine_key": norm_host(self.aliases.get(machine) or machine),
+                    "origin": "snapshot",
                     "snapshot": True, "snapshot_t": asof, "snapshot_src": f"results/live-{machine}.md via {src}",
                     "published": [], "group": "v3" if r.get("swarm_wide") == "True" or num("N") == 100 else "v2-shuffled",
                     "arm": STAMP.sub("", name), "arm_base": arm_base(name), "seed": seed_of(name, {}),
@@ -1301,7 +1327,7 @@ class Store:
     """Every run under runs/ and results/, tailed by one background thread."""
 
     def __init__(self, root: Path, machine: str | None = None, tick: float = 1.0, scan_processes: bool = True,
-                 fleet: bool = True, github_poll: bool = True):
+                 fleet: bool = True, github_poll: bool = True, aliases: dict[str, str] | None = None):
         self.root = Path(root).resolve()
         self.machine = machine or hostname()
         self.tick_s = tick
@@ -1325,7 +1351,7 @@ class Store:
         self.github = _github_base(self.root)
         self.thread: threading.Thread | None = None
         self.fleet = Fleet(enabled=fleet)
-        self.remote = RemoteStatus(self.root, self.github, use_github=github_poll)
+        self.remote = RemoteStatus(self.root, self.github, use_github=github_poll, aliases=aliases)
 
     # ---------------------------------------------------------------- discovery
     def _sources(self) -> list[tuple[str, Path, str]]:
@@ -1496,10 +1522,11 @@ class Store:
                 procs["rss_mb"] = round(int(rss) / 1024, 1)
             if "codex" in cmd and " exec" in cmd:
                 procs["codex"] += 1
-            if "swarm " in cmd and ("swarm run" in cmd or "swarm resume" in cmd or "swarm label" in cmd):
-                for name in self.runs:
-                    if name in cmd:
-                        (labeling if "swarm label" in cmd else alive).add(name)
+            hit = swarm_proc(cmd)
+            if hit:
+                verb, names = hit
+                for name in names & self.runs.keys():
+                    (labeling if verb == "label" else alive).add(name)
                 if "uv run" not in cmd and "python" in cmd or "/bin/swarm" in cmd:
                     procs["swarm"].append({"pid": int(pid), "etime": etime, "cmd": _short(cmd, 200)})
         changed = False
@@ -1594,7 +1621,8 @@ class Store:
         now = time.time()
         with self.lock:
             out = [self.summary(r, now) for r in self.runs.values()]
-        return out + self.remote.summaries({s["name"] for s in out})
+        # a machine's status file describes its own runs, which this store already reads from runs/
+        return out + self.remote.summaries({s["name"] for s in out}, {norm_host(self.machine)} - {""})
 
     def detail(self, name: str) -> dict | None:
         with self.lock:
@@ -1962,6 +1990,8 @@ def render(ev: dict, run: RunState) -> dict:
     elif t == "usage_limit_hit":
         title = f"USAGE LIMIT in {ev.get('phase')}"
         body = f"{len(ev.get('missed') or [])} agents missed their turn"
+        if ev.get("error"):
+            body += f": {_short(ev.get('error'), 300)}"
         tags.append("error")
     elif t == "run_start":
         title = f"run started · {run.cfg.get('name')}"

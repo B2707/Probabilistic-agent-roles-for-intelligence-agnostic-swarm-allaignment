@@ -47,6 +47,7 @@ class Runner:
         self.cfg = cfg
         self.run_dir = Path(run_dir)
         self.log = EventLog(self.run_dir / "events.jsonl")
+        self.usage_error: str | None = None  # Codex's text for the turn that hit a usage limit this phase
         self.world_path = self.run_dir / "world.json"
         self.world = World.load(self.world_path) if self.world_path.exists() else World()
         self.problems = load_problems(cfg.problems_file, cfg.problems, cfg.problem_ids)
@@ -99,7 +100,7 @@ class Runner:
                     return self.stop("usage_limit")
                 await self.end_round()
         if w.phase != "done":
-            if await self.final_audit():
+            if cfg.final_audit and await self.final_audit():
                 return self.stop("usage_limit")
             w.phase = "done"
             self.save()
@@ -124,11 +125,13 @@ class Runner:
         self.log.emit("run_start", 0, config=cfg.to_dict(), harness_commit=_harness_commit(),
                       problems=[p["task_id"] for p in self.problems])
         for slot in range(cfg.swarm_size):
-            a = Agent(id=w.new_agent_id(), slot=slot, team=self.problems[slot % n_teams]["task_id"], joined_round=1)
+            a = Agent(id=w.new_agent_id(), slot=slot, team=self.problems[slot % n_teams]["task_id"], joined_round=1,
+                      model=cfg.model_for(slot, n_teams))
             if slot in investigators:
                 a.role, a.initial_investigator = "investigator", True
             w.agents[a.id] = a
-            self.log.emit("agent_joined", 0, agent=a.id, role=a.role, slot=slot, team=a.team, replaces=None)
+            self.log.emit("agent_joined", 0, agent=a.id, role=a.role, slot=slot, team=a.team, replaces=None,
+                          model=a.model)
         if cfg.instigator:
             w.instigator_id = w.new_agent_id()  # a fake id right after the swarm's; it is not in w.agents
             self.log.emit("instigator_joined", 0, agent=w.instigator_id)
@@ -142,10 +145,11 @@ class Runner:
         self.log.emit("round_start", r)
         for old in [a for a in w.agents.values() if not a.active and not a.replaced]:
             old.replaced = True
-            new = Agent(id=w.new_agent_id(), slot=old.slot, team=old.team, joined_round=r)
+            new = Agent(id=w.new_agent_id(), slot=old.slot, team=old.team, joined_round=r,
+                        model=old.model or cfg.worker_model)
             w.agents[new.id] = new
             self.log.emit("agent_joined", r, agent=new.id, role="worker", slot=new.slot, team=new.team,
-                          replaces=old.id)
+                          replaces=old.id, model=new.model)
         for a in sorted(w.active(), key=lambda a: a.slot):
             if a.role == "worker" and draw(cfg.seed, r, a.slot, "convert") < cfg.k:
                 a.role, a.converted_round = "investigator", r
@@ -184,28 +188,31 @@ class Runner:
         todo = [a for a in sorted(w.active(), key=lambda a: a.id) if a.id not in w.turns_done]
         if self.cfg.shuffle_turns:  # with concurrency < N, id order would always put the same agents first
             random.Random(f"{self.cfg.seed}-{w.round}-order").shuffle(todo)
+        self.usage_error = None
         await asyncio.gather(*(one(a) for a in todo))
         if stop.is_set():
             missed = [a.id for a in w.active() if a.id not in w.turns_done]
-            self.log.emit("usage_limit_hit", w.round, phase="turns", missed=missed)
+            self.log.emit("usage_limit_hit", w.round, phase="turns", missed=missed, error=self.usage_error)
             return True
         return False
 
     async def take_turn(self, agent: Agent, prompt: str, message_ids: list[str] | None = None) -> str:
         r = self.world.round
         self.log.emit("turn_input", r, agent=agent.id, role=agent.role, prompt=prompt, message_ids=message_ids or [])
-        res = await self.backend.run_turn(agent, prompt, self.instructions(agent), self.cfg.worker_model)
+        model = agent.model or self.cfg.worker_model
+        res = await self.backend.run_turn(agent, prompt, self.instructions(agent), model, self.cfg.worker_effort(model))
         if res.session_id and res.session_id != agent.session_id:
             agent.session_id = res.session_id
             self.log.emit("session_started", r, agent=agent.id, session_id=res.session_id)
         for text in res.messages:
             self.log.emit("agent_message", r, agent=agent.id, role=agent.role, text=text)
-        self.log.emit("model_usage", r, agent=agent.id, role=agent.role, model=self.cfg.worker_model,
+        self.log.emit("model_usage", r, agent=agent.id, role=agent.role, model=model,
                       usage=res.usage, error=res.error, raw_error=getattr(res, "raw_error", None),
                       attempts=getattr(res, "attempts", 1))
         if res.builtin_tool_events:
             self.log.emit("builtin_tool_use", r, agent=agent.id, items=res.builtin_tool_events)
         if res.error == "usage_limit":
+            self.usage_error = self.usage_error or getattr(res, "raw_error", None)
             return "usage_limit"
         agent.notices.clear()
         if res.error:
@@ -309,9 +316,10 @@ class Runner:
 
         try:
             await asyncio.gather(*(one(a) for a in targets))
-        except UsageLimit:
+        except UsageLimit as e:
             self.log.emit("usage_limit_hit", r, phase="audits", missed=[a.id for a in targets
-                                                                         if a.id not in verdicts])
+                                                                         if a.id not in verdicts],
+                          error=str(e) or None)
             return True
         for agent in targets:
             v = verdicts[agent.id]
@@ -373,9 +381,9 @@ class Runner:
 
         try:
             await asyncio.gather(*(one(a) for a in todo))
-        except UsageLimit:
+        except UsageLimit as e:
             self.log.emit("usage_limit_hit", w.round, phase="final_audit",
-                          missed=[a.id for a in todo if a.id not in w.final_audited])
+                          missed=[a.id for a in todo if a.id not in w.final_audited], error=str(e) or None)
             return True
         return False
 

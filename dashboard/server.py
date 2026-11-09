@@ -25,9 +25,9 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # run as a file: uv run python dashboard/server.py
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-    from dashboard.store import DEADLINE, DEADLINE_T, Store, hostname
+    from dashboard.store import DEADLINE, DEADLINE_T, Store, hostname, norm_host
 else:
-    from .store import DEADLINE, DEADLINE_T, Store, hostname
+    from .store import DEADLINE, DEADLINE_T, Store, hostname, norm_host
 
 STATIC = Path(__file__).resolve().parent / "static"
 STATIC_FILES = {"index.html": "text/html; charset=utf-8", "app.js": "text/javascript; charset=utf-8",
@@ -112,6 +112,11 @@ class Peer:
             for s in payload:
                 self.runs[s["name"]] = s
             self.on_change()
+        elif event == "runs":  # the peer's full run list: drop the ones it no longer has
+            keep = set(payload)
+            for name in [n for n in self.runs if n not in keep]:
+                del self.runs[name]
+            self.on_change()
         elif event == "light":
             self.light = payload.get("local") or payload
         elif event == "hello":
@@ -149,7 +154,19 @@ class App:
                     cur = out.get(name)
                     if cur is None or (s.get("events") or 0) > (cur.get("events") or 0):
                         out[name] = {**s, "peer": i, "machine": s.get("machine") or p.machine}
+            out = {n: s for n, s in out.items() if not self._superseded(s, out)}
         return sorted(out.values(), key=lambda s: (s.get("start_t") or 0), reverse=True)
+
+    def _superseded(self, s: dict, rows: dict[str, dict]) -> bool:
+        """A git snapshot row loses to live data: the real run is listed (also as <run>-stopped after archiving), or
+        the snapshot's machine is a peer we can reach right now, whose own list is current."""
+        if s.get("origin") != "snapshot":
+            return False
+        real = rows.get(s["name"] + "-stopped")
+        if real is not None and real.get("origin") != "snapshot":
+            return True
+        live = {norm_host(p.machine) for p in self.peers if p.ok and p.machine} - {""}
+        return bool({norm_host(s.get("machine")), s.get("machine_key")} & live)
 
     def fleet(self, local_only: bool = False) -> dict:
         """Devices from this machine's fleet pathway, merged with each peer's (a device seen twice keeps the copy
@@ -387,6 +404,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(b": " + b" " * 2048 + b"\n\n")
         self._sse("hello", {"machine": st.machine, "now": time.time(), "run": run})
         sent: dict[str, tuple] = {}
+        names: list[str] | None = None
         last_light = last_ping = last_peer_poll = 0.0
         seen_v = (-1, -1)
         peer = app.owner(run) if run and not local_only else None
@@ -395,12 +413,20 @@ class Handler(BaseHTTPRequestHandler):
             v = (st.version, app.peer_version)
             if v != seen_v:
                 seen_v = v
-                changed = [s for s in app.merged(local_only)
+                merged = app.merged(local_only)
+                changed = [s for s in merged
                            if sent.get(s["name"]) != (s.get("machine"), s.get("version"), s.get("state"))]
                 if changed:
                     for s in changed:
                         sent[s["name"]] = (s.get("machine"), s.get("version"), s.get("state"))
                     self._sse("summary", changed)
+                # "summary" only adds and updates; "runs" is the full list, so an open page drops the rest
+                now_names = sorted(s["name"] for s in merged)
+                if now_names != names:
+                    names = now_names
+                    for gone in set(sent) - set(names):
+                        del sent[gone]
+                    self._sse("runs", names)
                 if run and peer is None and after is not None:
                     res = st.feed(run, after=after, limit=500, cats=None)
                     if res and res["items"]:
@@ -484,9 +510,9 @@ border-radius:6px}button{padding:9px 14px;background:#2f81f7;color:#fff;border:0
 def make_server(root: Path, host: str = "127.0.0.1", port: int = 8765, peers: list[str] | None = None,
                 token: str | None = None, machine: str | None = None, tick: float = 1.0,
                 scan_processes: bool = True, fleet: bool = True, github_poll: bool = True,
-                ) -> tuple[ThreadingHTTPServer, App]:
+                machine_aliases: dict[str, str] | None = None) -> tuple[ThreadingHTTPServer, App]:
     store = Store(root, machine=machine, tick=tick, scan_processes=scan_processes, fleet=fleet,
-                  github_poll=github_poll)
+                  github_poll=github_poll, aliases=machine_aliases)
     app = App(store, peers or [], token)
     handler = type("BoundHandler", (Handler,), {"app": app})
     srv = ThreadingHTTPServer((host, port), handler)
@@ -504,17 +530,26 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--token", default=os.environ.get("DASHBOARD_TOKEN"),
                     help="require this access token (or set DASHBOARD_TOKEN); use it when the port is public")
     ap.add_argument("--machine", default=None, help="machine label (default: this hostname)")
+    ap.add_argument("--machine-alias", action="append", default=[], metavar="GIT_NAME=DEVICE",
+                    help="a machine that reports through results/live-GIT_NAME.md is this Tailscale device, "
+                         "e.g. laptop=danas-macbook-pro (repeatable)")
     ap.add_argument("--tick", type=float, default=1.0, help="seconds between file polls")
     ap.add_argument("--no-fleet", action="store_true", help="skip device health (tailscale + fleet-statusd :7477)")
     ap.add_argument("--no-github", action="store_true",
                     help="don't read results/live-*.md snapshots from GitHub with gh (local checkout only)")
     args = ap.parse_args(argv)
+    aliases = {}
+    for a in args.machine_alias:
+        git_name, sep, device = a.partition("=")
+        if not sep or not git_name.strip() or not device.strip():
+            ap.error(f"--machine-alias wants GIT_NAME=DEVICE, got {a!r}")
+        aliases[git_name.strip()] = device.strip()
     root = Path(args.root).resolve()
     if not (root / "runs").is_dir() and not (root / "results").is_dir():
         print(f"no runs/ or results/ under {root}", file=sys.stderr)
         return 2
     srv, app = make_server(root, args.host, args.port, args.peer, args.token, args.machine or hostname(), args.tick,
-                           fleet=not args.no_fleet, github_poll=not args.no_github)
+                           fleet=not args.no_fleet, github_poll=not args.no_github, machine_aliases=aliases)
     app.start()
     shown = "localhost" if args.host in ("127.0.0.1", "0.0.0.0") else args.host
     print(f"Swarm Ops dashboard for {root} on http://{shown}:{args.port}/"

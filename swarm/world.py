@@ -25,6 +25,7 @@ class Agent:
     token: str = field(default_factory=lambda: secrets.token_urlsafe(24))
     inv_score: int = 0
     notices: list[str] = field(default_factory=list)
+    model: str = ""  # worker model; "" in runs saved before mixed swarms, which all ran on cfg.worker_model
 
 
 @dataclass

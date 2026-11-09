@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 from typing import Awaitable, Callable
 
-from .backend import codex_json
+from .backend import claude_json, codex_json, is_claude
 from .events import EventLog
 from .world import Agent
 
@@ -87,16 +87,21 @@ def removal_decision(agent: Agent, verdict: dict) -> tuple[bool, bool]:
 
 
 class CodexAuditor:
-    def __init__(self, instructions: str, model: str, swarm_home: str, workdir: Path, reasoning_effort: str):
+    def __init__(self, instructions: str, model: str, swarm_home: str, workdir: Path, reasoning_effort: str,
+                 service_tier: str = ""):
         self.instructions = instructions
+        self.service_tier = service_tier
         self.model = model
         self.swarm_home = swarm_home
         self.workdir = workdir
         self.reasoning_effort = reasoning_effort
 
     async def audit(self, agent: Agent, record: str) -> dict:
+        if is_claude(self.model):  # claude/<model>: Claude Code, as for judge labels (used by reaudit, never in a run)
+            return await claude_json(self.model, self.instructions, record, VERDICT_SCHEMA, self.reasoning_effort,
+                                     self.workdir)
         return await codex_json(self.swarm_home, self.model, self.instructions, record, VERDICT_SCHEMA,
-                                self.reasoning_effort, self.workdir)
+                                self.reasoning_effort, self.workdir, service_tier=self.service_tier)
 
 
 class ScriptedAuditor:

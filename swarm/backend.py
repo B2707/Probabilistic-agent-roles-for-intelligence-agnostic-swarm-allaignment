@@ -68,11 +68,11 @@ def is_adaption(model: str) -> bool:
     return model.startswith(ADAPTION_PREFIX)
 
 
-def model_args(model: str) -> list[str]:
+def model_args(model: str, service_tier: str = "") -> list[str]:
     """`-m` for a model, plus the provider switch for `adaption/<id>`."""
     if is_adaption(model):
         return ["-m", model.removeprefix(ADAPTION_PREFIX), *ADAPTION_PROVIDER]
-    return ["-m", model]
+    return ["-m", model, *(["-c", f"service_tier={toml_str(service_tier)}"] if service_tier else [])]
 
 
 def adaption_key() -> str:
@@ -85,7 +85,8 @@ def adaption_key() -> str:
 
 
 class UsageLimit(Exception):
-    pass
+    """The plan limit, or a rate limit, 403 or overload that outlasted the retries. str() is Codex's own error text
+    (may be empty), so the run's usage_limit_hit event can say which it was."""
 
 
 @dataclass
@@ -206,21 +207,25 @@ def parse_codex_events(stdout: str) -> TurnResult:
 
 
 class CodexBackend:
-    def __init__(self, swarm_home: str, run_dir: Path, server_url: str, reasoning_effort: str, timeout: float):
+    def __init__(self, swarm_home: str, run_dir: Path, server_url: str, reasoning_effort: str, timeout: float,
+                 service_tier: str = ""):
         self.swarm_home = swarm_home
+        self.service_tier = service_tier
         self.run_dir = Path(run_dir)
         self.server_url = server_url
         self.reasoning_effort = reasoning_effort
         self.timeout = timeout
 
-    async def run_turn(self, agent: Agent, prompt: str, instructions: str, model: str) -> TurnResult:
+    async def run_turn(self, agent: Agent, prompt: str, instructions: str, model: str,
+                       effort: str | None = None) -> TurnResult:
+        """One agent turn on `model` at `effort` (else the backend's effort, which unmixed runs always use)."""
         cwd = self.run_dir.resolve() / "agents" / agent.id
         cwd.mkdir(parents=True, exist_ok=True)
         args = ["exec"]
         if agent.session_id:
             args += ["resume", agent.session_id]
-        args += ["--json", *model_args(model), *CODEX_ISOLATION,
-                 "-c", f"model_reasoning_effort={toml_str(self.reasoning_effort)}",
+        args += ["--json", *model_args(model, self.service_tier), *CODEX_ISOLATION,
+                 "-c", f"model_reasoning_effort={toml_str(effort or self.reasoning_effort)}",
                  "-c", f"developer_instructions={toml_str(instructions)}",
                  "-c", f"mcp_servers.swarm.url={toml_str(self.server_url)}",
                  "-c", 'mcp_servers.swarm.bearer_token_env_var="SWARM_AGENT_TOKEN"',
@@ -235,13 +240,14 @@ class CodexBackend:
 
 
 async def codex_json(swarm_home: str, model: str, instructions: str, prompt: str, schema: dict,
-                     reasoning_effort: str, workdir: Path, timeout: float = 900, retries: int = 2) -> dict:
+                     reasoning_effort: str, workdir: Path, timeout: float = 900, retries: int = 2,
+                     service_tier: str = "") -> dict:
     """One stateless Codex call that must answer with JSON matching `schema` (auditor, judge)."""
     workdir = Path(workdir).resolve()
     workdir.mkdir(parents=True, exist_ok=True)
     schema_file = workdir / f"schema-{hashlib.sha256(json.dumps(schema, sort_keys=True).encode()).hexdigest()[:12]}.json"
     schema_file.write_text(json.dumps(schema))
-    args = ["exec", "--json", "--ephemeral", *model_args(model), *CODEX_ISOLATION,
+    args = ["exec", "--json", "--ephemeral", *model_args(model, service_tier), *CODEX_ISOLATION,
             "-c", f"model_reasoning_effort={toml_str(reasoning_effort)}",
             "-c", f"developer_instructions={toml_str(instructions)}",
             "--output-schema", str(schema_file), "-"]
@@ -250,7 +256,7 @@ async def codex_json(swarm_home: str, model: str, instructions: str, prompt: str
     for _ in range(retries + 1):
         res = await run_codex_retrying(args, prompt, env, workdir, timeout)
         if res.error == "usage_limit":
-            raise UsageLimit()
+            raise UsageLimit(res.raw_error or "")
         if not res.error and res.messages:
             try:
                 return json.loads(res.messages[-1])
@@ -259,6 +265,49 @@ async def codex_json(swarm_home: str, model: str, instructions: str, prompt: str
                 continue
         error = res.error or "no answer"
     raise RuntimeError(f"codex call failed: {error}")
+
+
+CLAUDE_PREFIX = "claude/"
+
+
+def is_claude(model: str) -> bool:
+    return model.startswith(CLAUDE_PREFIX)
+
+
+async def claude_json(model: str, instructions: str, prompt: str, schema: dict, reasoning_effort: str,
+                      workdir: Path, timeout: float = 900, retries: int = 2) -> dict:
+    """One stateless Claude Code call (`claude -p` on the user's own login) that must answer with JSON matching
+    `schema` (judge). The instructions are the whole system prompt; no tools, MCP servers, settings or saved session,
+    and an empty working directory. Error answers (overload, rate limit) are retried after RETRY_DELAYS."""
+    workdir = Path(workdir).resolve()
+    workdir.mkdir(parents=True, exist_ok=True)
+    args = ["-p", "--model", model.removeprefix(CLAUDE_PREFIX), "--effort", reasoning_effort,
+            "--system-prompt", instructions, "--json-schema", json.dumps(schema), "--output-format", "json",
+            "--tools", "", "--strict-mcp-config", "--setting-sources", "", "--no-session-persistence",
+            "--exclude-dynamic-system-prompt-sections"]
+    error = None
+    for attempt in range(retries + 1):
+        if attempt:
+            await asyncio.sleep(RETRY_DELAYS[min(attempt - 1, len(RETRY_DELAYS) - 1)])
+        proc = await asyncio.create_subprocess_exec(
+            "claude", *args, cwd=workdir, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE)
+        try:
+            out, err = await asyncio.wait_for(proc.communicate(prompt.encode()), timeout)
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.wait()
+            error = "timeout"
+            continue
+        try:
+            answer = json.loads(out)
+        except ValueError:
+            error = err.decode(errors="replace").strip()[-300:] or f"claude exited {proc.returncode}"
+            continue
+        if not answer.get("is_error") and isinstance(answer.get("structured_output"), dict):
+            return answer["structured_output"]
+        error = str(answer.get("result") or answer.get("subtype") or "no structured answer")[:300]
+    raise RuntimeError(f"claude call failed: {error}")
 
 
 # scripted backend (tests) ----------------------------------------------
@@ -301,14 +350,18 @@ class ScriptedBackend:
         self.server_url = server_url
         self.prompts: list[tuple[str, int, str]] = []
         self.instructions: dict[str, str] = {}  # agent id -> its latest system instructions
+        self.models: dict[str, tuple[str, str | None]] = {}  # agent id -> (model, effort) of its latest turn
 
-    async def run_turn(self, agent: Agent, prompt: str, instructions: str, model: str) -> TurnResult:
+    async def run_turn(self, agent: Agent, prompt: str, instructions: str, model: str,
+                       effort: str | None = None) -> TurnResult:
         rnd = int(re.search(r"Round (\d+)", prompt).group(1))
         self.prompts.append((agent.id, rnd, prompt))
         self.instructions[agent.id] = instructions
+        self.models[agent.id] = (model, effort)
         try:
             await self.policy(agent, rnd, prompt, MCPClient(self.server_url, agent.token))
-        except UsageLimit:
-            return TurnResult(session_id=agent.session_id or f"scripted-{agent.id}", error="usage_limit")
+        except UsageLimit as e:
+            return TurnResult(session_id=agent.session_id or f"scripted-{agent.id}", error="usage_limit",
+                              raw_error=str(e) or None)
         return TurnResult(session_id=agent.session_id or f"scripted-{agent.id}", messages=["(scripted)"],
                           usage={"input_tokens": 0, "output_tokens": 0})

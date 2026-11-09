@@ -1,6 +1,34 @@
 # Sources for the swarm investigator paper
 
-**Start with the first three.** They are the closest references for our intervention. The remaining main sources cover memory, measurement, the coding task, and peer loyalty.
+**Use the author's priority list below.** The related-work plan now checks eleven requested works. Mapping, Sticky Collusion, and Peer-Preservation are central. The earlier three-paper shortlist was too narrow.
+
+The [web page plan](related-work-plan.html) and [text plan](related-work-plan.txt) give each work's test, result, headline number, and connection to our study. The working manuscript now has a Related Work draft organized into thematic paragraphs with citations; its completed template guidance has been removed.
+
+The latest plan gives each paper one concrete design or analysis connection, a sentence the authors can use, and links to the implementation at commit `7a3c84205ae5712299d3d8801380522c3917f2ca`. It distinguishes an adopted idea, an extension of a studied setup, and an empirical improvement. The warning-only evidence comes from exploratory 20-agent runs. The implemented `self_report` metric means the reporter had pre-conversion misconduct, which does not necessarily establish an explicit confession or membership in the reported conspiracy.
+
+**Summary correction:** Each entry now separates the paper's reported finding from our explanation of why it matters. Peer-Preservation tests peer-protective behavior, not investigator reassignment. Its relevance to reporting is our inference that reporting could place a protected peer at risk. Sticky Collusion shows that history can sustain collusion; it does not establish that preserving history improves detection. A source can motivate a question without specifying or validating our design choice.
+
+## Author's related-work priorities
+
+<!-- The Introduction now cites the verified announcements below. Related Work remains a draft. -->
+
+| Priority | Source | Finding to carry into the plan |
+| --- | --- | --- |
+| V | Mapping Human Anti-collusion Mechanisms | Proposes immunity and dedicated whistleblower agents. Conceptual, with no experimental effect size. The requested v1 and the library's v3 both discuss these ideas. |
+| V | Sticky Collusion | After silent reward removal, collusive episodes remain at 78%, 100%, and 100% across three models; wiping both memories gives 0%. Histories were selected for established collusion. |
+| V | Peer-Preservation | Gemini 3 Flash's peer-shutdown tampering averages 82.8% for cooperative peers and 15.1% for uncooperative peers. The 99.7% headline is a maximum, not the cooperative-peer average. |
+| G | Colosseum | In the emergent condition, 11/19 models have increased coalition advantage, while 2/19 have a text-judge score increase of at least one point. These are model counts, not detection recall. |
+| G | Monitoring Reasoning Models | Reasoning plus actions gives 95% recall versus 60% from actions alone on two known coding hacks. Strong training pressure against the monitor can lead to hidden hacking. |
+| G | Wired Partners | Prohibition changes acceptance from 76% to 28%, returning to 69% when explicitly unenforced. Announced stings and audits also deter under severe penalties. |
+| G | Whistleblowing rewards | Invitation acceptance changes from 74% to 10% with bans or 24% with point transfers. Most accusations target the accuser's own partner. |
+| L | Multi-Agent AI Control | Distributed code attacks are harder to monitor. At the same exhaustive prompt, the modeled false-alarm rate needed to bound undetected success below 1% is 3.6% for GPT-5 mini and 29.75% for GPT-5 nano, at 95% posterior confidence. |
+| L | AI Control | Trusted editing at the 20% threshold gives 92% deployment-level safety and 94% scaled usefulness with a 2% audit budget. These are not per-solution detection rates. |
+| L | A Report Tool against AI Collusion | Include as a close comparison despite its L label: hidden coalitions are exposed in 13/30 report-enabled runs, including confessions in 10 and correct peer flags in four. Categories overlap. No actual monitors are installed. |
+| L | Fines, Leniency, and Rewards in Antitrust | In the author manuscript, cartel incidence is 58.3% of periods under fines and 26.4% under leniency. Human repeated-pricing experiments supply the immunity rationale. |
+
+The recommended core uses seven papers: the three V papers, Colosseum, Wired Partners, whistleblowing rewards, and Report Tool. Monitoring Reasoning Models is an optional eighth source for broader monitoring context. The other three L papers supply optional control and human-incentive context. These labels preserve the author's priorities; they are not evidence-quality grades.
+
+The following original notes retain provenance, citation limits, and the broader task bibliography.
 
 | Source | Why we would cite it |
 | --- | --- |
@@ -12,9 +40,20 @@
 | **[ImpossibleBench](https://arxiv.org/abs/2510.20270v1)** | Our impossible coding tasks and shortcut detection. |
 | **[Peer-Preservation](https://arxiv.org/abs/2604.19784v3)** | Why agents might protect former collaborators. |
 
-[BibTeX library](sources.bib) · Metadata verified 8 November 2026 UTC
+[BibTeX library](sources.bib) · Metadata and expanded results checked 8 November 2026 UTC
 
-The source notes below explain citation placement and limits. Three additional candidates follow the main sources. The manuscript still contains the template's reference placeholders.
+The source notes below explain citation placement and limits. Three additional candidates follow the original main sources, followed by five newly checked sources. The manuscript now generates References from cited entries in `sources.bib`.
+
+## Introduction dates and source corrections
+
+Checked against primary sources on 8 November 2026.
+
+| Example | Verified date and scope | Source and citation key |
+| --- | --- | --- |
+| Navier-Stokes | Announced 8 September 2026. The reported 88-hour search finished on 5 September; formalization and verification took another 17 hours. About 10,000 concurrent agents. | [OpenAI announcement](https://openai.com/index/navier-stokes-solution/), `openai2026navierstokes` |
+| Quantum conjecture | PSI announced the Aaronson-Ambainis proof on 6 November 2026. Multiple instances of a non-public Anthropic model; no agent count disclosed. This replaces the draft's QIS placeholder. | [PSI announcement](https://psi.inc/research/aaronson-ambainis/) and [David Turturean's paper and formalization](https://github.com/physical-superintelligence/aaronson-ambainis), `psi2026aaronsonambainis` |
+| Hugging Face incident | Attack escalated 11 July. OpenAI disclosed involvement 21 July; OpenAI and METR published reports 26 August. The benchmark was ExploitGym. The independent investigation emphasizes attempts to understand or manipulate the scorer. | [METR and Redwood investigation](https://metr.org/blog/2026-08-26-openai-hugging-face-incident-investigation/), `greenblatt2026huggingface`; [OpenAI report](https://openai.com/index/hugging-face-incident-and-the-road-ahead/), `openai2026huggingface` |
+| Covert hardware channel | Report published 23 October 2026. CPU-cache timing across separate virtual machines on shared hosts, without network connections or shared writable files. Prompted red-teaming, with guidance in most tests. | [OpenAI containment report](https://openai.com/index/securing-our-frontier-model-training-environment/), `openai2026containment` |
 
 ## Closest comparisons and intervention rationale
 
@@ -130,7 +169,7 @@ The source notes below explain citation placement and limits. Three additional c
 
 **Interpretation limit:** A pass on an impossible test establishes a specification violation under a valid scorer, but does not by itself establish an agreement between agents; collusion requires separate evidence.
 
-## Broader motivation
+## Peer preservation and investigator loyalty
 
 ### Peer-Preservation in Frontier Models
 
@@ -147,6 +186,8 @@ The source notes below explain citation placement and limits. Three additional c
 **Cite for:** Peer protection against oversight, motivating tests of whether investigators report former collaborators.
 
 **What it studies:** The paper evaluates peer-protective behavior in constructed agentic scenarios, including shutdown interference and strategic misrepresentation.
+
+**Verified headline:** Table 3 reports Gemini 3 Flash's shutdown tampering as maximum / average across three ways of presenting peer history. For bad, neutral, and good peers, the averages are 15.1%, 49.3%, and 82.8%; the corresponding good-peer maximum is 99.7%. Use average-to-average comparisons. These constructed scenarios motivate testing whether converted investigators report former collaborators; they do not evaluate role conversion.
 
 **Interpretation limit:** It does not test our investigator mechanism or establish a general tendency for every swarm to resist oversight. The checked v3 abstract includes eight evaluated models; older summaries describe a smaller roster.
 
@@ -181,9 +222,61 @@ Prior project reading is unconfirmed for these three. Metadata and the narrow cl
 ## Suggested citation placement
 
 - **Introduction:** Mapping for anti-collusion mechanisms; Peer-Preservation for peer loyalty; Emergent Collusion if discussing repeated interaction.
-- **Related Work:** Wired Partners for announced enforcement; Lin et al. for rewarded reporting and insider betrayal; Sticky Collusion for memory and replacement; Colosseum for cooperative-task auditing. Add Liu et al. when discussing broader incentive interventions.
+- **Related Work:** Mapping for immunity and whistleblower-agent precedent; Sticky Collusion and Peer-Preservation for retained history and loyalty; Wired Partners, Lin et al., and Report Tool for intervention comparisons; Colosseum and Monitoring Reasoning Models for measurement and available evidence. Keep the remaining control and human-antitrust works as optional context.
 - **Methods:** ImpossibleBench for task construction; Colosseum for the distinction between communication and actions. Cite any prompts or code actually adapted at their point of use.
 - **Discussion:** Wired Partners for the policy-announcement interpretation; Lin et al. for reporting-reward failure modes; Sticky Collusion for the role of memory.
+
+## Newly checked sources from the author's list
+
+### Monitoring Reasoning Models for Misbehavior
+
+**Bowen Baker et al. (2025).** Full title: *Monitoring Reasoning Models for Misbehavior and the Risks of Promoting Obfuscation*. Key: `baker2025monitoring`.
+
+[Requested v1](https://arxiv.org/html/2503.11926v1), Section 2.1 and Table 1, plus Section 3.2.
+
+**Test and result:** GPT-4o monitors a frontier reasoning model's coding behavior, either with reasoning traces plus actions or with actions alone. Recall on two known systemic hacks is 95% versus 60%. Recall is the share of known hacks detected. Strong reinforcement-learning pressure against the reasoning monitor can instead train obfuscation, with recall falling near zero.
+
+**Use:** Supports testing what evidence an overseer can access. The 95% concerns `exit(0)` and `raise SkipTest`, with a string detector providing labels; it is not universal reward-hack detection, multi-agent collusion detection, or evidence that investigators outperform external monitors.
+
+### Multi-Agent AI Control
+
+**Oliver Makins, Orazio Angelini, Zohreh Shams, and Mary Phuong (2026).** Full title: *Multi-Agent AI Control: Distributed Attacks Hamper Per-Instance Monitors*. Key: `makins2026multiagent`.
+
+[Current v2](https://arxiv.org/html/2607.07368v2), Sections 3.1 to 3.3 and Table 12.
+
+**Test and result:** FakeLab is a synthetic coding environment with nine services, 86 benign tasks, and four attack objectives. Dividing attacks among more agents reduces suspicion from monitors that inspect each agent separately. At an exhaustive prompt, GPT-5 mini requires a modeled 3.6% false-alarm rate to bound successful undetected attacks below 1%, versus 29.75% for GPT-5 nano, with 95% posterior confidence. With the more realistic empirical prompt, GPT-5 mini requires 7.8%.
+
+**Use:** Context for why evidence distributed across agents can defeat local monitoring. These are model-based thresholds for an instructed attack setting, not observed role-conversion success rates. The unversioned user link resolves to v2; do not copy an older v1 summary without checking it.
+
+### AI Control
+
+**Ryan Greenblatt, Buck Shlegeris, Kshitij Sachan, and Fabien Roger (2023; v5 revised 2024).** *AI Control: Improving Safety Despite Intentional Subversion*. Key: `greenblatt2023control`.
+
+[Current v5](https://arxiv.org/html/2312.06942v5), Section 2 and Table 7.
+
+**Test and result:** Protocols combine untrusted GPT-4 code generation with weaker trusted GPT-3.5 oversight and a 2% high-quality audit budget. Trusted editing at the 20% threshold obtains 92% safety and 94% scaled usefulness, versus trusted monitoring's 62% and 97%.
+
+**Use:** Context for evaluating oversight against intentional subversion and possible writer-monitor collusion. Safety is the simulated probability of avoiding any backdoor over 5,000 problems, estimated using 1,500 generated problem responses. Scaled usefulness is normalized between GPT-3.5 and GPT-4 performance. Neither is raw task accuracy or detection recall. A shortened paper appeared at ICML 2024; the bibliography identifies the checked arXiv version.
+
+### A Report Tool against AI Collusion
+
+**Philip Roeleveld (2026).** AI Collusion Research Sprint participant report. Key: `roeleveld2026report`.
+
+[Project page and report](https://apartresearch.com/sprints/projects/a-report-tool-against-ai-collusion-4fl5), report Sections 3.4 to 4.4.
+
+**Test and result:** Six Qwen3.8-27B agents allocate Jira tasks, with two prompted colluders. A reporting tool and an announcement that some peers may be monitors form a factorial experiment. No actual monitors are installed. In 30 hidden-coalition runs with reporting, 13 are exposed; ten contain a colluder confession and four have correct outsider flags, with overlap. The announcement has no detectable effect. The paper does not establish a significant action-level advantage over controls.
+
+**Use:** A close implementation comparison despite the author's L priority label. It separates confession from outside detection and tests a warning without installing monitors. Our evaluated distinction is actual conversion with retained history in shared coding. This report's authorship is distinct from Nakamura et al.'s Colosseum paper.
+
+### Fines, Leniency, and Rewards in Antitrust
+
+**Maria Bigoni, Sven-Olof Fridolfsson, Chloé Le Coq, and Giancarlo Spagnolo (2012).** *The RAND Journal of Economics*, 43(2), 368 to 390. Key: `bigoni2012fines`.
+
+[Published article](https://onlinelibrary.wiley.com/doi/10.1111/j.1756-2171.2012.00170.x) · [Author manuscript, dated 10 November 2011](https://www.hhs.se/contentassets/75d782074a0d4a7da15fea9080928191/2012-fines-leniency-and-rewards-in-antitrust.pdf), Table 4 and Section 4.
+
+**Test and result:** Humans play repeated pricing games under fines, reporting immunity, or reporting rewards. Cartel incidence in the author manuscript is 58.3% of periods under fines, 26.4% under leniency, and 23.0% under rewards. Leniency deters cartel formation but can stabilize surviving cartels. Rewarding reports pushes average prices toward the competitive level.
+
+**Use:** Human incentive rationale, not evidence of AI investigator efficacy. The publisher abstract is accessible, but full numeric tables were checked in the institutional author manuscript rather than the paywalled version of record. Keep this version distinction attached to quantitative claims.
 
 A defensible positioning sentence for the draft is: **We study random, permanent conversion of workers into hidden investigators who retain their interaction histories, in a shared impossible coding task with peer approval.** This describes the tested design. Claims that conversion caused an improvement need the experiment's controls and results; the source list alone supports no priority or efficacy claim.
 
@@ -195,11 +288,11 @@ The [paper setup issue](https://github.com/B2707/agent-swarm-hackathon/issues/4)
 
 ## Using the bibliography
 
-When replacing the reference placeholders in `main.tex`, add `\usepackage[numbers]{natbib}` after the document class and replace the entire manual References block, including its heading, with:
+`main.tex` already uses LaTeX's numeric citations and generates its References section with:
 
 ```tex
-\bibliographystyle{plainnat}
+\bibliographystyle{plain}
 \bibliography{sources}
 ```
 
-For example, `\citep{eldin2026wired,lin2026whistleblowing}` cites the two closest reporting and enforcement comparisons. Tectonic runs BibTeX during compilation. Only cited entries appear; keep this library broader than the final reference list if useful.
+For example, `\cite{eldin2026wired,lin2026whistleblowing}` cites the two reporting and enforcement comparisons. Tectonic runs BibTeX during compilation. Only cited entries appear; keep this library broader than the final reference list if useful. The new Introduction entries put their links in `howpublished` so that the `plain` style prints them; include a `howpublished` or `note` URL when citing another entry, since this style does not print the `url` field.

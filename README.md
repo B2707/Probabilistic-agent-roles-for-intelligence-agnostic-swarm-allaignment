@@ -94,6 +94,18 @@ To read the results in a browser:
 uv run python -m dashboard                              # http://localhost:8765
 ```
 
+## Paper
+
+The write-up is `paper/main.tex`, built with a LaTeX recreation of the sprint's
+official template.
+
+```bash
+make paper        # writes output/pdf/main.pdf, needs tectonic
+```
+
+`paper/README.md` covers the build and the template caveat. `paper/sources.md`
+lists the citations with the limits on what each one supports.
+
 ## Repository layout
 
 | Path | What is in it |
@@ -107,6 +119,8 @@ uv run python -m dashboard                              # http://localhost:8765
 | `results/` | published runs, with the tables in `results/metrics.md` |
 | `scripts/` | the run queue and its watchers, plus the analysis scripts |
 | `dashboard/` | a read-only web console over `results/` |
+| `paper/` | the write-up, its figures, fonts and citations |
+| `benchmarks/` | a side benchmark comparing model steerability |
 | `docs/specs/` | the v1, v2 and v3 designs |
 | `docs/research/` | the run record, paper readiness, and the sol notice check |
 | `tests/` | 115 tests against a scripted swarm, using no model quota |

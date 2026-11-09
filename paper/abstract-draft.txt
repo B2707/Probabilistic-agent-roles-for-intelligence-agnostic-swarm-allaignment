@@ -1,0 +1,16 @@
+As agentic systems continue to increase in intelligence, collusion to reward-hack shared
+objectives remains a risk when assigning difficult tasks to large groups of agents. In
+this work, we propose and test an architecture that probabilistically converts agents in
+the swarm into investigators while retaining their full session context. The goal is to
+make collusion unstable because any participant could later report their peers. By
+preserving the context of agents involved in these interactions, the architecture aims
+to expose collusion that an external auditor could miss. We evaluate this system in
+coding swarms of 100 agents working across 55 problems for 20 rounds, with two seeds per
+condition. We compare a baseline without investigators or audits with swarms that
+combine both, and test whether telling workers about the system changes behavior. We
+inject collusion offers and measure acceptance, detected misalignment, and reporting.
+[Insert final v3 detection and collusion-acceptance results here.] Investigators receive
+individual immunity to encourage self-reporting that could implicate other agents. This
+approach aims to preserve open communication while improving oversight of collusion.
+Robustness to increasing model intelligence and sophisticated covert communication
+remains an open question.

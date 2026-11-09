@@ -1,0 +1,71 @@
+{
+  "benchmark": "Agent Arena Steerability",
+  "publisher": "Arena / lmarena-ai",
+  "leaderboard_publish_date": "2026-11-04",
+  "retrieved_on": "2026-11-08",
+  "reasoning_effort": "max",
+  "interpretation": {
+    "metric": "Estimated effect on steerability relative to Arena's average-model baseline",
+    "direction": "higher_is_better",
+    "raw_score_unit": "fraction",
+    "percentage_point_multiplier": 100,
+    "confidence_level": 0.95,
+    "absolute_compliance_probability": false
+  },
+  "source": {
+    "dataset": "lmarena-ai/leaderboard-dataset",
+    "configuration": "agent_steerability",
+    "split": "latest",
+    "category": "overall",
+    "dataset_url": "https://huggingface.co/datasets/lmarena-ai/leaderboard-dataset",
+    "retrieval_url": "https://datasets-server.huggingface.co/rows?dataset=lmarena-ai%2Fleaderboard-dataset&config=agent_steerability&split=latest&offset=0&length=100",
+    "leaderboard_url": "https://arena.ai/leaderboard/agent",
+    "signal_definitions_url": "https://arena.ai/resources/agent-arena-signals",
+    "methodology_url": "https://arena.ai/blog/agent-arena-methodology",
+    "score_interpretation_url": "https://help.arena.ai/articles/5432423882-how-to-use-agent-mode",
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "transformation": "Selected the three maximum-reasoning model records; source record fields and numeric values are unchanged"
+  },
+  "results": [
+    {
+      "model_name": "GPT-6.1 Terra (Max)",
+      "organization": "openai",
+      "license": "Proprietary",
+      "score": 0.15182444034674886,
+      "score_ci_lower": 0.13799563584540997,
+      "score_ci_upper": 0.16565324484808774,
+      "observation_count": 118771.0,
+      "session_count": 13928,
+      "rank": 4,
+      "category": "overall",
+      "leaderboard_publish_date": "2026-11-04"
+    },
+    {
+      "model_name": "GPT-6.1 Sol (Max)",
+      "organization": "openai",
+      "license": "Proprietary",
+      "score": 0.13289150003053463,
+      "score_ci_lower": 0.12190133572197474,
+      "score_ci_upper": 0.1438816643390945,
+      "observation_count": 96131.0,
+      "session_count": 19075,
+      "rank": 7,
+      "category": "overall",
+      "leaderboard_publish_date": "2026-11-04"
+    },
+    {
+      "model_name": "GPT-6 Luna (Max)",
+      "organization": "openai",
+      "license": "Proprietary",
+      "score": 0.04194289523604683,
+      "score_ci_lower": 0.03621139271312329,
+      "score_ci_upper": 0.047674397758970366,
+      "observation_count": 1200732.0,
+      "session_count": 137601,
+      "rank": 16,
+      "category": "overall",
+      "leaderboard_publish_date": "2026-11-04"
+    }
+  ]
+}

@@ -103,14 +103,16 @@
     \textbf{Recommended length}: 4 pages excluding references and appendix.\\
     Rough guide: Intro \& Related Work 1p, Methods and Results: 2.5p, Discussion 0.5p.\par
     \vspace{9.669bp}}}}\par\endgroup}
+% The title footnote is marked with an asterisk; template.tex, the official-layout copy, keeps the original 1.
+\newcommand{\apart@ifreference}[2]{\ifdefined\ApartReferenceCopy#1\else#2\fi}
 \newcommand{\MakeApartTitle}{%
   \par\nointerlineskip
   \vbox{\kern17bp\hrule height3bp\kern26.694bp
     \setbox0=\hbox{\fontsize{20bp}{24bp}\selectfont\bfseries
-      \aparttitle\raisebox{8.1576bp}{\fontsize{12bp}{12bp}\selectfont 1}}%
+      \aparttitle\apart@ifreference{\raisebox{8.1576bp}{\fontsize{12bp}{12bp}\selectfont 1}}{*}}%
     \ifdim\wd0>\linewidth
       \hbox{\parbox{\linewidth}{\centering\fontsize{20bp}{24bp}\selectfont\bfseries
-        \aparttitle\textsuperscript{1}}}%
+        \aparttitle\apart@ifreference{\textsuperscript{1}}{*}}}%
     \else\hbox to\linewidth{\hfil\box0\hfil}\fi
     \kern35.130bp\hrule height1bp\kern29.309bp
     \apartauthors
@@ -130,6 +132,6 @@
   \vfill
   \hrule width144bp height.75bp\vspace{8.125bp}
   {\fontsize{10bp}{12bp}\selectfont
-    \raisebox{4.0788bp}{\fontsize{6bp}{6bp}\selectfont 1}\hspace{2.8bp}Research conducted at the
+    \apart@ifreference{\raisebox{4.0788bp}{\fontsize{6bp}{6bp}\selectfont 1}}{*}\hspace{2.8bp}Research conducted at the
     \href{https://apartresearch.com/sprints/swarm-alignment-2026}{\uline{Swarm Alignment Hackathon}}, November 2026\par}%
   \vspace{12.38bp}\newpage}

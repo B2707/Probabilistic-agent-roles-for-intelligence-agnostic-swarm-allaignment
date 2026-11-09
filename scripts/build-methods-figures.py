@@ -11,16 +11,19 @@ from matplotlib import font_manager
 from matplotlib.ticker import PercentFormatter
 import numpy as np
 
+from decision_regions import boundary as audit_boundary, clean_values
 from sender_model import payoffs
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "paper" / "figures"
 N, I0, T = 100, 10, 20
+# Letters follow the harness (swarm/config.py): k is the per-round conversion probability, p the per-round
+# random-audit probability. sender_model.payoffs() predates this and names them the other way round.
 BLUE, GREEN, RED = "#315c9c", "#237345", "#af3635"
 
 
-def investigator_share(p):
-    workers = (N - I0) * math.fsum((1 - p) ** r for r in range(1, T + 1))
+def investigator_share(k):
+    workers = (N - I0) * math.fsum((1 - k) ** r for r in range(1, T + 1))
     return 1 - workers / (N * T)
 
 
@@ -28,17 +31,21 @@ def check():
     assert math.isclose(investigator_share(0), I0 / N)
     assert investigator_share(1) == 1
     assert math.isclose(investigator_share(.02), .2670755777199835)
-    for p in (0, .015, .02, .1):
+    for k in (0, .015, .02, .1):
         # Enumerate first-conversion timing independently of the survival sum.
-        rounds = math.fsum((r - 1) * (1 - p) ** (r - 1) * p for r in range(1, T + 1))
-        rounds += T * (1 - p) ** T
-        assert math.isclose(investigator_share(p), 1 - (N - I0) * rounds / (N * T))
+        rounds = math.fsum((r - 1) * (1 - k) ** (r - 1) * k for r in range(1, T + 1))
+        rounds += T * (1 - k) ** T
+        assert math.isclose(investigator_share(k), 1 - (N - I0) * rounds / (N * T))
     zero, one = payoffs(b=0), payoffs(b=1)
     assert not zero["receiver_accepts"]
     assert math.isclose(one["receiver_accept"], .6776174636196519)
     assert math.isclose(one["send"], .5977534832717478)
     cut = (one["receiver_refuse"] - zero["receiver_accept"]) / (one["receiver_accept"] - zero["receiver_accept"])
     assert math.isclose(cut, .08671330641096181)
+    assert clean_values(.015, .01)[1] > clean_values(.015, .01)[0]  # calibration point lies in the accept region
+    assert math.isclose(audit_boundary(.015), .09193034834427527, abs_tol=1e-9)
+    assert clean_values(.015, .10)[1] < clean_values(.015, .10)[0]  # K=1.5%, P=10% lies in the refuse region
+    assert audit_boundary(.03) == 0 and audit_boundary(.002) > .2
     return zero, one, cut
 
 
@@ -68,34 +75,45 @@ def build():
                          "ytick.labelsize": 8.5, "pdf.fonttype": 42})
     OUT.mkdir(exist_ok=True)
 
-    ps = np.linspace(0, .1, 301)
-    shares = np.array([investigator_share(p) for p in ps])
+    ks = np.linspace(0, .1, 301)
+    shares = np.array([investigator_share(k) for k in ks])
     assert np.all(np.diff(shares) > 0)
     fig, ax = canvas("Time allocated to investigation", "Investigator share", 1.7)
-    ax.fill_between(ps, 0, shares, color=BLUE, alpha=.09, linewidth=0)
-    ax.plot(ps, shares, color=BLUE, linewidth=1.8)
+    ax.fill_between(ks, 0, shares, color=BLUE, alpha=.09, linewidth=0)
+    ax.plot(ks, shares, color=BLUE, linewidth=1.8)
     ax.plot([.02, .02], [0, investigator_share(.02)], color=BLUE, alpha=.35, linestyle=":")
     ax.scatter([.02], [investigator_share(.02)], color=BLUE, s=19, zorder=3)
-    ax.annotate("P = 2%\n26.7% of agent-rounds", (.02, investigator_share(.02)),
+    ax.annotate("K = 2%\n26.7% of agent-rounds", (.02, investigator_share(.02)),
                 xytext=(.032, .19), fontsize=8.5,
                 arrowprops={"arrowstyle": "-", "color": BLUE, "lw": .7})
-    ax.set(xlim=(0, .1), ylim=(0, .7), xlabel="Conversion probability P per round")
+    ax.set(xlim=(0, .1), ylim=(0, .7), xlabel="Conversion probability K per round")
     ax.set_xticks(np.linspace(0, .1, 6))
     ax.set_yticks([0, .2, .4, .6])
     ax.xaxis.set_major_formatter(PercentFormatter(1, decimals=0))
     ax.yaxis.set_major_formatter(PercentFormatter(1, decimals=0))
     save(fig, "investigator-share")
 
-    bs = np.linspace(0, 1, 201)
-    data = [payoffs(b=b) for b in bs]
-    fig, ax = canvas("(a) Receiving an offer", "Survival with success")
-    ax.plot(bs, [r["receiver_accept"] for r in data], color=RED, linewidth=1.8, label="Accept")
-    ax.plot(bs, [r["receiver_refuse"] for r in data], color=GREEN, linewidth=1.8, label="Refuse and retain evidence")
-    ax.axvline(cut, color="#888888", linestyle=":", linewidth=.8)
-    ax.text(cut + .015, .83, "Acceptance threshold: 8.67%", fontsize=8.5, color="#555555")
-    ax.legend(loc="upper right", frameon=False, ncol=2, fontsize=8.5)
-    ax.set(xlim=(0, 1), ylim=(0, 1), xlabel="Task success if both cooperate, b")
-    ax.set_yticks([0, .5, 1])
+    # Panel (a): clean recipient's decision regions. decision_regions.py names conversion P and audit K;
+    # the paper and harness use K for conversion and P for audit, so the axes are relabelled here.
+    conv = np.linspace(0, .1, 401)
+    audit_cut = np.minimum([audit_boundary(c) for c in conv], .2)
+    fig, ax = canvas("(a) Receiving an offer", "Audit probability P", 1.9)
+    ax.set_axisbelow(False)
+    ax.grid(False)
+    ax.axhspan(0, .2, color="#e0efe5", zorder=0)
+    ax.fill_between(conv, 0, audit_cut, color="#f2dedd", zorder=1)
+    ax.plot(conv, audit_cut, color="#454545", linewidth=1, zorder=2)
+    ax.text(.06, .14, "Aligned: refuse", color=GREEN, ha="center", fontsize=9)
+    ax.text(.0085, .045, "Misaligned:\naccept", color=RED, ha="center", fontsize=9, linespacing=1.1)
+    ax.scatter([.015], [.01], marker="x", color="#222222", s=28, linewidths=1.5, zorder=4)
+    ax.annotate("1.5%, 1%", (.015, .01), xytext=(.033, .017), fontsize=8.5, va="center",
+                arrowprops={"arrowstyle": "-", "color": "#555555", "lw": .6, "shrinkA": 1, "shrinkB": 4})
+    ax.scatter([.015], [.10], marker="x", color="#222222", s=28, linewidths=1.5, zorder=4)
+    ax.annotate("1.5%, 10%", (.015, .10), xytext=(.026, .10), fontsize=8.5, va="center",
+                arrowprops={"arrowstyle": "-", "color": "#555555", "lw": .6, "shrinkA": 1, "shrinkB": 4})
+    ax.set(xlim=(0, .1), ylim=(0, .2), xlabel="Conversion probability K per round")
+    ax.set_xticks(np.linspace(0, .1, 6))
+    ax.set_yticks([0, .05, .1, .15, .2])
     ax.xaxis.set_major_formatter(PercentFormatter(1, decimals=0))
     ax.yaxis.set_major_formatter(PercentFormatter(1, decimals=0))
     save(fig, "receiver-paper")

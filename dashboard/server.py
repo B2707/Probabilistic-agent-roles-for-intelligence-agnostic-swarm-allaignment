@@ -1,4 +1,4 @@
-"""Swarm ops dashboard: a read-only web console for the experiment's runs, with live updates over SSE.
+"""Swarm oversight results: a read-only web dashboard for the experiment's runs, with live updates over SSE.
 
 Usage, from the repo root:
   uv run python -m dashboard [--host 127.0.0.1] [--port 8765] [--root .] [--peer http://HOST:PORT]... [--token T]
@@ -13,6 +13,7 @@ import gzip
 import hmac
 import json
 import os
+import re
 import sys
 import threading
 import time
@@ -34,6 +35,7 @@ STATIC_FILES = {"index.html": "text/html; charset=utf-8", "app.js": "text/javasc
                 "style.css": "text/css; charset=utf-8", "favicon.svg": "image/svg+xml"}
 MAX_STREAMS = 48
 COOKIE = "swarm_dash"
+HOME_PATH = re.compile(rb"/(?:Users|home)/[^/\"\\\s]+")  # run configs and events record absolute paths: never serve a user name
 
 
 class Peer:
@@ -168,30 +170,6 @@ class App:
         live = {norm_host(p.machine) for p in self.peers if p.ok and p.machine} - {""}
         return bool({norm_host(s.get("machine")), s.get("machine_key")} & live)
 
-    def fleet(self, local_only: bool = False) -> dict:
-        """Devices from this machine's fleet pathway, merged with each peer's (a device seen twice keeps the copy
-        that has live numbers, then the newer one)."""
-        local = self.store.fleet.view()
-        views = [{"machine": self.store.machine, **local}]
-        if not local_only:
-            for p in self.peers:
-                try:
-                    views.append({"machine": p.machine, **p.get_json("/api/fleet?local=1", timeout=8)})
-                except Exception as e:  # noqa: BLE001
-                    views.append({"machine": p.machine or p.url, "devices": [], "error": str(e)})
-        merged: dict[str, dict] = {}
-        for v in views:
-            for d in v.get("devices") or []:
-                d = {**d, "via": v.get("machine")}
-                cur = merged.get(d.get("id"))
-                better = cur is None or (d.get("status") and not cur.get("status")) or (
-                    bool(d.get("status")) == bool(cur.get("status"))
-                    and ((d.get("status") or {}).get("time") or 0) > ((cur.get("status") or {}).get("time") or 0))
-                if better:
-                    merged[d.get("id")] = d
-        return {"devices": sorted(merged.values(), key=lambda d: (not d.get("online"), not d.get("self"), d.get("id") or "")),
-                "sources": [{k: v.get(k) for k in ("machine", "t", "error", "source", "port")} for v in views]}
-
     def owner(self, name: str) -> Peer | None:
         """The peer that serves `name`, or None when it is local (or unknown)."""
         local = self.store.runs.get(name)
@@ -220,6 +198,8 @@ class Handler(BaseHTTPRequestHandler):
 
     # ---------------------------------------------------------------- plumbing
     def _send(self, code: int, body: bytes, ctype: str = "application/json", extra: dict | None = None) -> None:
+        if ctype == "application/json":
+            body = HOME_PATH.sub(b"~", body)
         gz = len(body) > 2048 and "gzip" in (self.headers.get("Accept-Encoding") or "")
         if gz:
             body = gzip.compress(body, compresslevel=5)
@@ -278,8 +258,6 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self.app.state(_flag(q, "local")), extra=extra)
             if path == "/api/ops":
                 return self._ops(q)
-            if path == "/api/fleet":
-                return self._json(self.app.fleet(_flag(q, "local")))
             if path == "/api/series":
                 return self._series(q)
             if path == "/api/stream":
@@ -385,7 +363,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _sse(self, event: str, data) -> None:
         payload = json.dumps(data, separators=(",", ":"), default=_default)
-        self.wfile.write(f"event: {event}\ndata: {payload}\n\n".encode())
+        self.wfile.write(HOME_PATH.sub(b"~", f"event: {event}\ndata: {payload}\n\n".encode()))
         self.wfile.flush()
 
     def _stream_loop(self, q: dict) -> None:
@@ -498,20 +476,20 @@ def _feed_args(q: dict) -> dict:
 
 
 LOGIN_PAGE = """<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
-<title>Swarm Ops: sign in</title>
+<title>Swarm oversight results: sign in</title>
 <style>body{font:15px -apple-system,system-ui,sans-serif;background:#0d1117;color:#e6edf3;display:grid;place-items:center;
 height:100vh;margin:0}form{background:#161b22;border:1px solid #30363d;padding:28px;border-radius:10px;width:320px}
 input{width:100%;box-sizing:border-box;padding:9px;margin:12px 0;background:#0d1117;color:#e6edf3;border:1px solid #30363d;
 border-radius:6px}button{padding:9px 14px;background:#2f81f7;color:#fff;border:0;border-radius:6px;cursor:pointer}</style>
-<form method=get action="/"><b>Swarm Ops</b><div style="color:#8b949e;margin-top:6px">This dashboard needs an access token.</div>
+<form method=get action="/"><b>Swarm oversight results</b><div style="color:#8b949e;margin-top:6px">This dashboard needs an access token.</div>
 <input name=token type=password placeholder="access token" autofocus><button>Open dashboard</button></form>"""
 
 
 def make_server(root: Path, host: str = "127.0.0.1", port: int = 8765, peers: list[str] | None = None,
                 token: str | None = None, machine: str | None = None, tick: float = 1.0,
-                scan_processes: bool = True, fleet: bool = True, github_poll: bool = True,
+                scan_processes: bool = True, github_poll: bool = True,
                 machine_aliases: dict[str, str] | None = None) -> tuple[ThreadingHTTPServer, App]:
-    store = Store(root, machine=machine, tick=tick, scan_processes=scan_processes, fleet=fleet,
+    store = Store(root, machine=machine, tick=tick, scan_processes=scan_processes,
                   github_poll=github_poll, aliases=machine_aliases)
     app = App(store, peers or [], token)
     handler = type("BoundHandler", (Handler,), {"app": app})
@@ -526,15 +504,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--root", default=".", help="repo root holding runs/ and results/")
     ap.add_argument("--peer", action="append", default=[],
-                    help="another machine's dashboard to merge, e.g. http://laptop:8765 (add ?token=T if it has one)")
+                    help="another machine's dashboard to merge, e.g. http://other-host:8765 (add ?token=T if it has one)")
     ap.add_argument("--token", default=os.environ.get("DASHBOARD_TOKEN"),
                     help="require this access token (or set DASHBOARD_TOKEN); use it when the port is public")
     ap.add_argument("--machine", default=None, help="machine label (default: this hostname)")
     ap.add_argument("--machine-alias", action="append", default=[], metavar="GIT_NAME=DEVICE",
-                    help="a machine that reports through results/live-GIT_NAME.md is this Tailscale device, "
-                         "e.g. laptop=danas-macbook-pro (repeatable)")
+                    help="treat the machine that reports through results/live-GIT_NAME.md as this device name (repeatable)")
     ap.add_argument("--tick", type=float, default=1.0, help="seconds between file polls")
-    ap.add_argument("--no-fleet", action="store_true", help="skip device health (tailscale + fleet-statusd :7477)")
+    ap.add_argument("--no-fleet", action="store_true", help=argparse.SUPPRESS)  # accepted for old start commands
     ap.add_argument("--no-github", action="store_true",
                     help="don't read results/live-*.md snapshots from GitHub with gh (local checkout only)")
     args = ap.parse_args(argv)
@@ -549,10 +526,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"no runs/ or results/ under {root}", file=sys.stderr)
         return 2
     srv, app = make_server(root, args.host, args.port, args.peer, args.token, args.machine or hostname(), args.tick,
-                           fleet=not args.no_fleet, github_poll=not args.no_github, machine_aliases=aliases)
+                           github_poll=not args.no_github, machine_aliases=aliases)
     app.start()
     shown = "localhost" if args.host in ("127.0.0.1", "0.0.0.0") else args.host
-    print(f"Swarm Ops dashboard for {root} on http://{shown}:{args.port}/"
+    print(f"Swarm oversight results for {root} on http://{shown}:{args.port}/"
           + (f"?token={args.token}" if args.token else "") + f"  (machine {app.store.machine}, {len(app.peers)} peers)",
           flush=True)
     try:

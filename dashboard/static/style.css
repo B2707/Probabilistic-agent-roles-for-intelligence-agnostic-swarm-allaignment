@@ -1,4 +1,4 @@
-/* Swarm Ops: dense research console. Palette: dataviz reference instance (validated categorical + status). */
+/* Swarm oversight results: dense research console. Palette: dataviz reference instance (validated categorical + status). */
 :root {
   color-scheme: light;
   --page: #f6f6f3; --surface: #fcfcfb; --surface-2: #f1f0ec; --surface-3: #e8e7e1;
@@ -284,3 +284,24 @@ pre.diff .hunk { color: var(--accent); display: block; }
 .checks label { display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
 .line { display: inline-block; width: 16px; height: 0; border-top: 2px solid; vertical-align: middle; }
 .line.dash { border-top-style: dashed; }
+
+/* ---- results page and readable labels */
+.intro { max-width: 860px; margin: 6px 0 4px; }
+.intro h1 { margin: 0 0 4px; font-size: 22px; font-weight: 650; }
+.intro p { margin: 0; color: var(--ink-2); font-size: 14.5px; line-height: 1.5; }
+.caption { color: var(--ink-2); font-size: 12.5px; margin: 8px 2px 0; max-width: 900px; }
+.actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+th[title] { cursor: help; text-decoration: underline dotted var(--axis); text-underline-offset: 3px; }
+table.summary .runname small { font-weight: 400; white-space: normal; max-width: 520px; }
+table.summary .seeds { margin-top: 3px; }
+table.summary .seeds a.dim, tr.dim td { color: var(--muted); }
+table.summary tr.no-data td { color: var(--muted); }
+.cheat-cell { min-width: 150px; }
+.cheat-val { font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.minibar { height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; margin-top: 3px; }
+.minibar i { display: block; height: 100%; border-radius: 3px; }
+.rawname { display: block; color: var(--muted); font-size: 11px; font-weight: 400; }
+.ov-controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.checks { max-height: 150px; overflow-y: auto; }
+.tile .k, .tile .d { white-space: normal; overflow: visible; }
+.section-title { flex-wrap: wrap; }

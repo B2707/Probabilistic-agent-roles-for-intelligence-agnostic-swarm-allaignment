@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Swarm Ops</title>
+<title>Swarm oversight results</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/static/style.css">
 <script>
@@ -14,19 +14,17 @@
 </head>
 <body>
 <header class="top">
-  <a class="brand" href="#/"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 3 7v10l9 5 9-5V7l-9-5Zm0 2.3 6.9 3.8L12 12 5.1 8.1 12 4.3ZM5 9.8l6 3.4v6.6l-6-3.3V9.8Zm8 10V13.2l6-3.4v6.7l-6 3.3Z"/></svg><span>Swarm Ops</span></a>
+  <a class="brand" href="#/"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 3 7v10l9 5 9-5V7l-9-5Zm0 2.3 6.9 3.8L12 12 5.1 8.1 12 4.3ZM5 9.8l6 3.4v6.6l-6-3.3V9.8Zm8 10V13.2l6-3.4v6.7l-6 3.3Z"/></svg><span>Swarm oversight results</span></a>
   <nav class="tabs" id="nav">
-    <a href="#/" data-nav="overview">Overview</a>
     <a href="#/results" data-nav="results">Results</a>
-    <a href="#/run" data-nav="run" id="nav-run">Run</a>
-    <a href="#/fleet" data-nav="fleet">Fleet</a>
-    <a href="#/ops" data-nav="ops">Ops</a>
+    <a href="#/overview" data-nav="overview">All runs</a>
+    <a href="#/run" data-nav="run" id="nav-run">Run details</a>
+    <a href="#/ops" data-nav="ops" hidden>Operations</a>
   </nav>
   <div class="top-right">
     <div id="machines" class="machines"></div>
-    <div id="live" class="live" title="Live stream status"><i></i><span>connecting</span></div>
-    <div id="deadline" class="deadline" title="Hackathon deadline: Mon 9 Nov 2026 11:59 UTC"></div>
-    <button id="notify" class="icon-btn" title="Browser notifications for cheats, removals and run state changes" aria-label="Notifications">
+    <div id="live" class="live" title="Live stream status" hidden><i></i><span>connecting</span></div>
+    <button id="notify" class="icon-btn" hidden title="Browser notifications for cheats, removals and run state changes" aria-label="Notifications">
       <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5.5-6.84V3a1.5 1.5 0 0 0-3 0v1.16A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z"/></svg>
     </button>
     <button id="theme" class="icon-btn" title="Toggle dark / light" aria-label="Toggle theme">

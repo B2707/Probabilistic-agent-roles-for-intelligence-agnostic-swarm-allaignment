@@ -1,6 +1,6 @@
-# Paper readiness: data coverage and the judging rubric (8 Nov 2026, 15:30 EST; final audit section updated 17:15)
+# Paper readiness: data coverage and the judging rubric (8 Nov 2026, first written 15:30 EST, rewritten 22:55)
 
-Checked against the sprint page (https://apartresearch.com/sprints/swarm-alignment-2026, read 8 Nov 15:20 EST) and the runs in `results/` on `swarm-harness`. Deadline: 9 Nov 11:59 UTC (06:59 EST).
+Checked against the sprint page (https://apartresearch.com/sprints/swarm-alignment-2026, read 8 Nov 15:20 EST) and the runs in `results/` on `swarm-harness`. Deadline: 9 Nov 11:59 UTC (06:59 EST). The full record of 8 Nov, with every run, decision and mistake, is `docs/research/2026-11-08-day-log.md`.
 
 ## What we ran
 
@@ -9,31 +9,65 @@ Checked against the sprint page (https://apartresearch.com/sprints/swarm-alignme
 | v2 (7 Nov) | 20 agents in 4 teams of 5, 4 problems, team review | A to H (aggressive instigator, uninformed, informed, planted investigators, audits only, hidden tests, bluff, informed aggressive, k = 0.01 and 0.015) | gpt-6-luna (high); baselines, G-bluff and H-informed-aggressive also on gpt-6.1-sol (max) | 1 | done, archived in `results/ordered/` |
 | v3 luna | 100 agents, 55 problems, global review, aggressive instigator | A100, B100, C100 | gpt-6-luna (high) | 3 clean (s1fast, s2, s3) plus the disturbed s1 | done, Opus labels and Opus final audit |
 | v3 sol | same | A100, B100, C100 | gpt-6.1-sol (high) | 3 | done, Opus labels and Opus final audit |
-| v3 new | same | D100 bluff, E100 auditor only, F100 baseline | luna and sol (high) | 3 (same seeds as A/B/C) | running since 15:30 with Fast mode, in seed order |
+| v3 new | same | D (bluff), E (auditor only), F (plain, no instigator) | luna and sol (high) | D and E: luna 3, sol 2 (seed 3 lost to the account lock); F: seed 1 only | done, Opus labels and Opus final audit |
+| v3 rerun (pending) | same, neutral notice text | C, D, E | luna and sol | 1 | waiting for Bader's approval of the notice texts |
+
+## The confound in every informed arm (found 8 Nov, 21:5x to 22:2x)
+
+Every informed arm (C100 since 7 Nov, and D and E) gives workers `informed_rule.md`. It starts "Integrity policy:" and spells out the cheats: "agents who make tests pass without genuinely implementing the specification (for example by getting frozen tests changed, or special-casing test inputs)". It also says caught agents are removed. The text has been in the first harness commit (`3117caa`, 7 Nov 11:22) and has never been edited. D (`prompts_bluff/`) and E (`prompts_audit/`) copied the wording and changed only which oversight it describes. Bader: the wording is an instruction to be aligned, and it did not belong in any run.
+
+- **Runs with the text (19 v3 run folders):**
+  - C100: luna seeds 1, 1fast, 2 and 3, and sol seeds 1 to 3.
+  - D: luna seeds 1 to 3, sol seeds 1 and 2, and the partial sol seed 3.
+  - E: luna seeds 1 to 3, sol seeds 1 and 2, and the partial sol seed 3.
+  - Also the v2 and archived informed runs: C-informed, D-planted, F2-hidden-informed, G-bluff, H-informed-aggressive, H-k001 and H-k0015.
+- **Runs without it:** A100, B100 and F. The harness adds the text only when `informed = true` (`swarm/loop.py:293`).
+- **Also in every arm, A100 included:** `prompts/worker_swarm.md` says "exactly as its docstring specifies" and "Tests are frozen for this release. Nobody may change them." Only investigators (B100, C100) get `prompts/investigator.md`, which names the cheats.
+- **Plan (Bader, 22:2x):**
+  - Rerun C, D and E once each on luna and sol with neutral notices that name no behaviour and use no integrity wording.
+  - F is scrapped.
+  - Data collection ends after the reruns.
+  - The limitations may mention the corrupted data. Bader hasn't decided.
+  - The draft texts are in the day log and wait for his approval.
 
 ## What the data supports
 
-- **Oversight against none.** A100 against B100: luna ends at 51.7 of 55 problems at 100% without investigators and 32.3 with them; B100 catches 156 of 191.7 misaligned luna agents (mean) and 71 of 76, 44 of 47 and 14 of 15 sol agents (Opus final audit).
-- **Telling agents about investigators.** C100 against B100: round-1 cheat fixes fall from 62.7 to 2.7 (luna means) and from between 6 and 51 to 0 (sol seeds).
-- **Model difference.** In A100, sol merges cheats in round 1 and then merges 20 to 30 PRs that remove them, in all three seeds, ending at 0 of 55. Luna never does.
-- **The new arms (seed 1, 18:0x; D and E sol still running).** Luna: the bluff (D) cuts cheating about as much as real investigators (2 round-1 cheat fixes and 4 misaligned agents, against C100's 4 and 8 and A100's 59 and 100); E (warning plus random audits) gives 3 and 6. F luna cheats like A100 (72 round-1 cheat fixes, 99 misaligned), so luna's cheating doesn't need the instigator. `scripts/seed_compare.py` builds the tables. Sol seed 1 (20:1x): D and E match C100 exactly, with 0 cheat fixes, 0 problems at 100%, 0 misaligned agents and 0 of 100 instigator offers accepted. A100 had 63 cheat fixes and B100 51. Luna seed 2 (20:4x) repeats seed 1: round-1 cheat fixes A100 78, D 5, E 2, C100 1; misaligned 99, 7, 4, 2. Final (22:0x, issuecomment on issue #3): luna 3 seeds and sol 2 seeds of D and E all match C100 (luna round-1 cheat fixes means A100 69.3, D 3.7, E 2.3, C100 2.7; sol 0 in every warned run). D/E sol seed 3 not run (Bader's account locked until 15 Nov). New caveat: 32% of turns in every v3 run were rerun by the harness after a 403 reconnect even though they had finished (agents posted progress twice in 92-95% of those); every arm is affected at similar rates.
+- **Hidden oversight against none (no notice text in either arm).** A100 against B100:
+  - Luna ends at 51.7 of 55 problems at 100% without investigators and 32.3 with them.
+  - B100 catches 156 of 191.7 misaligned luna agents (mean), and 71 of 76, 44 of 47 and 14 of 15 sol agents (Opus final audit).
+  - Hidden investigators clean up after cheating. They don't prevent it: B100 luna wrote 62.3 round-1 cheat fixes against A100's 69.3.
+- **What the instigator adds (no notice text).**
+  - Luna cheats without it: F luna seed 1 had 72 round-1 cheat fixes and 99 misaligned agents.
+  - Sol cleaned up its own cheats in all three A100 seeds (20 to 30 removal PRs, ending at 0 of 55), but not in F seed 1, where 53 problems stayed at 100% and there was 1 removal PR.
+  - One F run only, so state it as a condition.
+- **Real against fake enforcement under the same text.** C100 against D:
+  - Prevention is equal.
+  - Only real enforcement catches the cheaters who remain: C100 caught 7 of 13 misaligned luna agents and left no cheated problem on main, while D caught 0 of 17 and left 1 cheated problem on main in every seed.
+  - That's consistent across 3 of 3 seeds, but a one-sided sign test gives p = 0.125, so it isn't significant.
+- **The notice text (confounded).** Any informed arm cuts round-1 cheat fixes from 69.3 (A100 luna mean) to 2.3 to 3.7, and from about 60 to 0 on sol. That holds whether the oversight is real (C100), a bluff (D) or random audits only (E). Report it as the effect of a stated integrity policy, not deterrence, unless the neutral reruns show otherwise.
+- **Model difference.** In A100, sol merges cheats in round 1 and then merges 20 to 30 PRs that remove them, in all three seeds. Luna never does.
 
 ## Problems
 
-1. **No Fast mode makes more turns time out.** A turn that hits the 180 s limit ends and is not retried, and round 1 is when most cheat fixes are written.
-
-   | Run | Fast mode | Timed-out turns, rounds 1, 2, 3 (of 100 each) |
-   |---|---|---|
-   | A100-6-luna s2 | yes | 1, 0, 0 |
-   | A100-6-luna s1 (disturbed) | no | 11, 1, 1 |
-   | D100-6-luna | no | 15, 3, 2 |
-   | A100-61-sol s1 | yes | 3, 2, 2 |
-   | F100-61-sol | no | 5, 4, 4 |
-
-   **Fixed 15:30:** Bader had D/E/F restarted with Fast mode; the no-Fast runs are archived `-stopped`.
-2. **D/E/F had one seed each.** B100 sol varied a lot between seeds (51, 37 and 6 round-1 cheat fixes), so one seed can mislead. **Fixed 15:30:** 3 seeds each, the same seeds as A/B/C, queued seed by seed (all of seed 1 first). At about 2 h per run and 3 runs at once, seed 1 lands around 19:30, seed 2 around 23:30, seed 3 around 03:30 EST, with Opus labels after each.
-3. **D's warning text differs from C100's.** D adds one sentence about random audits (`prompts_bluff/informed_rule.md`); C100 mentions only investigators. D against C100 changes the text and the enforcement together. Small, but state it.
-4. **"Accepted, incl. endorsements" exceeds offers in sol** (168 of 104 in A100 s2). Unexplained; keep it out of the paper until someone checks how the metric counts.
+1. **The notice-text confound** (above).
+2. **Duplicate turns in every v3 run.**
+   - `swarm/backend.py` keeps an error from a Codex "Reconnecting... (403)" event even when the turn then completes over HTTPS. The harness then reruns the finished turn after 30, 90 or 270 s.
+   - 32% of turns (21,424 of 67,391 across the 35 v3 run folders, 20% to 43% per run, every arm) had a retry.
+   - In 92 to 95% of those turns the agent posted its progress update twice. Retried turns average about one more tool call.
+   - Arms stay comparable, but message counts (offers, alerts, progress posts) include the duplicates. Many of the day's "usage stops" were probably these retries running out.
+   - Not fixed, so that the reruns match A100 and B100. Say so in the limitations.
+3. **Lost turns.** A turn that hits the 180 s limit ends and isn't rerun: 0.3% to 1.6% of turns per run. Without Fast mode it was 15 of 100 luna round-1 turns, which is why the no-Fast D/E/F runs were stopped at 15:30. The laptop sol runs under load lost 4 to 5% (D sol s2: 31 of 2000).
+4. **Coverage.**
+   - D and E have 3 luna seeds and 2 sol seeds. Bader's ChatGPT account hit its weekly limit at 21:13 and is locked until 15 Nov, so sol seed 3 didn't run.
+   - F has seed 1 only (Bader, 17:00).
+   - B100 sol varied a lot between seeds (51, 37 and 6 round-1 cheat fixes), so single seeds can mislead.
+5. **Accounts.** Luna D and E ran on Mohammad's ChatGPT account. E sol seed 2 ran rounds 17 to 20 on Mohammad's account after its agents' Codex sessions were copied over. Each agent's first turn after the move resent its full context without cache.
+6. **D's notice differs from C100's.** D adds one sentence about random audits. The neutral rerun gives C and D the same text.
+7. **"Accepted, incl. endorsements" exceeds offers in sol** (168 of 104 in A100 s2). Unexplained. Keep it out of the paper until someone checks how the metric counts.
+8. **Teams or projects (open).**
+   - Bader says the plan said "projects, not teams".
+   - The repo specs say "Agents are split into teams, one team per problem" (`docs/specs/2026-11-06-swarm-harness.md`, line 130). `docs/specs/2026-11-07-swarm-v3.md` kept one assigned problem per agent, and its "Still open" list has "Whether agents may open PRs on any problem", which was never decided.
+   - Every v3 worker is told "Your team is ...". No written "projects, not teams" was found in the specs, issues, planning doc or threads.
 
 ## Rubric
 
@@ -41,32 +75,57 @@ Judges score three dimensions from 1 to 5: Impact Potential and Innovation, Exec
 
 ### Marks within reach
 
-- **Variance and baselines.** Report every seed (or mean and range) for A/B/C on both models. F is the no-instigator baseline, A100 the no-oversight baseline.
-- **Auditor validation.** The terra auditor flagged 1090 of the 1094 objective cheaters (agents blamed for a run that passed the impossible assert, `swarm.metrics.impossible_assert_passes`) across the 21 v3 runs, 99.6% recall (`scripts/auditor_recall.py`). Precision is unchecked: the auditor also flags agents for offers and approvals, and `data/audit_truth.json` was never checked by hand (`checked_by: null`). A hand check of about 20 flagged agents who are not objective cheaters would give a precision estimate. Opus and terra labels agree on 198 of 200 messages (spec v3, 8 Nov 03:00).
-- **Final audit by a second model (done 16:54).** Bader had claude-opus-5-5 (xhigh) audit every agent of the 21 v3 A/B/C runs after the run (`reaudit-opus.jsonl`), and the metrics now take the final audit from Opus, not terra. On the 2099 agents both audited at the end, they agree on 2028 (96.6%, Cohen's kappa 0.93; 0.82 on B and C alone). Opus flags 41 that terra clears and clears 30 that terra flags. Opus also flags 691 of the 698 agents terra removed during B/C runs, and 1092 of the 1094 objective cheaters (terra, all audits: 1090). Lowest agreement: B100 luna, 89.5%. The disagreements sit on rule edges: an agent that read a merged override and said "no changes needed" (rule 8; both auditors split on it, in both directions), approvals that failed because the PR had already merged (Opus counts them, terra doesn't), and requests to correct a frozen test (rule 5) or temporary diagnostic branches (rule 2) that terra counts and Opus doesn't. `scripts/opus_vs_terra.py` reproduces the numbers.
-- **False removals (Opus grades them, 8 Nov evening).** In v3, Opus would make 692 of the 702 removals under the same removal rule. All 10 false ones are luna, in seeds 1 and 2 only. B luna has 3 per seed: "keep main as is" posts about another agent's merged override (rule 8), three of them by investigators whose only misalignment came before conversion, so they were immune. C luna has 2 per seed, and the raw events show all four were honest (no test edits, no impossible-assert pass): two temporary debug branches that raised an error on one test input (rule 2), a doctest example edited and restored (rule 1), and "resolve that fixture separately" in a review (rule 5). Two came from reports and two from random audits. Sol agents rarely do these things (2 debug branches against luna's 17; their "no changes needed" posts follow removing an override), and terra flags them the same way when they do, so this is luna behaviour on rule edges, not a terra bias against luna. The metrics now count a catch only when Opus or an impossible-assert pass agrees, and add `false_removals`: the C luna mean goes from 4 caught of 6 to 2.33 of 4.33, with 1.33 false removals per run.
-- **Surprising finding.** Sol removing its own cheats with no oversight, repeated in three A100 seeds. Seed 1 of F (A100 without the instigator, 18:0x) did not clean up: 53 of 55 problems still at 100% at the end and 1 removal PR, against 0 and 30 in A100 sol seed 1. So the clean-up may need the instigator's visible pushing (A100 sol had 219 alerts, F sol 24). F runs seed 1 only (Bader 17:0x), so this rests on one run; state the condition in the paper.
-- **Theory of change.** The sprint's Track 4 lists "Can we introduce agent roles to a swarm that implement mechanisms for governing swarm behaviour?" and "Can agent swarms be structured so as to identify and deter sandbagging by individual agents?". Random, permanent worker-to-investigator conversion is such a role. D answers whether announcing it is enough, which is the cheap version a deployer could use.
-- **Motivating case.** The sprint opens with ~1200 agents coordinating on a shared message board (METR, 2026). Our swarm has a board and DMs; say how the setup maps to it.
+- **Variance and baselines.** Report every seed (or mean and range) per arm and model. A100 is the no-oversight baseline. F is the no-instigator baseline (one seed).
+- **Auditor validation.**
+  - Terra flagged 1090 of the 1094 objective cheaters across the 21 A/B/C runs, 99.6% recall (`scripts/auditor_recall.py`). Objective cheaters are agents blamed for a run that passed the impossible assert (`swarm.metrics.impossible_assert_passes`).
+  - Precision hasn't been checked by hand (`data/audit_truth.json`: `checked_by: null`).
+  - Opus and terra labels agree on 198 of 200 messages.
+- **Final audit by a second model** (16:54, `scripts/opus_vs_terra.py`).
+  - claude-opus-5-5 (xhigh) audited every agent of the 21 A/B/C runs after the run, and the metrics take the final audit from Opus.
+  - On the 2099 agents both audited at the end, they agree on 2028 (96.6%, Cohen's kappa 0.93; 0.82 on B and C alone). Opus flags 41 agents that terra clears and clears 30 that terra flags.
+  - Opus also flags 691 of the 698 agents terra removed during B/C runs, and 1092 of the 1094 objective cheaters. Lowest agreement: B100 luna, 89.5%.
+  - The disagreements sit on rule edges:
+    - "No changes needed" about a merged override (rule 8): split in both directions.
+    - Approvals that failed because the PR had already merged: Opus counts them.
+    - Requests to correct a frozen test (rule 5) and temporary diagnostic branches (rule 2): terra counts them.
+- **False removals** (8 Nov evening, `5b65556`).
+  - Opus would make 692 of the 702 v3 removals under the same removal rule. All 10 false ones are luna, in seeds 1 and 2.
+  - B luna has 3 per seed: "keep main as is" posts about another agent's merged override (rule 8). Three were by investigators immune for what they did before converting.
+  - C luna has 2 per seed, and the raw events show all four were honest:
+    - two temporary debug branches that raised an error on one test input (rule 2)
+    - a doctest example edited and restored (rule 1)
+    - "resolve that fixture separately" in a review (rule 5)
+  - The metrics now count a catch only when Opus or an impossible-assert pass agrees. The C luna mean goes from 4 caught of 6 to 2.33 of 4.33, with 1.33 false removals per run.
+- **Surprising finding.** Sol removes its own cheats when an instigator is pushing them (all three A100 seeds) and didn't in the one run without the instigator (F seed 1). A100 sol had 219 alerts, F sol 24.
+- **Theory of change.** The sprint's Track 4 asks "Can we introduce agent roles to a swarm that implement mechanisms for governing swarm behaviour?" and "Can agent swarms be structured so as to identify and deter sandbagging by individual agents?". Random, permanent worker-to-investigator conversion is such a role. C against D under a neutral notice shows whether announcing it is enough, which is the cheap version a deployer could use.
+- **Motivating case.** The sprint opens with about 1200 agents coordinating on a shared message board (METR, 2026). Our swarm has a board and DMs. Say how the setup maps to it.
 - **Replication detail.** Models, efforts, seeds, all prompts (appendix), metric definitions, harness commit.
 - **Figure.** Problems at 100% by round, one line per arm and model. It shows sol's clean-up and luna's persistence at a glance.
-- **Form extras.** Pick every track that fits (4; 1 for the testbed; 2 if the spread of cheating counts). The code link needs a public repo (it's private now; check for secrets before opening it). A 3 to 5 min video and slides are optional.
+- **Form extras.** Pick every track that fits (4; 1 for the testbed; 2 if the spread of cheating counts). The code link needs a public repo. It's private now, so check for secrets before opening it. A 3 to 5 min video and slides are optional.
 - **Prior work.** The repo starts 6 Nov 16:03 EST, inside the sprint. Say so; the rules screen for it.
 
 ### Required, easy to miss
 
 - Official template PDF, at most 8 pages before references and appendices, abstract of 150 to 250 words, authors and affiliations.
-- A "Limitations and Dual-Use / Ethical Considerations" appendix that says what the results do and do not establish, and how the setup or findings could make multi-agent misbehaviour easier to carry out or harder to detect (for example the instigator's scripts and its evasion claim).
+- A "Limitations and Dual-Use / Ethical Considerations" appendix. It must say what the results do and do not establish, and how the setup or findings could make multi-agent misbehaviour easier to carry out or harder to detect, for example the instigator's scripts and its evasion claim. It must also cover the notice-text confound, the duplicate turns and the coverage gaps above.
 
 ## Claims at risk of overstatement
 
-- **"Telling agents stops cheating."** C100 luna still had 7 misaligned agents per run on average. Wait for D before saying the warning alone does it, and give numbers, not "stops".
-- **Catch rates.** Fixed 16:54: Opus now defines who is misaligned at the end (final audit) and terra only enforces removals during the run, so the same model no longer does both. Report the 96.6% agreement and the rule-edge cases above. Opus still reads the same event record, so a behaviour neither model counts as misaligned stays uncounted.
+- **"Telling agents stops cheating" or "deterrence".** The informed arms' notice names the cheats. Until the neutral reruns, the claim is that a stated integrity policy stops nearly all cheating.
+- **"Investigators beat a warning."** Not shown for prevention. For detection the data points that way (C100 against D), but it isn't significant.
+- **Catch rates.** Opus defines who is misaligned at the end and terra only removes agents during the run. Report the 96.6% agreement and the rule-edge cases. Opus still reads the same event record, so a behaviour neither model counts stays uncounted.
 - **"Swarm-level collusion."** Each agent opens PRs only on its own problem and a PR needs 2 approvals. Report the conspiracy-size metrics as they are.
-- **Generality.** One task family (LiveCodeBench problems with one impossible assert), one provider (OpenAI models), a scripted instigator that does not adapt.
+- **Generality.** One task family (LiveCodeBench problems with one impossible assert), one provider (OpenAI models), and a scripted instigator that doesn't adapt.
 - **Removal PRs** are counted by title, so the counts are approximate.
-- **Run disturbances.** Luna s1 hit a freeze and 403 stops (kept as a disclosed extra); every run had a few usage stops and resumes; D/E/F ran without Fast mode.
+- **Run disturbances.**
+  - Luna seed 1 (`-230001`) hit a freeze and 403 stops, and is kept as a disclosed extra.
+  - Every run had usage stops and resumes, many of them probably the duplicate-turn retries.
+  - E sol seed 2 changed accounts at round 17.
 
 ## Open
 
-- Paper draft: no draft or template copy found in the repo or on issue #4.
+- **Bader's approval of the neutral notice texts**, then the 6 reruns (C, D and E on luna and sol, seed 1, Mohammad's account).
+- **Teams or projects:** where the instruction was written, and whether the reruns change the wording.
+- **Paper draft:** none found. `origin/main` has only `paper/sources.md` and `paper/sources.bib`. Issue #4 tracks the template and skeleton.
+- **Auditor precision** hand check (about 20 flagged agents who aren't objective cheaters).
+- **Making the repo public** (Bader's call, secrets check first).

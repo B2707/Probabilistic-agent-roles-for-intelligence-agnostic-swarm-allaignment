@@ -4,3 +4,9 @@ runs/
 *.pyc
 .pytest_cache/
 .swarm-home*/
+
+tmp/
+paper/build/
+output/
+*.synctex.gz
+.DS_Store

@@ -1,0 +1,44 @@
+{
+  "publication_commit": "161435b685eaec663e6be4c6297af1e5d9257eda",
+  "selection_seed": 3210777441706422283,
+  "selection_method": "Uniform sample without replacement of three completed primary A/B/C runs per worker model, excluding disclosed disturbed Luna seed-1 extras. The seed was generated once before any replay verdict.",
+  "eligible": {
+    "gpt-6.1-sol": [
+      "results/A100-61-sol-20261108-085139",
+      "results/A100-61-sol-s2-20261108-123640",
+      "results/A100-61-sol-s3-20261108-130302",
+      "results/B100-61-sol-20261108-034254",
+      "results/B100-61-sol-s2-20261108-090719",
+      "results/B100-61-sol-s3-20261108-090614",
+      "results/C100-61-sol-20261108-044628",
+      "results/C100-61-sol-s2-20261108-104629",
+      "results/C100-61-sol-s3-20261108-120306"
+    ],
+    "gpt-6-luna": [
+      "results/A100-6-luna-s1fast-20261108-030213",
+      "results/A100-6-luna-s2-20261108-014315",
+      "results/A100-6-luna-s3-20261108-070940",
+      "results/B100-6-luna-s1fast-20261108-030013",
+      "results/B100-6-luna-s2-20261108-014315",
+      "results/B100-6-luna-s3-20261108-050947",
+      "results/C100-6-luna-s1fast-20261108-030113",
+      "results/C100-6-luna-s2-20261108-014315",
+      "results/C100-6-luna-s3-20261108-062224"
+    ]
+  },
+  "selected": [
+    "results/A100-61-sol-s3-20261108-130302",
+    "results/B100-61-sol-s3-20261108-090614",
+    "results/C100-61-sol-s2-20261108-104629",
+    "results/B100-6-luna-s1fast-20261108-030013",
+    "results/C100-6-luna-s2-20261108-014315",
+    "results/C100-6-luna-s1fast-20261108-030113"
+  ],
+  "audit_probability": 0.1,
+  "baseline": "Original interim audits only; no fresh full-record calls",
+  "audit_scope": "After each round turns, before end-of-round scoring; final audits excluded. Preserve original report triggers and use the original keyed slot draw with threshold 0.10. New flags do not change recorded populations or history.",
+  "auditor_model": "gpt-6.1-terra",
+  "auditor_effort": "max",
+  "service_tier": "priority",
+  "concurrency": 25
+}

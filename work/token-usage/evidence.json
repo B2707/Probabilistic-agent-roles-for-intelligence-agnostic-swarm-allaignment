@@ -1,0 +1,778 @@
+{
+  "publication_commit": "5105e7843f60e64b3d2ad7af697754fb15ed1ffc",
+  "publication_time": "2026-11-08 16:22:06 -0500",
+  "method": "Subtract successive cumulative counters within each recorded agent/session, starting at zero. Sum increments and divide by all 18,000 completed agent-rounds per model. Include workers and investigators, continuation nudges and recorded retries. Exclude separate auditor/judge calls, scripted instigator, archived runs and disclosed extras. Missing intermediate snapshots may be covered by a later session counter; unreported final work and discarded retry sessions remain unknown. Cache and reasoning fields are subsets, not extra tokens.",
+  "groups": {
+    "gpt-6.1-sol": {
+      "runs": 9,
+      "agent_rounds": 18000,
+      "totals": {
+        "input_tokens": 7570632600,
+        "cached_input_tokens": 7359223424,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 14963013,
+        "reasoning_output_tokens": 4955175
+      },
+      "mean": {
+        "input_tokens": 420590.7,
+        "cached_input_tokens": 408845.7457777778,
+        "cache_write_input_tokens": 0.0,
+        "output_tokens": 831.2785,
+        "reasoning_output_tokens": 275.2875,
+        "uncached_input_tokens": 11744.954222222208,
+        "non_reasoning_output_tokens": 555.991,
+        "total_tokens": 421421.9785
+      },
+      "empty_usage_records": 576,
+      "usage_records": 18310,
+      "extra_retry_attempts": 7137,
+      "sessions_ending_with_missing_usage": 71,
+      "rounds_with_usage": 17695
+    },
+    "gpt-6-luna": {
+      "runs": 9,
+      "agent_rounds": 18000,
+      "totals": {
+        "input_tokens": 4820011150,
+        "cached_input_tokens": 4664031872,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 15030341,
+        "reasoning_output_tokens": 7953695
+      },
+      "mean": {
+        "input_tokens": 267778.39722222224,
+        "cached_input_tokens": 259112.88177777777,
+        "cache_write_input_tokens": 0.0,
+        "output_tokens": 835.0189444444444,
+        "reasoning_output_tokens": 441.87194444444447,
+        "uncached_input_tokens": 8665.515444444463,
+        "non_reasoning_output_tokens": 393.14699999999993,
+        "total_tokens": 268613.41616666666
+      },
+      "empty_usage_records": 59,
+      "usage_records": 18019,
+      "extra_retry_attempts": 7333,
+      "sessions_ending_with_missing_usage": 0,
+      "rounds_with_usage": 17941
+    }
+  },
+  "runs": [
+    {
+      "folder": "results/A100-6-luna-s1fast-20261108-030213",
+      "model": "gpt-6-luna",
+      "arm": "A",
+      "seed": 1,
+      "effort": "high",
+      "completed_rounds": 20,
+      "totals": {
+        "input_tokens": 523017731,
+        "cached_input_tokens": 508972672,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1584232,
+        "reasoning_output_tokens": 874958
+      },
+      "naive_totals": {
+        "input_tokens": 4455834524,
+        "cached_input_tokens": 4280835968,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 23255349,
+        "reasoning_output_tokens": 13703112
+      },
+      "agent_rounds": 2000,
+      "rounds_with_usage": 1992,
+      "usage_records": 2000,
+      "empty_usage_records": 8,
+      "extra_retry_attempts": 688,
+      "session_gaps_followed_by_snapshot": 8,
+      "sessions_ending_with_missing_usage": 0,
+      "sessions_with_usage": 100,
+      "errors": {
+        "timeout": 8
+      },
+      "source": "https://github.com/B2707/agent-swarm-hackathon/tree/5105e7843f60e64b3d2ad7af697754fb15ed1ffc/results/A100-6-luna-s1fast-20261108-030213"
+    },
+    {
+      "folder": "results/A100-6-luna-s2-20261108-014315",
+      "model": "gpt-6-luna",
+      "arm": "A",
+      "seed": 2,
+      "effort": "high",
+      "completed_rounds": 20,
+      "totals": {
+        "input_tokens": 533965990,
+        "cached_input_tokens": 520445824,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1444589,
+        "reasoning_output_tokens": 744931
+      },
+      "naive_totals": {
+        "input_tokens": 4982829936,
+        "cached_input_tokens": 4810287104,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 22833519,
+        "reasoning_output_tokens": 12681665
+      },
+      "agent_rounds": 2000,
+      "rounds_with_usage": 1997,
+      "usage_records": 2000,
+      "empty_usage_records": 3,
+      "extra_retry_attempts": 985,
+      "session_gaps_followed_by_snapshot": 3,
+      "sessions_ending_with_missing_usage": 0,
+      "sessions_with_usage": 100,
+      "errors": {
+        "timeout": 3
+      },
+      "source": "https://github.com/B2707/agent-swarm-hackathon/tree/5105e7843f60e64b3d2ad7af697754fb15ed1ffc/results/A100-6-luna-s2-20261108-014315"
+    },
+    {
+      "folder": "results/A100-6-luna-s3-20261108-070940",
+      "model": "gpt-6-luna",
+      "arm": "A",
+      "seed": 3,
+      "effort": "high",
+      "completed_rounds": 20,
+      "totals": {
+        "input_tokens": 494071715,
+        "cached_input_tokens": 479288448,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1390341,
+        "reasoning_output_tokens": 717770
+      },
+      "naive_totals": {
+        "input_tokens": 4740255257,
+        "cached_input_tokens": 4541192576,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 22459698,
+        "reasoning_output_tokens": 12542647
+      },
+      "agent_rounds": 2000,
+      "rounds_with_usage": 1997,
+      "usage_records": 2000,
+      "empty_usage_records": 3,
+      "extra_retry_attempts": 848,
+      "session_gaps_followed_by_snapshot": 3,
+      "sessions_ending_with_missing_usage": 0,
+      "sessions_with_usage": 100,
+      "errors": {
+        "timeout": 2,
+        "{\"detail\":\"Bad Request\"}": 1
+      },
+      "source": "https://github.com/B2707/agent-swarm-hackathon/tree/5105e7843f60e64b3d2ad7af697754fb15ed1ffc/results/A100-6-luna-s3-20261108-070940"
+    },
+    {
+      "folder": "results/A100-61-sol-20261108-085139",
+      "model": "gpt-6.1-sol",
+      "arm": "A",
+      "seed": 1,
+      "effort": "high",
+      "completed_rounds": 20,
+      "totals": {
+        "input_tokens": 694423838,
+        "cached_input_tokens": 677581184,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1404994,
+        "reasoning_output_tokens": 406548
+      },
+      "naive_totals": {
+        "input_tokens": 6888567967,
+        "cached_input_tokens": 6672157696,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 20936632,
+        "reasoning_output_tokens": 6576356
+      },
+      "agent_rounds": 2000,
+      "rounds_with_usage": 1982,
+      "usage_records": 2004,
+      "empty_usage_records": 18,
+      "extra_retry_attempts": 703,
+      "session_gaps_followed_by_snapshot": 11,
+      "sessions_ending_with_missing_usage": 0,
+      "sessions_with_usage": 100,
+      "errors": {
+        "timeout": 15,
+        "{\"detail\":\"Bad Request\"}": 3,
+        "usage_limit": 4
+      },
+      "source": "https://github.com/B2707/agent-swarm-hackathon/tree/5105e7843f60e64b3d2ad7af697754fb15ed1ffc/results/A100-61-sol-20261108-085139"
+    },
+    {
+      "folder": "results/A100-61-sol-s2-20261108-123640",
+      "model": "gpt-6.1-sol",
+      "arm": "A",
+      "seed": 2,
+      "effort": "high",
+      "completed_rounds": 20,
+      "totals": {
+        "input_tokens": 896428508,
+        "cached_input_tokens": 871034368,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1847635,
+        "reasoning_output_tokens": 705843
+      },
+      "naive_totals": {
+        "input_tokens": 8406428162,
+        "cached_input_tokens": 8141723264,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 25172694,
+        "reasoning_output_tokens": 9700790
+      },
+      "agent_rounds": 2000,
+      "rounds_with_usage": 1980,
+      "usage_records": 2002,
+      "empty_usage_records": 20,
+      "extra_retry_attempts": 681,
+      "session_gaps_followed_by_snapshot": 12,
+      "sessions_ending_with_missing_usage": 0,
+      "sessions_with_usage": 100,
+      "errors": {
+        "timeout": 16,
+        "{\"detail\":\"Bad Request\"}": 4,
+        "usage_limit": 2
+      },
+      "source": "https://github.com/B2707/agent-swarm-hackathon/tree/5105e7843f60e64b3d2ad7af697754fb15ed1ffc/results/A100-61-sol-s2-20261108-123640"
+    },
+    {
+      "folder": "results/A100-61-sol-s3-20261108-130302",
+      "model": "gpt-6.1-sol",
+      "arm": "A",
+      "seed": 3,
+      "effort": "high",
+      "completed_rounds": 20,
+      "totals": {
+        "input_tokens": 677491245,
+        "cached_input_tokens": 657619456,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1379631,
+        "reasoning_output_tokens": 415036
+      },
+      "naive_totals": {
+        "input_tokens": 6212428892,
+        "cached_input_tokens": 5994116608,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 19712515,
+        "reasoning_output_tokens": 6462975
+      },
+      "agent_rounds": 2000,
+      "rounds_with_usage": 1980,
+      "usage_records": 2005,
+      "empty_usage_records": 20,
+      "extra_retry_attempts": 708,
+      "session_gaps_followed_by_snapshot": 13,
+      "sessions_ending_with_missing_usage": 0,
+      "sessions_with_usage": 100,
+      "errors": {
+        "timeout": 17,
+        "usage_limit": 5,
+        "{\"detail\":\"Bad Request\"}": 3
+      },
+      "source": "https://github.com/B2707/agent-swarm-hackathon/tree/5105e7843f60e64b3d2ad7af697754fb15ed1ffc/results/A100-61-sol-s3-20261108-130302"
+    },
+    {
+      "folder": "results/B100-6-luna-s1fast-20261108-030013",
+      "model": "gpt-6-luna",
+      "arm": "B",
+      "seed": 1,
+      "effort": "high",
+      "completed_rounds": 20,
+      "totals": {
+        "input_tokens": 480168199,
+        "cached_input_tokens": 460269056,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1974907,
+        "reasoning_output_tokens": 1056622
+      },
+      "naive_totals": {
+        "input_tokens": 3282866340,
+        "cached_input_tokens": 3125178240,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 15320567,
+        "reasoning_output_tokens": 8479000
+      },
+      "agent_rounds": 2000,
+      "rounds_with_usage": 1996,
+      "usage_records": 2005,
+      "empty_usage_records": 4,
+      "extra_retry_attempts": 771,
+      "session_gaps_followed_by_snapshot": 4,
+      "sessions_ending_with_missing_usage": 0,
+      "sessions_with_usage": 256,
+      "errors": {
+        "timeout": 4,
+        "usage_limit": 5
+      },
+      "source": "https://github.com/B2707/agent-swarm-hackathon/tree/5105e7843f60e64b3d2ad7af697754fb15ed1ffc/results/B100-6-luna-s1fast-20261108-030013"
+    },
+    {
+      "folder": "results/B100-6-luna-s2-20261108-014315",
+      "model": "gpt-6-luna",
+      "arm": "B",
+      "seed": 2,
+      "effort": "high",
+      "completed_rounds": 20,
+      "totals": {
+        "input_tokens": 559400139,
+        "cached_input_tokens": 539885568,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1812949,
+        "reasoning_output_tokens": 880971
+      },
+      "naive_totals": {
+        "input_tokens": 3956312871,
+        "cached_input_tokens": 3799587968,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 13376439,
+        "reasoning_output_tokens": 6315008
+      },
+      "agent_rounds": 2000,
+      "rounds_with_usage": 1999,
+      "usage_records": 2009,
+      "empty_usage_records": 1,
+      "extra_retry_attempts": 932,
+      "session_gaps_followed_by_snapshot": 1,
+      "sessions_ending_with_missing_usage": 0,
+      "sessions_with_usage": 248,
+      "errors": {
+        "timeout": 2,
+        "usage_limit": 9
+      },
+      "source": "https://github.com/B2707/agent-swarm-hackathon/tree/5105e7843f60e64b3d2ad7af697754fb15ed1ffc/results/B100-6-luna-s2-20261108-014315"
+    },
+    {
+      "folder": "results/B100-6-luna-s3-20261108-050947",
+      "model": "gpt-6-luna",
+      "arm": "B",
+      "seed": 3,
+      "effort": "high",
+      "completed_rounds": 20,
+      "totals": {
+        "input_tokens": 499585927,
+        "cached_input_tokens": 480206336,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 2020055,
+        "reasoning_output_tokens": 1084137
+      },
+      "naive_totals": {
+        "input_tokens": 3357561725,
+        "cached_input_tokens": 3206015104,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 13832076,
+        "reasoning_output_tokens": 7123087
+      },
+      "agent_rounds": 2000,
+      "rounds_with_usage": 1992,
+      "usage_records": 2000,
+      "empty_usage_records": 8,
+      "extra_retry_attempts": 705,
+      "session_gaps_followed_by_snapshot": 6,
+      "sessions_ending_with_missing_usage": 0,
+      "sessions_with_usage": 233,
+      "errors": {
+        "timeout": 7,
+        "{\"detail\":\"Bad Request\"}": 1
+      },
+      "source": "https://github.com/B2707/agent-swarm-hackathon/tree/5105e7843f60e64b3d2ad7af697754fb15ed1ffc/results/B100-6-luna-s3-20261108-050947"
+    },
+    {
+      "folder": "results/B100-61-sol-20261108-034254",
+      "model": "gpt-6.1-sol",
+      "arm": "B",
+      "seed": 1,
+      "effort": "high",
+      "completed_rounds": 20,
+      "totals": {
+        "input_tokens": 701803940,
+        "cached_input_tokens": 680624640,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1555834,
+        "reasoning_output_tokens": 467398
+      },
+      "naive_totals": {
+        "input_tokens": 5521080843,
+        "cached_input_tokens": 5320685184,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 16086583,
+        "reasoning_output_tokens": 4679733
+      },
+      "agent_rounds": 2000,
+      "rounds_with_usage": 1921,
+      "usage_records": 2001,
+      "empty_usage_records": 79,
+      "extra_retry_attempts": 615,
+      "session_gaps_followed_by_snapshot": 6,
+      "sessions_ending_with_missing_usage": 69,
+      "sessions_with_usage": 170,
+      "errors": {
+        "timeout": 79,
+        "usage_limit": 1
+      },
+      "source": "https://github.com/B2707/agent-swarm-hackathon/tree/5105e7843f60e64b3d2ad7af697754fb15ed1ffc/results/B100-61-sol-20261108-034254"
+    },
+    {
+      "folder": "results/B100-61-sol-s2-20261108-090719",
+      "model": "gpt-6.1-sol",
+      "arm": "B",
+      "seed": 2,
+      "effort": "high",
+      "completed_rounds": 20,
+      "totals": {
+        "input_tokens": 851185821,
+        "cached_input_tokens": 831605248,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1620280,
+        "reasoning_output_tokens": 523563
+      },
+      "naive_totals": {
+        "input_tokens": 7487492876,
+        "cached_input_tokens": 7265578880,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 19888279,
+        "reasoning_output_tokens": 6826577
+      },
+      "agent_rounds": 2000,
+      "rounds_with_usage": 1987,
+      "usage_records": 2009,
+      "empty_usage_records": 13,
+      "extra_retry_attempts": 1010,
+      "session_gaps_followed_by_snapshot": 9,
+      "sessions_ending_with_missing_usage": 2,
+      "sessions_with_usage": 142,
+      "errors": {
+        "timeout": 11,
+        "usage_limit": 9,
+        "{\"detail\":\"Bad Request\"}": 2
+      },
+      "source": "https://github.com/B2707/agent-swarm-hackathon/tree/5105e7843f60e64b3d2ad7af697754fb15ed1ffc/results/B100-61-sol-s2-20261108-090719"
+    },
+    {
+      "folder": "results/B100-61-sol-s3-20261108-090614",
+      "model": "gpt-6.1-sol",
+      "arm": "B",
+      "seed": 3,
+      "effort": "high",
+      "completed_rounds": 20,
+      "totals": {
+        "input_tokens": 947788914,
+        "cached_input_tokens": 927177088,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1735466,
+        "reasoning_output_tokens": 566504
+      },
+      "naive_totals": {
+        "input_tokens": 8502463094,
+        "cached_input_tokens": 8259761536,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 23412174,
+        "reasoning_output_tokens": 8213876
+      },
+      "agent_rounds": 2000,
+      "rounds_with_usage": 1991,
+      "usage_records": 2011,
+      "empty_usage_records": 9,
+      "extra_retry_attempts": 934,
+      "session_gaps_followed_by_snapshot": 7,
+      "sessions_ending_with_missing_usage": 0,
+      "sessions_with_usage": 113,
+      "errors": {
+        "timeout": 7,
+        "usage_limit": 11,
+        "{\"detail\":\"Bad Request\"}": 2
+      },
+      "source": "https://github.com/B2707/agent-swarm-hackathon/tree/5105e7843f60e64b3d2ad7af697754fb15ed1ffc/results/B100-61-sol-s3-20261108-090614"
+    },
+    {
+      "folder": "results/C100-6-luna-s1fast-20261108-030113",
+      "model": "gpt-6-luna",
+      "arm": "C",
+      "seed": 1,
+      "effort": "high",
+      "completed_rounds": 20,
+      "totals": {
+        "input_tokens": 572608915,
+        "cached_input_tokens": 556603776,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1661866,
+        "reasoning_output_tokens": 914574
+      },
+      "naive_totals": {
+        "input_tokens": 5380952512,
+        "cached_input_tokens": 5179232000,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 24683403,
+        "reasoning_output_tokens": 14640433
+      },
+      "agent_rounds": 2000,
+      "rounds_with_usage": 1989,
+      "usage_records": 2003,
+      "empty_usage_records": 11,
+      "extra_retry_attempts": 766,
+      "session_gaps_followed_by_snapshot": 10,
+      "sessions_ending_with_missing_usage": 0,
+      "sessions_with_usage": 104,
+      "errors": {
+        "timeout": 9,
+        "usage_limit": 3,
+        "{\"detail\":\"Bad Request\"}": 2
+      },
+      "source": "https://github.com/B2707/agent-swarm-hackathon/tree/5105e7843f60e64b3d2ad7af697754fb15ed1ffc/results/C100-6-luna-s1fast-20261108-030113"
+    },
+    {
+      "folder": "results/C100-6-luna-s2-20261108-014315",
+      "model": "gpt-6-luna",
+      "arm": "C",
+      "seed": 2,
+      "effort": "high",
+      "completed_rounds": 20,
+      "totals": {
+        "input_tokens": 598894641,
+        "cached_input_tokens": 581661056,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1538129,
+        "reasoning_output_tokens": 797550
+      },
+      "naive_totals": {
+        "input_tokens": 5540845181,
+        "cached_input_tokens": 5337813760,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 22767575,
+        "reasoning_output_tokens": 12831899
+      },
+      "agent_rounds": 2000,
+      "rounds_with_usage": 1992,
+      "usage_records": 2001,
+      "empty_usage_records": 8,
+      "extra_retry_attempts": 959,
+      "session_gaps_followed_by_snapshot": 7,
+      "sessions_ending_with_missing_usage": 0,
+      "sessions_with_usage": 104,
+      "errors": {
+        "timeout": 8,
+        "usage_limit": 1
+      },
+      "source": "https://github.com/B2707/agent-swarm-hackathon/tree/5105e7843f60e64b3d2ad7af697754fb15ed1ffc/results/C100-6-luna-s2-20261108-014315"
+    },
+    {
+      "folder": "results/C100-6-luna-s3-20261108-062224",
+      "model": "gpt-6-luna",
+      "arm": "C",
+      "seed": 3,
+      "effort": "high",
+      "completed_rounds": 20,
+      "totals": {
+        "input_tokens": 558297893,
+        "cached_input_tokens": 536699136,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1603273,
+        "reasoning_output_tokens": 882182
+      },
+      "naive_totals": {
+        "input_tokens": 5067026791,
+        "cached_input_tokens": 4832702336,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 23667514,
+        "reasoning_output_tokens": 14019696
+      },
+      "agent_rounds": 2000,
+      "rounds_with_usage": 1987,
+      "usage_records": 2001,
+      "empty_usage_records": 13,
+      "extra_retry_attempts": 679,
+      "session_gaps_followed_by_snapshot": 13,
+      "sessions_ending_with_missing_usage": 0,
+      "sessions_with_usage": 103,
+      "errors": {
+        "timeout": 7,
+        "{\"detail\":\"Bad Request\"}": 6,
+        "usage_limit": 1
+      },
+      "source": "https://github.com/B2707/agent-swarm-hackathon/tree/5105e7843f60e64b3d2ad7af697754fb15ed1ffc/results/C100-6-luna-s3-20261108-062224"
+    },
+    {
+      "folder": "results/C100-61-sol-20261108-044628",
+      "model": "gpt-6.1-sol",
+      "arm": "C",
+      "seed": 1,
+      "effort": "high",
+      "completed_rounds": 20,
+      "totals": {
+        "input_tokens": 874101173,
+        "cached_input_tokens": 830850304,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1823817,
+        "reasoning_output_tokens": 636776
+      },
+      "naive_totals": {
+        "input_tokens": 7449726076,
+        "cached_input_tokens": 7108835072,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 23457144,
+        "reasoning_output_tokens": 8635769
+      },
+      "agent_rounds": 2000,
+      "rounds_with_usage": 1885,
+      "usage_records": 2271,
+      "empty_usage_records": 386,
+      "extra_retry_attempts": 539,
+      "session_gaps_followed_by_snapshot": 135,
+      "sessions_ending_with_missing_usage": 0,
+      "sessions_with_usage": 100,
+      "errors": {
+        "timeout": 35,
+        "usage_limit": 271,
+        "Error running remote compact task: unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574dd4b8857f337-YYZ, request id: req_422ed16da898425fa946492280a306e7": 1,
+        "Error running remote compact task: unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574dd4dab8776ed-YYZ, request id: req_8f6229ef72594422b2233664c151ea14": 1,
+        "Error running remote compact task: unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574dd4d98af542b-YYZ, request id: req_114ef06257e748bfbdbfa6c337631e65": 1,
+        "Error running remote compact task: unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574dd4daacdab09-YYZ, request id: req_1980f015a24f49adb9263fb5ffd8732f": 1,
+        "Error running remote compact task: unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574dd4da8edac12-YYZ, request id: req_89df03130ebf4b6b91ecd491ccd75f81": 1,
+        "Error running remote compact task: unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574dd4e9f4faaee-YYZ, request id: req_ec6eb563b66048fa83fb828d5a01aec7": 1,
+        "Error running remote compact task: unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574dd4d9b3dab66-YYZ, request id: req_c3010260782441198dc035992665ac02": 1,
+        "Error running remote compact task: unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574dd4dae80ab0a-YYZ, request id: req_fc76058ee6474511beb119443fc4010b": 1,
+        "Error running remote compact task: unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574dd4eae05ec71-YYZ, request id: req_814a3bab997344ec87eb8b078f163f1e": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddbaaba5ac27-YYZ, request id: req_420debda0484483e832342a857ef647e": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddbabc582388-YYZ, request id: req_d59eca4fdf3f47faaac095aaac8324b0": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddbadba9ab81-YYZ, request id: req_b621834d544c4a21b3b2bd736f8acf3c": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddbaee7cac39-YYZ, request id: req_57bf459326f8496d8f02144b923ed629": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddbad8efa208-YYZ, request id: req_0fb8bc79077241fb9b92d2b4d7dd2295": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddbb5f8c9dab-YYZ, request id: req_0365e386d6ef4f7f88576ee04ecc89a2": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddbc6aeb6e57-YYZ, request id: req_d33303ba53224847823c85b10f190c56": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddbc59032116-YYZ, request id: req_a9492f6c0d464be88cefcc71a48ad83c": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddbc088471ff-YYZ, request id: req_287a01813ab94e338fc5270c4e4425ca": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddbb2a30ab8e-YYZ, request id: req_52c06ed465b94cb5bb8e5b9687069680": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddbc6953cceb-YYZ, request id: req_282a300ce6bb4944a6030bee3dd46a24": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddc19b4ca2d9-YYZ, request id: req_1bca7d754cdd4f319a820f39f7c8999b": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddc1d881aac8-YYZ, request id: req_95549767e6374ea78a3ba8e849527cd4": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddc1ba8ca20e-YYZ, request id: req_a6364ce1d6184735869be3872da0f6b5": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddbd68c5aaee-YYZ, request id: req_815c6bec9ae2471f9654733c44ae30fe": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddbc6addab33-YYZ, request id: req_9658d0da51e24fa4a476bd3cda739054": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddf7af79ab21-YYZ, request id: req_28a0b184fce043bcb23f2bffb23de538": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddf81eba34dc-YYZ, request id: req_8225e95d72c945069578b6f3e8f299b4": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddf98bde9108-YYZ, request id: req_80c670bb942c4703a3f8aa1fa5979abe": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddfb3f8744b0-YYZ, request id: req_aee989ef39a641a494f3b16d1ea0faf9": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddfb4a83e910-YYZ, request id: req_ab36ee48477841deb226b25a0c136643": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddfc0b04ac00-YYZ, request id: req_7c89e78339044c5ab25183611ceec197": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ddfcef8e0c69-YYZ, request id: req_41ab7362ece7413588219b1edd97ab66": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de052dfdab8e-YYZ, request id: req_801ebd9633f446ef9fc494ea89ae1448": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de053b3ea1e1-YYZ, request id: req_6f4f977dbcbc4da6abf573ca8661d268": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de4d2ed3ab2e-YYZ, request id: req_87d62a1207b64e808fffc9f3e83173c1": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de53af6136b4-YYZ, request id: req_75da49c0723d48fe85a5b3067683e497": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de56683bac5d-YYZ, request id: req_db673e2089164e3bacddf904f42e9e53": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de56694138e1-YYZ, request id: req_96168eb30fa54c7192f6cdcb02904b6c": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de566dc7d42b-YYZ, request id: req_57393381dd464178a40587e85ffe5a89": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de571c2b71ff-YYZ, request id: req_adb2c8e3dd8b413f98291e0cac972c75": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de57ca7da392-YYZ, request id: req_9786e47088114506b0945e3764690e1a": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de57fabdb402-YYZ, request id: req_57087128542749a492537f060b45e9c3": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de6008f564a6-YYZ, request id: req_60655c113f6c4827b1368f9cc401d80e": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de63dec6ebb4-YYZ, request id: req_166c4b1b58384769a20c19f1ec778d68": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de60ed2dc65d-YYZ, request id: req_1a2144d258b044eaab54ee4cd6c75b97": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de64292336a3-YYZ, request id: req_0cb560ed97dc432d9912ab5ef5a6a59b": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de642b6e17a1-YYZ, request id: req_688f391f30e241efa613ac8a85026c3a": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de6479c935ae-YYZ, request id: req_7baffc79c91a4ba2abef23c6ef2fb4d8": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de64c8c53845-YYZ, request id: req_7c9f5f2356194879b748eeccdb26e814": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de6558e65905-YYZ, request id: req_420603e3bcfc45a687c05fd235068bcf": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de7f6885ac24-YYZ, request id: req_7de93a19bbfd4f7a99e24e9c9890eac4": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de812d554cc4-YYZ, request id: req_3f126a6db01e40feb3b6efb4a668896c": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de8bece6ac2e-YYZ, request id: req_bd0d903e6c5b4cb28f0fdaed01e245f0": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de8f7c5bac51-YYZ, request id: req_26043132a5854fa38d18874ca263728f": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de8fcc9cebb4-YYZ, request id: req_209a3e6269f447f8b79d0d9118537513": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de906b8c39d8-YYZ, request id: req_3e6ee29d27d84f778e0a4b19b438cae4": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de91cdbab409-YYZ, request id: req_0b02211b1bb24335bfbfdc8d9cf357d1": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de91de02378a-YYZ, request id: req_a0ff766425dc46919293e94331e497a0": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574de91ce3c28db-YYZ, request id: req_777c68318e044cb4b206d966aef252b2": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574dec0ce37f00c-YYZ, request id: req_1667ab9381ff4b8a88f3a1950703c0c6": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574decf5c5e103a-YYZ, request id: req_95ed056fa965465b92918ab28cd02581": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ded42bf3ab94-YYZ, request id: req_c0be5467cb494bab9bfa5afd5a670eb3": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ded6186ca211-YYZ, request id: req_6b2ef540f4f048fea22bfecd780d45b9": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ded66ddfab46-YYZ, request id: req_4e8bdbcd0dbe4cc8950bc18fef583af9": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ded949e5ac03-YYZ, request id: req_0d214139670d47aca7a5cc3e1947d018": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574ded99f2fab27-YYZ, request id: req_d3119b69de7c412d9c65aea9605c0404": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574deda9d9aac9f-YYZ, request id: req_37b43bc6d15e48ffa9640ee345d45417": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574deda9bd136b1-YYZ, request id: req_68b7d767d9f645b58a7662d721ee0c79": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574dedcae70ade0-YYZ, request id: req_1d54a287cc024acb85236790c249aef7": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574dedd3cc8ac25-YYZ, request id: req_64738e7da3b24b95a81652ced3e8289c": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574dedd3c6aa1e4-YYZ, request id: req_dd9a698845a645dfa7b8e67e38f55f78": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574dede8c5a39e7-YYZ, request id: req_3b1543fdedf3412e915caae417c80e87": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574dedfed53a238-YYZ, request id: req_824fbb44bb704cf1bfae26814af150fd": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574dee2faf25d15-YYZ, request id: req_bfa4ce470230462dac6370a214e15ac5": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574dee359aaac5d-YYZ, request id: req_eceddc4ad3a143808792494f82f20626": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574dee69e7039f3-YYZ, request id: req_0c64c22ebaab419db4646c63cb737b09": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574def05ec5aaa2-YYZ, request id: req_1bb9d83c93da4e1584ed6c5f93b9935e": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574def3cc62de44-YYZ, request id: req_47a79c59040f4f8fb1903fdc56dbb04b": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574defd7c1139c6-YYZ, request id: req_20b3cb2f384c4deabf5767ad04db159c": 1,
+        "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a574deffcb2d0702-YYZ, request id: req_ca2743a565b84452901f2ff1ac4fec84": 1
+      },
+      "source": "https://github.com/B2707/agent-swarm-hackathon/tree/5105e7843f60e64b3d2ad7af697754fb15ed1ffc/results/C100-61-sol-20261108-044628"
+    },
+    {
+      "folder": "results/C100-61-sol-s2-20261108-104629",
+      "model": "gpt-6.1-sol",
+      "arm": "C",
+      "seed": 2,
+      "effort": "high",
+      "completed_rounds": 20,
+      "totals": {
+        "input_tokens": 821333848,
+        "cached_input_tokens": 801985920,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1663603,
+        "reasoning_output_tokens": 575479
+      },
+      "naive_totals": {
+        "input_tokens": 7446410064,
+        "cached_input_tokens": 7214369280,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 23563452,
+        "reasoning_output_tokens": 8833737
+      },
+      "agent_rounds": 2000,
+      "rounds_with_usage": 1993,
+      "usage_records": 2002,
+      "empty_usage_records": 7,
+      "extra_retry_attempts": 826,
+      "session_gaps_followed_by_snapshot": 6,
+      "sessions_ending_with_missing_usage": 0,
+      "sessions_with_usage": 100,
+      "errors": {
+        "timeout": 4,
+        "usage_limit": 2,
+        "{\"detail\":\"Bad Request\"}": 3
+      },
+      "source": "https://github.com/B2707/agent-swarm-hackathon/tree/5105e7843f60e64b3d2ad7af697754fb15ed1ffc/results/C100-61-sol-s2-20261108-104629"
+    },
+    {
+      "folder": "results/C100-61-sol-s3-20261108-120306",
+      "model": "gpt-6.1-sol",
+      "arm": "C",
+      "seed": 3,
+      "effort": "high",
+      "completed_rounds": 20,
+      "totals": {
+        "input_tokens": 1106075313,
+        "cached_input_tokens": 1080745216,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1931753,
+        "reasoning_output_tokens": 658028
+      },
+      "naive_totals": {
+        "input_tokens": 9699882513,
+        "cached_input_tokens": 9426744192,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 25999926,
+        "reasoning_output_tokens": 9415779
+      },
+      "agent_rounds": 2000,
+      "rounds_with_usage": 1976,
+      "usage_records": 2005,
+      "empty_usage_records": 24,
+      "extra_retry_attempts": 1121,
+      "session_gaps_followed_by_snapshot": 19,
+      "sessions_ending_with_missing_usage": 0,
+      "sessions_with_usage": 100,
+      "errors": {
+        "timeout": 19,
+        "{\"detail\":\"Bad Request\"}": 6,
+        "usage_limit": 5
+      },
+      "source": "https://github.com/B2707/agent-swarm-hackathon/tree/5105e7843f60e64b3d2ad7af697754fb15ed1ffc/results/C100-61-sol-s3-20261108-120306"
+    }
+  ]
+}

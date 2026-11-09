@@ -1,0 +1,6 @@
+{
+  "time": 1794180899.073069,
+  "reason": "User requested stopping after the three completed Sol runs.",
+  "completed_scope": "Sol only",
+  "do_not_resume_luna": true
+}

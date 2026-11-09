@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tokens per agent-round</title>
+<style>
+html,body{margin:0;background:transparent;color:var(--foreground);font-family:var(--font-sans,system-ui)}
+main{min-width:0}h2{font-size:1.15em;font-weight:500;margin:0 0 6px}p{margin:0 0 14px}figure{margin:20px 0}figcaption{margin-bottom:10px;font-weight:500}
+.row{display:grid;grid-template-columns:42px minmax(0,1fr) 76px;gap:9px;align-items:center;margin:12px 0}
+.track{height:25px;background:var(--secondary);display:flex;overflow:hidden}.segment{height:100%}.cached,.reasoning{background:var(--chart-1)}.fresh,.other{background:var(--chart-2)}
+.value{text-align:right;font-variant-numeric:tabular-nums}.legend{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--muted-foreground)}.legend span{display:inline-flex;align-items:center;gap:6px}.key{display:inline-block;width:11px;height:11px}
+.small{font-size:.875em;color:var(--muted-foreground)}details{margin-top:18px;border-top:1px solid var(--border);padding-top:12px}summary{font-weight:500}details[open]>summary{margin-bottom:12px}label{display:block;margin:10px 0 5px}select,textarea,button{font:inherit;color:var(--foreground);background:var(--card);border:1px solid var(--border);border-radius:var(--radius,5px);padding:8px}select,textarea{width:100%;box-sizing:border-box}textarea{resize:vertical}button{margin-top:8px}button:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--ring);outline-offset:3px}output{display:block;margin-top:8px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th,td{text-align:right;padding:7px 4px;border-bottom:1px solid var(--border)}th:first-child,td:first-child{text-align:left}th{font-weight:500}
+</style>
+</head>
+<body>
+<main id="token-comparison">
+<h2>Recorded tokens per agent-round</h2>
+<p class="small">GPT-6.1 Sol and GPT-6 Luna at high reasoning effort. Nine completed A/B/C runs per model, 18,000 agent-rounds each.</p>
+<figure aria-label="Mean input tokens per agent-round. Sol 420,591, including 408,846 cached. Luna 267,778, including 259,113 cached.">
+<figcaption>Input tokens</figcaption>
+<div class="row"><span>Sol</span><div class="track"><span class="segment cached" style="width:97.207509766%" title="Cached input: 408,845.75 tokens"></span><span class="segment fresh" style="width:2.792490234%" title="Uncached input: 11,744.95 tokens"></span></div><span class="value">420,591</span></div>
+<div class="row"><span>Luna</span><div class="track"><span class="segment cached" style="width:61.606897579%" title="Cached input: 259,112.88 tokens"></span><span class="segment fresh" style="width:2.060320270%" title="Uncached input: 8,665.52 tokens"></span></div><span class="value">267,778</span></div>
+<div class="legend"><span><i class="key cached"></i>Cached input</span><span><i class="key fresh"></i>Uncached input</span></div>
+</figure>
+<figure aria-label="Mean output tokens per agent-round. Sol 831, including 275 reasoning tokens. Luna 835, including 442 reasoning tokens.">
+<figcaption>Output tokens, including reasoning</figcaption>
+<div class="row"><span>Sol</span><div class="track"><span class="segment reasoning" style="width:32.967814902%" title="Reasoning: 275.29 tokens"></span><span class="segment other" style="width:66.584237843%" title="Other generated output: 555.99 tokens"></span></div><span class="value">831</span></div>
+<div class="row"><span>Luna</span><div class="track"><span class="segment reasoning" style="width:52.917595150%" title="Reasoning: 441.87 tokens"></span><span class="segment other" style="width:47.082404850%" title="Other generated output: 393.15 tokens"></span></div><span class="value">835</span></div>
+<div class="legend"><span><i class="key reasoning"></i>Reasoning</span><span><i class="key other"></i>Other output, including tool calls</span></div>
+</figure>
+<p><strong>Combined average</strong> · Sol 421,422 · Luna 268,613 tokens</p>
+<p class="small">Recorded usage can miss work from failed attempts. Separate auditor and judge calls are excluded.</p>
+<details>
+<summary>Exact breakdown and counting method</summary>
+<table aria-label="Mean tokens per agent-round"><thead><tr><th>Tokens</th><th>Sol</th><th>Luna</th></tr></thead><tbody>
+<tr><td>Input</td><td>420,590.70</td><td>267,778.40</td></tr>
+<tr><td>Cached input, included above</td><td>408,845.75</td><td>259,112.88</td></tr>
+<tr><td>Uncached input</td><td>11,744.95</td><td>8,665.52</td></tr>
+<tr><td>Output</td><td>831.28</td><td>835.02</td></tr>
+<tr><td>Reasoning, included above</td><td>275.29</td><td>441.87</td></tr>
+</tbody></table>
+<p>One agent-round is one agent slot's work during one experiment round. It can contain several model requests and tool calls. Workers and investigators are included.</p>
+<p>Each model has nine completed runs: conditions A, B and C at seeds 1, 2 and 3. Each run has 100 agents and 20 rounds. The disturbed original Luna seed-1 runs and archived experiments are excluded.</p>
+<p>Usage records contain cumulative session counters. Subtract each previous counter in the same session, sum those increments, and divide by 18,000 agent-rounds. Later snapshots can include work from an earlier timeout. Input includes repeated context and tool results. Cached input and reasoning are subsets of their respective totals.</p>
+<p>Sol has 576 empty usage records and 71 sessions with missing usage after their last snapshot. Luna has 59 empty usage records, all followed by a later snapshot. Retries can discard intermediate session usage, so neither result is a complete billing total. Missing-round work covered by a later snapshot contributes to the overall average.</p>
+<p class="small">Publication snapshot: 5105e7843f60e64b3d2ad7af697754fb15ed1ffc, November 8, 2026 at 16:22 EST. Experiment code and results were read without modification.</p>
+</details>
+<details>
+<summary>Annotate a part of this comparison</summary>
+<label for="note-target">Part</label><select id="note-target"><option>Overall comparison</option><option>Sol input tokens</option><option>Luna input tokens</option><option>Output and reasoning tokens</option><option>Counting method or missing usage</option></select>
+<label for="note-text">Your feedback</label><textarea id="note-text" rows="3"></textarea>
+<button id="copy-note" type="button">Copy feedback</button><output id="note-status" aria-live="polite"></output>
+</details>
+</main>
+<script>
+const root=document.getElementById('token-comparison');
+const target=root.querySelector('#note-target'),note=root.querySelector('#note-text'),status=root.querySelector('#note-status');
+try{const saved=JSON.parse(localStorage.getItem('token-comparison-note')||'null');if(saved){target.value=saved.target;note.value=saved.text;}}catch{}
+function saveNote(){try{localStorage.setItem('token-comparison-note',JSON.stringify({target:target.value,text:note.value}));}catch{}}
+target.addEventListener('change',saveNote);note.addEventListener('input',saveNote);
+root.querySelector('#copy-note').addEventListener('click',async()=>{const text=note.value.trim();if(!text){status.textContent='Write feedback first.';return;}const feedback=target.value+': '+text;try{await navigator.clipboard.writeText(feedback);status.textContent='Copied. Paste the feedback into this chat.';}catch{status.textContent=feedback;}saveNote();});
+</script>
+</body>
+</html>

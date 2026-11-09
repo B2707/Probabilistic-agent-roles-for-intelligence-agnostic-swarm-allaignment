@@ -68,3 +68,16 @@ Each run directory holds `events.jsonl` (every event, append-only), `world.json`
 ### Tests
 
 `uv run pytest` runs the scripted-swarm tests and the metrics tests. They use no Codex quota.
+
+## Paper
+
+Edit [paper/main.tex](paper/main.tex) in T3's Files panel, then run the
+**Recompile paper** project action. The PDF is written to `output/pdf/main.pdf`.
+See [the local LaTeX guide](paper/README.md) for compilation, PDF viewing, and
+sending selected source lines into chat.
+
+## Benchmarks
+
+[Agent Arena Steerability results](benchmarks/agent-arena-steerability/README.md)
+compare GPT-6.1 Terra, GPT-6.1 Sol, and GPT-6 Luna at maximum reasoning effort,
+with a dated data snapshot, uncertainty ranges, and source links.

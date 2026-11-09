@@ -1,0 +1,51 @@
+{
+  "reference_sha256": "2e946375785134ac67b3cc6269b879ea6d2ba326cad9680b694143c500a6f286",
+  "latex_sha256": "acc97da7215d45a73d490850fee0721c26363a3b41e1cb644d9c5f3c66c649ea",
+  "pages": [
+    {
+      "page": 1,
+      "size_points": [
+        612.0,
+        792.0
+      ],
+      "size_matches": true,
+      "text_and_page_break_matches": true,
+      "reference_tokens": 202,
+      "latex_tokens": 202
+    },
+    {
+      "page": 2,
+      "size_points": [
+        612.0,
+        792.0
+      ],
+      "size_matches": true,
+      "text_and_page_break_matches": true,
+      "reference_tokens": 279,
+      "latex_tokens": 279
+    },
+    {
+      "page": 3,
+      "size_points": [
+        612.0,
+        792.0
+      ],
+      "size_matches": true,
+      "text_and_page_break_matches": true,
+      "reference_tokens": 240,
+      "latex_tokens": 240
+    },
+    {
+      "page": 4,
+      "size_points": [
+        612.0,
+        792.0
+      ],
+      "size_matches": true,
+      "text_and_page_break_matches": true,
+      "reference_tokens": 132,
+      "latex_tokens": 132
+    }
+  ],
+  "note": "Text/page-size checks supplement visual review; they do not prove pixel identity."
+}

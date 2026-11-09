@@ -1,0 +1,8 @@
+{"type": "start", "time": 1794174124.086108, "jobs": 1, "limit": 1, "codex_version": "codex-cli 0.167.0"}
+{"type": "end", "time": 1794174145.0957608, "seconds": 21.009652853012085, "completed": 1, "total": 1758, "usage_limit": false}
+{"type": "start", "time": 1794174152.1081522, "jobs": 1757, "limit": 0, "codex_version": "codex-cli 0.167.0"}
+{"type": "interrupted", "time": 1794174759.0457852, "reason": "No requests in flight; switching transport after repeated 403 errors", "requests_in_flight": 0, "completed": 41}
+{"type": "start", "time": 1794174773.136076, "jobs": 1, "limit": 1, "transport": "HTTP requested through supports_websockets=false", "codex_version": "codex-cli 0.167.0"}
+{"type": "interrupted", "time": 1794174857.968523, "reason": "Turn interruption ended the one-call HTTP diagnostic before it returned; no verdict or usage was captured for that diagnostic.", "unmeasured_diagnostic_calls": 1, "completed": 41}
+{"type": "start", "time": 1794174858.421123, "jobs": 1717, "limit": 0, "pid": 71705, "transport": "default project transport", "codex_version": "codex-cli 0.167.0"}
+{"type": "user_stopped", "time": 1794180899.350503, "scope": "Sol completed; Luna canceled", "owned_orphan_pids_signaled": [], "other_runs_signaled": false}

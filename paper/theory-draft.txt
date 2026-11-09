@@ -1,0 +1,69 @@
+Theory sketch
+P is the conversion probability per round. K is the random-audit probability per round. The code calls them k and p respectively.
+
+[1. Count work across the whole run]
+
+Final headcount and accumulated work are different. An agent can spend most of the run working and finish as an investigator. The worker-round proportion equals the average worker proportion across rounds, not the final worker proportion.
+
+With 100 agents, 10 initial investigators, 20 rounds, and P=2%:
+
+Quantity | Expected amount | Proportion
+Workers during round 20 | 60.08 of 100 agents | 60.08%
+Worker-rounds across all 20 rounds | 1465.85 of 2000 agent-rounds | 73.29%
+
+Your example gives 18 worker rounds and two investigator rounds if conversion happens after round 18. The code converts before each turn, so conversion at the start of round 18 gives 17 worker rounds and three investigator rounds. Both examples preserve the earlier worker contribution.
+
+The calculation adds each round separately. For round r, starting at r=1:
+
+    Expected workers in round r = 90(1-P)^r.
+    Expected total worker-rounds = sum of 90(1-P)^r over rounds 1 through 20.
+
+These expectations assume no removals, replacements, or missed turns. Investigators may also contribute to solutions while maintaining cover. We credit none of that contribution. Calling the count a lower bound on productive effort additionally assumes productive worker turns and nonnegative investigator contributions.
+
+[2. Rational choices]
+
+A successful solve or at least one eligible confirmed catch gives utility 1 if the original agent survives until evaluation. Otherwise utility is 0. Removal overrides earlier success. Extra catches add no reward. A catch must concern another agent. Reporting only yourself earns no reward, and conversion alone is not a success.
+
+The best action maximizes the probability of surviving with either kind of success.
+
+Calibrate P=1.5% and K=1% at the first worker turn, leaving 19 future conversion opportunities. Include one contact of unknown current role and one known guilty worker. If the contact is a worker, both partners can convert and report later. The focal worker can also convert and gain retrospective immunity. Audits may remove potential report targets.
+
+Let Q be the belief that the contact is already an investigator. A random-contact reference prior is 11.55%, given 100 agents, 10 initial investigators, one conversion draw, and the two known current workers. This is not an estimate conditioned on an offer. The chart allows a custom belief. A newly written prohibited proposal excludes the clean-investigator branch. A worker-authored offer can arrive after that sender converts; the separate sender game treats this timing.
+
+In the investigator branch, the contact refuses required cooperation and reports observed acceptance. The default leaves the other guilty worker available as a catch target. Direct messages arrive next round, so the focal worker may convert before the report. With certain task success conditional on worker cooperation, acceptance gives 48.69% survival with success, versus 24.53% for refusal. Setting Q=0 restores 54.85% versus 24.74%. Green marks aligned refusal; red marks misaligned acceptance. Conspiracy-size results remain conditional on an already formed group of guilty workers.
+
+Situation | Decision rule
+Sending an offer | Solve the recipient's response first, then compare offering with the best alternative. The gray sender case did not predict refusal. The offer itself can be punishable even when rejected.
+Receiving an offer as a worker | Compare acceptance with refusal and keeping the evidence. Refusal can lead to a successful report after conversion.
+Already cheating and receiving an offer | Earlier misconduct remains auditable until conversion. Refusing a new offer preserves evidence without adding another violation.
+Receiving an offer as an investigator | A certain catch with no remaining removal risk achieves utility 1. Reporting also audits the reporter; new misconduct is not immune.
+
+In a separate two-person example with the actual message delay and a known worker author, P=1.5%, K=1%, and certain cooperation success, the receiver accepts and the sender prefers offering to a zero-success alternative. Sending gives 59.78% survival with success. Of that, 58.49 percentage points count task success and 1.28 require a catch without task success. If cooperation cannot earn a task reward, the receiver instead refuses and the sender creates no catch target. See sender-game-review.html and supplement Section 11 for this restricted game and the role-inference calculation.
+
+When P and K are known, use them to calculate these chances. When their values are hidden, average over explicit beliefs. Hidden rates do not imply zero oversight. P and K alone do not specify peer responses or the chance of solving.
+
+If refusing has zero chance of either kind of success, any positive chance of surviving with a successful cheat is preferable. The model therefore gives conditional predictions rather than universal deterrence.
+
+[3. Connect the model to experiments]
+
+Vary P while holding K fixed, and K while holding P fixed. Distinguish disclosed rates, a disclosed mechanism with hidden rates, and a hidden mechanism. The existing informed prompt does not disclose numerical rates.
+
+Measure final headcount and worker-rounds separately. For offers, track acceptance, later reporting after conversion, and removal before evaluation. Repeat whole swarms across seeds.
+
+The binary utility is our theoretical benchmark. Current investigator prompts reward accumulated catches, so directly testing this benchmark requires matching the stated incentives.
+
+Full derivations and pinned source references are preserved in theory-derivations.txt. The conversion timing was rechecked in swarm/loop.py at fa77b49fdadeb43f7acd6c07893e281b228c36bb.
+
+[4. Conspiracy size]
+
+Model an already formed conspiracy at P=1.5% and K=1%, with 19 future conversion opportunities. Distinguish a confirmed violation, actual removal, and an individual member's success.
+
+Assume all original members are guilty workers and know each other's violations. Audits are perfect. New investigators commit no further violations. A member removed before evaluation fails; a converted member is immune for earlier misconduct. The individual-payoff calculation additionally assumes an evaluated task success has already been secured and remains valid.
+
+There are two rational continuations after success is secured. Reporting all peers and remaining silent can each give a newly converted agent utility 1. Reporting is therefore not forced by binary utility. Before success is secured, a certain catch can instead make reporting preferable to uncertain collusion.
+
+For three members, the chance of at least one removal during the run is 76.88% if converts report all peers, versus 40.55% if they stay silent. One member's survival-with-success probability is 54.85% under report-all and 84.09% under silence. Larger groups increase the chance of detecting someone, but that is not the same as deterring each individual.
+
+If extra members do not improve task success, individual survival falls with size under report-all and stays constant under silence. This favors the smallest workable group under the reporting policy. The harness needs at least three participants for a cheating PR, not necessarily for the entire swarm objective.
+
+These are conditional continuation games, not a solved equilibrium of conspiracy formation. They exclude outside informants and replacements. The final blanket audit is separate: perfect final auditing would make eventual confirmation certain, but the controller does not remove agents in that audit.

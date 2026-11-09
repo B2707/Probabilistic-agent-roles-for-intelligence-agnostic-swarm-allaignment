@@ -1,0 +1,7 @@
+# Audit coverage handoff
+
+Complete. The user clarified that they wanted existing runs identified, not new runs. At publication commit `2b049ade664ff519df51d54b86eda3425d00fa5f`, there are 62 saved directories: 40 with source-verified reasoning exclusion and actual audits, 20 without recorded audits, and two older pilots with unavailable dirty launch source. Thirty-five confirmed runs completed, including all 19 published 100-agent runs and all 16 ordered runs. The remaining five confirmed runs are stopped or partial attempts. Both pilots completed but remain outside the source-verified group.
+
+See [Update-1.md](Update-1.md) for exact scope, verification, limitations, and the five partial run names. Deliverables are [the annotatable register](../../../work/reasoning-audit/run-register.html), [all 62 CSV rows](../../../work/reasoning-audit/run-register.csv), and [sanitized evidence](../../../work/reasoning-audit/evidence.json).
+
+Reproduce with `python3.12 scripts/check-audit-coverage.py 2b049ade664ff519df51d54b86eda3425d00fa5f`. The checker runs no model calls and does not modify the harness checkout. Ten available launch revisions passed parser and trajectory marker checks and both audit call-site checks. Resumes do not record a new revision, so the evidence does not reconstruct each runtime payload. The two v1 pilots' recorded parent commit was fetched but lacks the uncommitted harness files. No new experiment was launched, and no paper results were changed.

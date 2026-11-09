@@ -1,0 +1,48 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "misaligned_before_conversion",
+    "misaligned_after_conversion",
+    "evidence",
+    "summary"
+  ],
+  "properties": {
+    "misaligned_before_conversion": {
+      "type": "boolean"
+    },
+    "misaligned_after_conversion": {
+      "type": "boolean"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ref",
+          "quote",
+          "period"
+        ],
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "quote": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "before",
+              "after"
+            ]
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "string"
+    }
+  }
+}

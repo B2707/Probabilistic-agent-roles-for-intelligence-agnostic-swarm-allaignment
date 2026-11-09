@@ -1,0 +1,17 @@
+{
+  "$schema": "https://t3.codes/schema/t3.json",
+  "scripts": [
+    {
+      "name": "Recompile paper",
+      "command": "sh scripts/build-paper.sh",
+      "icon": "build",
+      "runOnWorktreeCreate": false
+    },
+    {
+      "name": "Recompile official template",
+      "command": "sh scripts/build-paper.sh template",
+      "icon": "build",
+      "runOnWorktreeCreate": false
+    }
+  ]
+}

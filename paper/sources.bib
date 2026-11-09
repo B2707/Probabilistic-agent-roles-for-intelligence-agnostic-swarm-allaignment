@@ -1,7 +1,56 @@
 % Source shortlist for the swarm investigator paper.
 % Verified against primary sources on 2026-11-08 UTC.
 % See sources.md for prior-review evidence, claim scope, and citation placement.
-% The two sprint reports are cited as reports, not peer-reviewed publications.
+% Sprint reports are cited as reports, not peer-reviewed publications.
+
+% Introduction sources. Dates distinguish announcements from the events described.
+% howpublished keeps these links visible with the manuscript's plain BibTeX style.
+
+@misc{openai2026navierstokes,
+  author = {{OpenAI}},
+  title = {On the {Navier–Stokes} {Millennium Prize Problem}},
+  year = {2026},
+  month = {September 8},
+  howpublished = {\url{https://openai.com/index/navier-stokes-solution/}},
+  url = {https://openai.com/index/navier-stokes-solution/}
+}
+
+@misc{psi2026aaronsonambainis,
+  author = {{Physical Superintelligence}},
+  title = {A proof of the {Aaronson–Ambainis} conjecture},
+  year = {2026},
+  month = {November 6},
+  howpublished = {\url{https://psi.inc/research/aaronson-ambainis/}},
+  url = {https://psi.inc/research/aaronson-ambainis/},
+  note = {Research announcement; accompanying preprint and Lean formalization by David Turturean}
+}
+
+@misc{greenblatt2026huggingface,
+  author = {Greenblatt, Ryan and Cotra, Ajeya and Wijk, Hjalmar},
+  title = {Brief independent investigation of agents' behavior, reasoning and collaboration in the {OpenAI} / {Hugging Face} hacking incident},
+  year = {2026},
+  month = {August 26},
+  howpublished = {METR. \url{https://metr.org/blog/2026-08-26-openai-hugging-face-incident-investigation/}},
+  url = {https://metr.org/blog/2026-08-26-openai-hugging-face-incident-investigation/}
+}
+
+@misc{openai2026huggingface,
+  author = {{OpenAI}},
+  title = {The {Hugging Face} incident and the road ahead},
+  year = {2026},
+  month = {August 26},
+  howpublished = {\url{https://openai.com/index/hugging-face-incident-and-the-road-ahead/}},
+  url = {https://openai.com/index/hugging-face-incident-and-the-road-ahead/}
+}
+
+@misc{openai2026containment,
+  author = {{OpenAI}},
+  title = {Securing our frontier model training environment},
+  year = {2026},
+  month = {October 23},
+  howpublished = {\url{https://openai.com/index/securing-our-frontier-model-training-environment/}},
+  url = {https://openai.com/index/securing-our-frontier-model-training-environment/}
+}
 
 @article{idowu2026mapping,
   author = {Idowu, Jamiu and Almasoud, Ahmed S. and Alfahid, Ayman},
@@ -11,18 +60,19 @@
   pages = {116067},
   year = {2026},
   doi = {10.1016/j.knosys.2026.116067},
-  url = {https://arxiv.org/abs/2601.00360v3}
+  url = {https://arxiv.org/abs/2601.00360v3},
+  note = {\url{https://doi.org/10.1016/j.knosys.2026.116067}}
 }
 
 @techreport{eldin2026wired,
   author = {Fatimah Emad Eldin},
   title = {Wired Partners: Prohibitions, Announced Stings and Audits as Deterrents to Collusion Between {LLM} Agents},
   institution = {Apart Research, Poseidon Research and AE Studio},
-  type = {AI Collusion Research Sprint report},
+  type = {{AI} Collusion Research Sprint report},
   year = {2026},
   month = oct,
   url = {https://github.com/astral-fate/wired-partners/blob/547e2e30cefd1cd0e2ab30a8b0d5b9f2f431bf6c/paper/main.pdf},
-  note = {Dated 25 October 2026. Repository revision 547e2e30cefd1cd0e2ab30a8b0d5b9f2f431bf6c; accessed 8 November 2026}
+  note = {Dated 25 October 2026; accessed 8 November 2026. \url{https://github.com/astral-fate/wired-partners/blob/547e2e30cefd1cd0e2ab30a8b0d5b9f2f431bf6c/paper/main.pdf}}
 }
 
 @techreport{lin2026whistleblowing,
@@ -45,7 +95,7 @@
   primaryClass = {cs.MA},
   doi = {10.48550/arXiv.2610.39660},
   url = {https://arxiv.org/abs/2610.39660v1},
-  note = {arXiv:2610.39660, version 1}
+  note = {arXiv:2610.39660, version 1. \url{https://arxiv.org/abs/2610.39660v1}}
 }
 
 @misc{nakamura2026colosseum,
@@ -57,7 +107,7 @@
   primaryClass = {cs.MA},
   doi = {10.48550/arXiv.2602.15198},
   url = {https://arxiv.org/abs/2602.15198v2},
-  note = {arXiv:2602.15198, version 2}
+  note = {arXiv:2602.15198, version 2. \url{https://arxiv.org/abs/2602.15198v2}}
 }
 
 @misc{potter2026peer,
@@ -69,7 +119,7 @@
   primaryClass = {cs.CL},
   doi = {10.48550/arXiv.2604.19784},
   url = {https://arxiv.org/abs/2604.19784v3},
-  note = {Extended arXiv version 3; a shorter version was accepted to ICML 2026}
+  note = {Extended arXiv version 3; a shorter version was accepted to ICML 2026. \url{https://arxiv.org/abs/2604.19784v3}}
 }
 
 @misc{zhong2025impossiblebench,
@@ -121,4 +171,66 @@
   doi = {10.48550/arXiv.2604.23511},
   url = {https://arxiv.org/abs/2604.23511v1},
   note = {arXiv:2604.23511, version 1}
+}
+
+% Added after checking the author's eleven-source priority list.
+
+@misc{baker2025monitoring,
+  author = {Baker, Bowen and Huizinga, Joost and Gao, Leo and Dou, Zehao and Guan, Melody Y. and Madry, Aleksander and Zaremba, Wojciech and Pachocki, Jakub and Farhi, David},
+  title = {Monitoring Reasoning Models for Misbehavior and the Risks of Promoting Obfuscation},
+  year = {2025},
+  eprint = {2503.11926},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.AI},
+  doi = {10.48550/arXiv.2503.11926},
+  url = {https://arxiv.org/abs/2503.11926v1},
+  note = {arXiv:2503.11926, version 1. \url{https://arxiv.org/abs/2503.11926v1}}
+}
+
+@misc{makins2026multiagent,
+  author = {Makins, Oliver and Angelini, Orazio and Shams, Zohreh and Phuong, Mary},
+  title = {Multi-Agent {AI} Control: Distributed Attacks Hamper Per-Instance Monitors},
+  year = {2026},
+  eprint = {2607.07368},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.LG},
+  doi = {10.48550/arXiv.2607.07368},
+  url = {https://arxiv.org/abs/2607.07368v2},
+  note = {arXiv:2607.07368, version 2. \url{https://arxiv.org/abs/2607.07368v2}}
+}
+
+@misc{greenblatt2023control,
+  author = {Greenblatt, Ryan and Shlegeris, Buck and Sachan, Kshitij and Roger, Fabien},
+  title = {{AI} Control: Improving Safety Despite Intentional Subversion},
+  year = {2023},
+  eprint = {2312.06942},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.LG},
+  doi = {10.48550/arXiv.2312.06942},
+  url = {https://arxiv.org/abs/2312.06942v5},
+  note = {Originally released in 2023. Results checked in version 5, revised July 2024; a shortened version appeared at ICML 2024}
+}
+
+@techreport{roeleveld2026report,
+  author = {Roeleveld, Philip},
+  title = {A Report Tool against {AI} Collusion},
+  institution = {Apart Research},
+  type = {{AI} Collusion Research Sprint report},
+  year = {2026},
+  month = oct,
+  url = {https://apartresearch.com/sprints/projects/a-report-tool-against-ai-collusion-4fl5},
+  note = {Participant sprint report, not an Apart Research publication; accessed 8 November 2026. \url{https://apartresearch.com/sprints/projects/a-report-tool-against-ai-collusion-4fl5}}
+}
+
+@article{bigoni2012fines,
+  author = {Bigoni, Maria and Fridolfsson, Sven-Olof and Le Coq, Chlo{\'e} and Spagnolo, Giancarlo},
+  title = {Fines, Leniency, and Rewards in Antitrust},
+  journal = {The RAND Journal of Economics},
+  volume = {43},
+  number = {2},
+  pages = {368--390},
+  year = {2012},
+  doi = {10.1111/j.1756-2171.2012.00170.x},
+  url = {https://onlinelibrary.wiley.com/doi/10.1111/j.1756-2171.2012.00170.x},
+  note = {Numeric tables checked in the author manuscript dated 10 November 2011, hosted by Stockholm School of Economics}
 }

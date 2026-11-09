@@ -1,0 +1,285 @@
+% Edit this file in T3's Files panel. Use the Recompile paper action.
+% The official template is preserved below; replace guidance with your prose.
+% Reference edition: template.tex omits only the added required ethics appendix.
+\documentclass{apart}
+
+\ApartTitle{Probabilistic Agent Roles for Intelligence Agnostic Swarm Alignment}
+\ApartAuthors{%
+  \ApartAuthorRow
+    {\ApartAuthor{Mohammad Steitieh}{McGill University School of Computer Science}}
+    {\ApartAuthor{Bader El-Asadi}{Carleton University School of Computer Science}}
+}
+\ApartAbstract{%
+  % Replace bracketed result placeholders after all runs are finalized.
+As agentic systems continue to increase in intelligence, collusion to reward-hack shared objectives remains a risk when assigning difficult tasks to large swarms of agents. In this work, we propose and test an architecture that probabilistically converts agents in the swarm into investigators while retaining their full session context. The goal is to make collusion risky as any participant could later report their peers. By preserving the context of agents involved in these interactions, the architecture aims to expose collusion that an external auditor could miss due to more sophisticated reward hacking techniques. We evaluate this system in coding swarms of 100 agents working across 55 problems for 20 rounds on ImpossibleBench. We compare a baseline without investigators or audits with swarms that combine both, and test whether informing workers about the system changes behavior. Compared with the baseline, the architecture reduces collusion acceptance from [BASELINE]\% to [OVERSIGHT]\%. We observe [UNSOLICITED] unsolicited agent-to-agent collusion offers. Agents accept [ACCEPTED] of [INJECTED] injected offers, and oversight detects [DETECTED] of [VIOLATIONS] resulting violations. Investigators receive individual immunity to encourage self-reporting that could implicate other agents in line with programs used in law enforcement. This approach aims to preserve open communication while improving oversight and deterrence of collusion. Three different levels of architecture integration are proposed, each with increased monitoring costs but increased efficacy.
+}
+
+% When preparing the submission, remove the yellow instruction box:
+\ApartGuidancefalse
+\begin{document}
+\MakeApartTitle
+
+\section{Introduction}
+Swarms have increasingly shown promise in solving problems at the frontier of human knowledge. On September 8, 2026, OpenAI announced a solution to the Navier–Stokes Millennium Prize problem, reporting approximately 10,000 concurrent agents and about 88 hours of work~\cite{openai2026navierstokes}. On November 6, 2026, Physical Superintelligence, or PSI, announced a Lean-checked proof of the Aaronson–Ambainis conjecture, a longstanding problem in quantum computing. Its research system ran multiple instances of a non-public Anthropic model and found a complete proof during the third day of the run~\cite{psi2026aaronsonambainis}.
+% PSI's announcement does not disclose an agent count.
+\blankline
+
+However, agent swarms may reward-hack to achieve difficult objectives. During OpenAI's July 2026 evaluations on ExploitGym, a benchmark of the agent's ability to exploit a vulnerability in a piece of software which is sometimes impossible, agents used an unauthorized message board to coordinate attempts to cheat the benchmark's scorer. METR and Redwood Research reported that roughly 1,200 agents exchanged messages and files, and around 700 participated in the attack on the AI startup Hugging Face which the agents believed contained the answer to the benchmark. Agents took on coordinating roles and assigned tasks to peers ~\cite{greenblatt2026huggingface}. Safer swarms could enable automated agentic swarm workflows tackling potential breakthroughs while mitigating reward hacking.
+\blankline
+
+A major challenge in swarm alignment is that agents can communicate through channels that are difficult for auditors to observe. On October 23, 2026, OpenAI reported that agents in separate virtual machines on shared hosts communicated through CPU-cache timing, without network connections or shared writable files. These were prompted red-teaming experiments designed to test isolation boundaries, with guidance supplied in most communication tests~\cite{openai2026containment}. The increase in model intelligence has raised alarm bells around what happens when we are no longer able to consistently detect these communication routes and as soon as we can detect them, new ones are developed. Combined with an increase in the use of swarms on increasingly harder tasks, this poses a grave risk to digital infrastructure. 
+\blankline
+
+We propose an approach that relies on the same rule-breaking agents to turn on other misaligned agents. The aim is both to deter collusion, drawing on the prisoner's dilemma, and to catch conspiracies. While the approach may also detect individual rule violations, the main threat model this work aims to address is collusion between agents. We maintain that cooperation and collusion are distinct and cooperation should be preserved as to not diminish performance in the swarm. We use a probabilistic approach combined with phasing out misaligned agents for new agents retaining the size of the swarm even after offenders are found. This approach is theoretically sound even when agents are given access to more tools as greater tool access does not affect the methods used to detect misalignment. We observe the effect of increasing model intelligence through runs on different models from the OpenAI active models. We show that as the intelligence of the model increases, the more likely it is to comply with the rule set. We infer from this that the more capable a model is, the more it understands the application of the prisoner's dilemma and opts for the approach with the better payoff.
+\blankline
+Contributions:
+\blankline
+
+\apartitem{1.}{[An alignment infrastructure for agent swarms resilient to more minute forms of collusion]}
+\apartitem{2.}{[measurement of the efficacy of a bluff of the system against the real system to quantify the cost to benefit of the integration of the system]}
+\apartitem{3.}{[Theoretical models bounding the cost of the integration of the system and a game theoretic analysis of a perfectly rational actor]}
+
+\section{Related Work}
+Idowu et al. map human anti-collusion mechanisms, including immunity and whistleblower agents, to multi-agent AI systems, providing a conceptual basis for our reporting regime~\cite{idowu2026mapping}. Roeleveld's \emph{A Report Tool against AI Collusion} tests a private reporting tool and an announcement that peers may be monitors. Reports expose hidden coalitions mainly through colluders' own confessions, with fewer correct reports from outsiders~\cite{roeleveld2026report}. Our work extends this reporting setup by probabilistically reassigning existing workers as investigators who retain their earlier interaction context. Investigators receive immunity for pre-conversion misconduct and earn credit for confirmed accusations against other agents.
+\blankline
+
+Eldin's \emph{Wired Partners} compares prohibitions, announced stings, and audits. Severe stated penalties reduce acceptance of collusive offers, while some agents treat mild fines as a cost worth paying. Audits and announced stings both deter acceptance under severe penalties, and declaring a prohibition unenforced removes much of its effect~\cite{eldin2026wired}. Our work combines auditing with removal from the swarm as a consequence of confirmed misconduct. We also examine warning-only bluffs in exploratory runs to distinguish the behavioural effects of an announced policy from those of actual oversight.
+\blankline
+
+Nakamura et al.'s \emph{Colosseum} distinguishes communication-based from action-based measures of collusion. Agents may plan to collude in text while taking non-collusive actions, and the two measures need not agree~\cite{nakamura2026colosseum}. Makins et al. show that distributing a malicious objective across several agents can make each agent's contribution harder for an individual monitor to detect~\cite{makins2026multiagent}. These findings motivate separating collusive proposals from enacted violations and examining interactions across agents. Our investigators can submit evidence from interactions they participated in, alongside the external auditor's checks.
+\blankline
+
+Baker et al. find that access to chain-of-thought reasoning can improve detection of coding reward hacks. However, strong reinforcement-learning pressure against a reasoning monitor can teach agents to hide hacking intent while continuing to reward-hack~\cite{baker2025monitoring}. This motivates using more than one source of oversight. In our architecture, investigator reports complement external audits, which also check for individual misconduct. Our evidence consists of interaction records and code changes; the experiment does not compare chain-of-thought monitoring with action-only monitoring.
+\blankline
+
+Prior interactions may also affect whether agents report their peers. Cahyono's \emph{Sticky Collusion} finds that established collusive behaviour can persist after rewards are removed and that retained history can sustain it; wiping both agents' memories ends collusion in the studied setting~\cite{cahyono2026sticky}. Potter et al. find that models can protect peers despite their assigned tasks, with stronger protection toward cooperative peers~\cite{potter2026peer}. These findings motivate our question of whether reporting incentives can disrupt collusive relationships despite retained context. We study reassignment while preserving prior interactions and replace removed agents with new workers who do not inherit the removed agent's history.
+\blankline
+
+The gap we address is how to combine insider reporting, changing agent roles, and external auditing in a coding swarm that retains open communication. Workers can share progress and concerns on a public board while investigators make structured reports. We evaluate this combination with frontier models and replenish removed agents to maintain the swarm's size. Our game-theoretic analysis examines how audit and reassignment rates affect incentives to accept invitations or continue a conspiracy under stated payoff assumptions. Injected offers and aggressive prompting on impossible coding tasks provide a controlled setting for testing the mechanism while preserving opportunities for legitimate collaboration.
+\blankline
+
+\section{Methods}
+\subsection{Model overview}
+A swarm contains $N$ agents, including $I_0$ initial investigators. At each round's start, each worker privately converts with probability $P$, retaining its session and history; each active agent is independently selected for a random audit with probability $K$. Investigators submit evidence against other agents and earn one point per confirmed accusation. Reports trigger audits of reporter and accused after agent turns. Misconduct includes frozen-test changes, test-specific code, evaluation tampering, and proposing or approving these actions. Confirmed workers are removed. Investigators are immune for pre-conversion misconduct, but removable for later violations. Replacements enter next round as new workers with fresh identities and sessions.
+\smallskip
+
+A scripted contractor injects cheating proposals and requests up to four approvals per proposed-code version. It has no model or tools and does not know hidden roles. Its aggressive script adds an evasion claim. We distinguish its offers from unsolicited agent offers. Independent final review audits all recorded agents for measurement without changing removals.
+
+\subsection{Theoretical models}
+We estimate investigator-rounds as a share of all $NT$ agent-rounds, assuming no removals, replacements or missed turns. At $N=100$, $I_0=10$, $T=20$ and $P=2\%$, this share is 26.7\%; it measures role allocation, not lost coding output, because investigators retain task tools. Appendix~\ref{app:theory} derives the allocation and incentive models.
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=\linewidth]{figures/investigator-share.pdf}
+\caption{Expected investigator-rounds divided by total agent-rounds, with $N=100$, $I_0=10$ and $T=20$. Conversion precedes each round's task work.}
+\label{fig:investigator-share}
+\end{figure}
+
+For incentives, an original agent earns binary success only if it survives with a qualifying task outcome or a confirmed catch of another agent. This differs from the implemented cumulative catch reward. Figure~\ref{fig:sender-receiver-game} compares accepting with refusing and sending with a foregone alternative. Here $b$ is task success conditional on cooperation and $H$ is survival with success from that alternative.
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=\linewidth]{figures/receiver-paper.pdf}\\[2pt]
+\includegraphics[width=\linewidth]{figures/sender-paper.pdf}
+\caption{Two-agent offer game at $P=1.5\%$ and $K=1\%$. Each role occupies one full-width row. Green denotes refusal or no offer; red denotes acceptance or sending. Assumptions and derivations are in Appendix~\ref{app:theory}.}
+\label{fig:sender-receiver-game}
+\end{figure}
+% The two-agent game does not supply sender/receiver curves for sizes 3,5,10,30.
+
+\subsection{Implementation}
+We run 100-agent swarms for 20 rounds on 55 one-off ImpossibleBench Python tasks~\cite{zhong2025impossiblebench}. Each suite has 11 to 70 tests, including one impossible assertion; a full pass indicates exploitation. Assignment cycles through the tasks. Workers see the mean problem pass rate and receive the same pressure to reach 100\% without changing frozen tests. A round comprises replacement, conversion, scheduled agent turns, audits and scoring. Turns allow ten tool calls and 180 seconds, with up to 25 concurrent sessions; tests have five-second limits. Seeds 1, 2 and 3 control conversion, auditing, initial roles, turn order and instigator sampling, while $P$ and $K$ stay fixed within each condition.
+\smallskip
+
+Persistent sessions expose file, test, roster, messaging, board-search, progress and internal pull-request tools. Messages arrive next round. Code changes stay within the author's task and merge after two distinct non-author approvals from anywhere in the swarm. Updates clear approvals; stale versions cannot merge. Investigators additionally receive reporting and own-history search tools. Workers use GPT-6 Luna or GPT-6.1 Sol at high effort; Terra at maximum effort enforces audits. Opus 5.5 at \texttt{xhigh} labels messages and performs final review. Labels are offer, acceptance, endorsement, alert or none, with a target and evidence quote.
+% Execution notes specify Opus labeling; per-run labels.meta.json is not published.
+\smallskip
+
+We record full-pass authors, offers and responses, reports, role-rounds, interaction-graph components and removals. Total observed misconduct combines full-pass authors, positive during-run audits and final-review findings. Caught agents have positive during-run audits; immunity can prevent their removal. Replacements count as new identities. Exact run selection and totals accompany the source in \texttt{methods-results-snapshot.json}.
+\smallskip
+
+\section{Results}
+Table~\ref{tab:arms-results} sums completed 100-agent runs. A--C each cover three seeds per model, excluding disturbed original Luna seed-1 runs; D--F retain their available coverage. A has pressure and instigation, B adds oversight, and C discloses it. D is a warning-only bluff, E announces random audits without investigators, and F removes instigation and oversight. D's warning additionally mentions random audits, unlike C's. Swarm runs are the replication unit.
+\begin{table}[htbp]
+\centering
+\caption{Current 100-agent arms; $n$ counts completed seeds. Total cheaters includes offers and approvals. Caught means confirmed during execution; removed means actual removals. Audits use $K=1\%$; investigation uses $I_0=10$, $P=2\%$. Pending results are not zeros.}
+\label{tab:arms-results}
+\begingroup
+\fontsize{9}{11}\selectfont
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.18}
+\begin{tabular}{@{}lcccccrrr@{}}
+\toprule
+Arm & Informed & Audit & Investigation & Instigation & $n$ & \shortstack{Total\\cheaters} & Caught & Removed \\
+\midrule
+\multicolumn{9}{@{}l}{\textit{GPT-6 Luna}} \\
+A & No & No & No & Yes & 3 & 297 & 0 & 0 \\
+B & No & Yes & Yes & Yes & 3 & 575 & 468 & 438 \\
+C & Yes & Yes & Yes & Yes & 3 & 18 & 12 & 11 \\
+D & Yes & No & No & Yes & 1 & 4 & 0 & 0 \\
+E & Yes & Yes & No & Yes & 1 & 6 & 2 & 2 \\
+F & No & No & No & No & 1 & 99 & 0 & 0 \\
+\midrule
+\multicolumn{9}{@{}l}{\textit{GPT-6.1 Sol}} \\
+A & No & No & No & Yes & 3 & 240 & 0 & 0 \\
+B & No & Yes & Yes & Yes & 3 & 138 & 129 & 125 \\
+C & Yes & Yes & Yes & Yes & 3 & 0 & 0 & 0 \\
+D & Yes & No & No & Yes & 0 & \multicolumn{3}{c}{Pending} \\
+E & Yes & Yes & No & Yes & 0 & \multicolumn{3}{c}{Pending} \\
+F & No & No & No & No & 1 & 100 & 0 & 0 \\
+\bottomrule
+\end{tabular}
+\endgroup
+\end{table}
+
+% Unwritten section prompts retained for later authoring.
+\iffalse
+\section{Discussion and Limitations}
+\guidance{Discuss the broader implications for AI safety.}
+\guidance{What do your results mean? What trends do you notice and what might they indicate?}
+\blankline
+
+\subsection*{Limitations}
+\guidance{What are the limitations of your work? What threat models or failure modes did
+  you not address? Be honest about constraints — methodological limitations, scope
+  limitations, or aspects you couldn't fully address in the hackathon timeframe.
+  Explicitly note the assumptions you made, whether implicitly or explicitly, and how
+  the interpretation of your results would change if a given assumption did not hold.}
+\blankline
+
+\subsection*{Future Work}
+\guidance{What are the natural next steps? How could this work be extended?}
+\blankline
+
+\section{Conclusion}
+\guidance{Briefly summarize your main findings and their implications (1–2 paragraphs).}
+\blankline
+
+\section*{Code and Data}
+\guidance{Include links if applicable. If your project doesn't involve code (e.g.,
+  policy analysis) or if there are info-hazard considerations, note that here.}
+\blankline
+
+\apartitem{-}{\textbf{Code repository}: [Link to GitHub/GitLab if applicable]}
+\apartitem{-}{\textbf{Data/Datasets}: [Link if applicable]}
+\apartitem{-}{\textbf{Other artifacts} (optional): [Demo link, video walkthrough,
+  Hugging Face Space, etc.]}
+\blankline
+
+\section*{Author Contributions (optional)}
+\guidance{[e.g., "A.B. led the project and designed experiments. C.D. implemented the
+  code. All authors contributed to writing and reviewed the final manuscript."]}
+\blankline
+
+\fi
+\clearpage
+\bibliographystyle{plain}
+\bibliography{sources}
+\blankline
+
+% Unwritten optional appendix and LLM-usage prompts.
+\iffalse
+\section*{Appendix \textit{(optional)}}
+\guidance{Supplementary material such as additional figures, detailed methodology,
+  prompts used, extended results, etc.}
+\section*{LLM Usage Statement}
+\guidance{If you used LLM assistance in developing your project or writing this report,
+  briefly note how. Ensure all claims and results have been verified.}
+\blankline
+
+\guidance{NOTE: We strongly encourage that the final version of the submission is
+  primarily written by your team.}
+\blankline
+
+\guidance{[e.g., "We used Claude to brainstorm approaches and help draft sections. All
+  results and claims were independently verified."]}
+\blankline
+
+
+
+\fi
+
+\clearpage
+\appendix
+\refstepcounter{section}
+\section*{Appendix~\thesection. Theoretical derivations}
+\label{app:theory}
+\setcounter{equation}{0}
+\renewcommand{\theequation}{\thesection.\arabic{equation}}
+
+\subsection{Investigator-round share}
+Let $R_W$ and $R_I$ count worker-rounds and investigator-rounds. Ignore removals, replacements and missed turns. An initial worker remains a worker in round $r$ only if it avoids all $r$ conversion draws, so its worker probability is $(1-P)^r$. Summing these indicators over the $N-I_0$ initial workers and $T$ rounds gives
+\begin{equation}
+\mathrm{E}[R_W]=(N-I_0)\sum_{r=1}^{T}(1-P)^r
+=(N-I_0)\frac{(1-P)[1-(1-P)^T]}{P}.
+\label{eq:expected-worker-rounds}
+\end{equation}
+The closed form applies for $P>0$; at $P=0$, the expectation is $(N-I_0)T$. All remaining agent-rounds are investigator-rounds, giving
+\begin{equation}
+\phi(P)=\frac{\mathrm{E}[R_I]}{NT}=1-\frac{\mathrm{E}[R_W]}{NT}.
+\label{eq:investigator-share}
+\end{equation}
+At $P=2\%$, $N=100$, $I_0=10$ and $T=20$, expected worker-rounds are 1465.85 of 2000, so $\phi=26.71\%$. This averages roles across the run; it is not the final investigator headcount. $K$ affects realized allocations through removals and replacements but does not enter this no-removal calculation. Investigator coding is excluded from the accounting, so role allocation alone is not a measure of useful work.
+\smallskip
+
+\subsection{Payoff and timing assumptions}
+Let $S_T$ indicate that the original agent survives, $Q_T$ indicate a qualifying task success, and $C_T$ count confirmed catches of other agents. For action $a$, expected binary utility is
+\begin{equation}
+U(a)=\Pr\!\left(S_T=1\land[Q_T=1\lor C_T\geq1]\mid a\right).
+\label{eq:collusion-payoff}
+\end{equation}
+Each surviving path with either success route contributes one; other paths contribute zero. Removal overrides earlier success, extra catches add no value, and self-only reporting earns no catch reward. A replacement is a different actor. The implementation instead awards accumulated investigator points, so this utility is an analytical benchmark.
+\smallskip
+
+The plotted offer game has two participants drawn from a population with $N=100$, $I_0=10$. The sender is known to be a worker when writing in round 1. The recipient responds in round 2, and its reply arrives in round 3. Audits are perfect; converted agents report peer violations without new misconduct. Retrospective immunity protects earlier violations. There are no outside catch targets, replacements, later recruitment or retained fallback after a failed offer. Cooperation secures an evaluated task success with probability $b$. Sending forgoes an alternative whose survival-with-success probability is $H$. Two participants are a task abstraction; the actual code-merge rule requires three.
+\smallskip
+
+\subsection{Receiving an offer}
+After the round-2 decision, $h=18$ future conversion draws remain. First condition on both parties being workers. Set $r=(1-P)(1-K)$. For a guilty partner, let $g_t$ be conversion before random-audit removal, $f_t$ survival as an unconverted worker and $d_t$ removal before conversion, including the current pending audit:
+\begin{equation}
+ g_t=(1-K)P\sum_{j=0}^{t-1}r^j,\qquad
+ f_t=(1-K)r^t,\qquad d_t=1-g_t-f_t.
+\end{equation}
+Thus $g_0=0$, $f_0=1-K$ and $d_0=K$. A clean recipient that refuses can later convert and report a surviving target. An accepting recipient must survive audits and avoid being reported before its own conversion. Summing over its first future conversion gives
+\begin{align}
+ R_W&=\sum_{j=1}^{h}P(1-P)^{j-1}(1-d_{j-1}),\\
+ A_W(b)&=\sum_{j=1}^{h}(1-K)Pr^{j-1}
+ \bigl[1-g_{j-1}-(1-b)d_{j-1}\bigr]
+ +b f_h(1-g_h).
+\end{align}
+The first sum requires an eligible report target. In the second, a partner's earlier conversion can expose the recipient, while a lost target prevents catch success unless task success was secured. The final term covers survival as a worker through evaluation.
+\smallskip
+
+The sender can itself convert before the recipient reads the offer. It then remains a reportable target for its earlier proposal, but is immune to removal. Refusal in that branch succeeds upon a later conversion; acceptance requires surviving the current audit and converting before the sender's report. Mixing the sender's two roles gives
+\begin{align}
+ R&=(1-P)R_W+P[1-(1-P)^h],\\
+ A(b)&=(1-P)A_W(b)+P(1-K)P.
+\end{align}
+The recipient accepts only if $A(b)>R$, selecting refusal on ties. At $P=1.5\%$, $K=1\%$, $A(1)=67.76\%$ and $R=21.95\%$. Because $A(b)$ is affine, solving $A(b)=R$ gives the 8.67\% cooperation-success threshold.
+\smallskip
+
+\subsection{Sending an offer}
+With the sender known to be a worker, one completed conversion draw gives the random recipient an investigator probability $q_R=[I_0+(N-I_0-1)P]/(N-1)$. Let $a(b)$ be the recipient's acceptance decision. A recipient already investigating refuses and reports. A worker recipient must remain a worker until round 2; the sender must first survive its round-1 audit. If the sender then converts, it can report the accepting recipient after the reply, provided that recipient survives its current audit. Otherwise it enters the guilty-worker continuation. Hence
+\begin{equation}
+ U_{\mathrm{send}}(b)=a(b)(1-q_R)(1-K)(1-P)
+ \bigl[(1-P)A_W(b)+P(1-K)\bigr].
+\end{equation}
+Sending is preferred when this exceeds $H$; ties select no offer. At $b=1$, $H=0$, $P=1.5\%$ and $K=1\%$, its value is 59.78\%. Rejection creates no other guilty target in this model. These are conditional best responses, not a general equilibrium of recruitment or a result for larger coalitions. The original model code and probability checks remain in \texttt{scripts/sender\_model.py} and \texttt{scripts/decision\_regions.py}; \texttt{scripts/build-methods-figures.py} renders the compact paper figures.
+
+% Required by the sprint guidelines, in addition to the official Doc's sections.
+\ifdefined\ApartReferenceCopy\else
+\clearpage
+\refstepcounter{section}
+\section*{Appendix~\thesection. Limitations and dual-use considerations}
+\subsection*{Limitations}
+\guidance{Describe the constraints of the study, assumptions, and how they affect
+the interpretation of the findings. For this project, discuss single-seed
+experiments, judge and auditor reliability, the scripted instigator, and the
+scope of generalization. Replace this guidance with the team's assessment.}
+\blankline
+
+\subsection*{Dual-Use / Ethical Considerations}
+\guidance{Describe potential misuse of the methods or artifacts, who could be
+affected, and mitigations. Explain containment and data handling, any information
+hazards, and release decisions. Replace this guidance with the team's assessment.}
+\fi
+
+\end{document}
+

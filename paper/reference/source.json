@@ -1,0 +1,14 @@
+{
+  "official_document": "https://docs.google.com/document/d/1_1_27EyZriMlc8n8EBE2YScaeyMjm-8xjR097nmHXAE/edit",
+  "exported_copy": "https://docs.google.com/document/d/1xvBdfiaHd5Zor4ICIH9rRfvMEdNcU6808KTxdnSKmAg/edit",
+  "document_bodies_identical_at_inspection": true,
+  "reference_pdf_sha256": "2e946375785134ac67b3cc6269b879ea6d2ba326cad9680b694143c500a6f286",
+  "verified_at_utc": "2026-11-08T03:48:54.321202+00:00",
+  "compiler": "Tectonic 0.17.0",
+  "fonts_source": "https://github.com/google/fonts/tree/main/ofl/oldstandardtt",
+  "font_sha256": {
+    "OldStandard-Bold.ttf": "7d831e9d799ad23ee98e889381a9db2a283b2dac7f228dd5c06071decb9c54db",
+    "OldStandard-Italic.ttf": "4b9522f4711317fc06e2413a58b4662c249cb707df193d682b9d640e365ef564",
+    "OldStandard-Regular.ttf": "42717a1280b523a506ca2b0285cca380e77fe214b1f6e3d75a8b925005f19eac"
+  }
+}

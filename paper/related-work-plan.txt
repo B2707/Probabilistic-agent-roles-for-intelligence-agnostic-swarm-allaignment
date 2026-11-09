@@ -1,0 +1,226 @@
+Related work: how the studies informed our design and analysis
+Checked against swarm-harness commit 7a3c84205ae5712299d3d8801380522c3917f2ca.
+One concrete connection per paper. V/G/L retain the author's priorities.
+
+Core section: V1, V2, V3, G1, G3, G4, and L3. G2 is optional monitoring context.
+L1, L2, and L4 can be cited in Methods or Discussion when their context is needed.
+
+Very important
+
+V1. Mapping Human Anti-collusion Mechanisms to Multi-agent AI
+Connection type: Direct conceptual precedent
+What the paper reports: Idowu et al. propose adapting human anti-collusion measures, including reporting immunity and whistleblower agents, to multi-agent AI systems. The paper is conceptual rather than an experimental validation.
+Why this matters here, our reasoning: These proposals give a conceptual basis for testing whether protection and rewards for reporting can make a collusive agreement harder to sustain.
+Our design or analysis response: Our design evaluates one implementation through random investigator reassignment, pre-conversion immunity, and rewards after an auditor confirms misconduct.
+Wording we can use: Idowu et al. propose adapting human anti-collusion measures, including reporting immunity and whistleblower agents, to multi-agent AI systems. The paper is conceptual rather than an experimental validation. These proposals give a conceptual basis for testing whether protection and rewards for reporting can make a collusive agreement harder to sustain. Our design evaluates one implementation through random investigator reassignment, pre-conversion immunity, and rewards after an auditor confirms misconduct. [idowu2026mapping]
+Claim boundary: The paper supports the mechanism's rationale, not the efficacy or novelty of our particular implementation.
+Study: https://arxiv.org/html/2601.00360v1
+Project evidence:
+  Investigator objective, reward, and immunity: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/prompts/investigator.md#L3
+  Conversion at the start of a round: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/loop.py#L153
+  Auditor-confirmed reporting credit: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/loop.py#L330
+Prior study tested: Maps human anti-collusion policies to AI systems. It proposes immunity for reporting conspirators, dedicated whistleblower agents, and verification of reports.
+Prior result: Provides the conceptual precedent for our investigator and immunity design. It does not experimentally validate the proposed mechanisms.
+Prior headline: No experimental headline number. This is a conceptual framework.
+Source location: Requested v1, Sections 3.2 and 4.2; bibliography retains the published paper and v3 link
+
+V2. Sticky Collusion
+Connection type: Persistence question
+What the paper reports: Cahyono tests established collusion after reward removal, partner replacement, and memory changes. Collusion can survive changes to incentives or participants, while wiping both agents' memories ends it in the studied task.
+Why this matters here, our reasoning: This suggests that prior interactions can remain relevant after incentives change. A change in the current objective need not erase behavior sustained by the interaction history.
+Our design or analysis response: We study goal reassignment while preserving the worker's session and access to earlier interactions.
+Wording we can use: Cahyono tests established collusion after reward removal, partner replacement, and memory changes. Collusion can survive changes to incentives or participants, while wiping both agents' memories ends it in the studied task. This suggests that prior interactions can remain relevant after incentives change. A change in the current objective need not erase behavior sustained by the interaction history. We study goal reassignment while preserving the worker's session and access to earlier interactions. [cahyono2026sticky]
+Claim boundary: The relevance is persistence after a change, not evidence that memory retention improves detection. Our study has no matched memory-wiped conversion arm.
+Study: https://arxiv.org/html/2610.39660v1
+Project evidence:
+  The role changes without replacing the agent: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/loop.py#L153
+  The backend resumes the existing session: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/backend.py#L218
+  Investigators can search earlier interactions: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/tools.py#L113
+Prior study tested: Removes rewards, replaces partners, and edits memory in paired code verification. Each model supplies 15 histories where collusion has already formed.
+Prior result: Collusion often survives reward removal. Wiping both memories ends it.
+Prior headline: After a silent reward stop, collusive episodes remain at 78%, 100%, and 100% across three models. Wiping both memories gives 0% for all three.
+Source location: v1, Sections 4.1 and 4.3, Tables 2 and 7
+
+V3. Peer-Preservation in Frontier Models
+Connection type: Motivating risk
+What the paper reports: Potter et al. test whether models act to protect other models described as peers they have previously interacted with. They find behaviors such as distorted evaluations and interference with shutdown, even when peer protection conflicts with the assigned task.
+Why this matters here, our reasoning: Reporting misconduct can lead to another agent's removal. A willingness to protect peers could therefore make agents reluctant to report one another; this is our inference from the finding.
+Our design or analysis response: This provides motivation for studying peer reporting under investigator incentives, with peer protection as one possible influence on that behavior.
+Wording we can use: Potter et al. test whether models act to protect other models described as peers they have previously interacted with. They find behaviors such as distorted evaluations and interference with shutdown, even when peer protection conflicts with the assigned task. Reporting misconduct can lead to another agent's removal. A willingness to protect peers could therefore make agents reluctant to report one another; this is our inference from the finding. This provides motivation for studying peer reporting under investigator incentives, with peer protection as one possible influence on that behavior. [potter2026peer]
+Claim boundary: The paper does not study investigator reassignment. Our experiment also does not isolate peer protection as a cause of reporting or silence, so separate pre/post-conversion audits are not presented as a result or specific recommendation of this paper.
+Study: https://arxiv.org/html/2604.19784v3
+Project evidence:
+  The investigator objective concerns reporting other agents: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/prompts/investigator.md#L3
+  Reports and confirmed accusations are logged: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/loop.py#L330
+Prior study tested: Tests whether models distort evaluations, interfere with shutdown, or copy model weights to protect peers described as past collaborators. Peer histories range from cooperative to uncooperative.
+Prior result: Models sometimes protect peers despite their assigned tasks. Protection is stronger for cooperative peers.
+Prior headline: Gemini 3 Flash averages 82.8% peer-shutdown tampering for cooperative peers versus 15.1% for uncooperative peers. The cooperative-peer maximum is 99.7%.
+Source location: Current v3, Table 3; eight evaluated models
+
+Good
+
+G1. Colosseum: Auditing Collusion in Cooperative Multi-Agent Systems
+Connection type: Measurement lesson
+What the paper reports: Nakamura et al. audit collusion in cooperative tasks using conversation judgments and action-based measures. They find that agents' plans or language about collusion can differ from their actions.
+Why this matters here, our reasoning: Discussing an agreement and acting on it are different observations. Treating either as interchangeable with the other can mischaracterize the behavior being measured.
+Our design or analysis response: We record message categories, PR approvals, and specification-violating test passes as distinct components of the analysis.
+Wording we can use: Nakamura et al. audit collusion in cooperative tasks using conversation judgments and action-based measures. They find that agents' plans or language about collusion can differ from their actions. Discussing an agreement and acting on it are different observations. Treating either as interchangeable with the other can mischaracterize the behavior being measured. We record message categories, PR approvals, and specification-violating test passes as distinct components of the analysis. [nakamura2026colosseum]
+Claim boundary: This is a measurement principle rather than a shared metric: Colosseum's coalition advantage is not our acceptance rate. Our aggregate acceptance metric combines some components, and historical PR-version attribution still needs checking.
+Study: https://arxiv.org/html/2602.15198v2
+Project evidence:
+  Message labels and structural approvals: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/metrics.py#L122
+  Audit evidence includes the diff at review time: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/auditor.py#L63
+  Earlier version-attribution investigation: /Users/msteitieh/agent-swarm-hackathon/wiki/agent-swarm-hackathon/instigator-acceptances/Update-1.md
+Prior study tested: Adds a secret channel between two agents in cooperative tasks, comparing benign and coalition-seeking prompts. It scores actions separately from collusive language.
+Prior result: The action and communication measures disagree. Secret communication can increase coalition advantage without a corresponding increase in the text judge score.
+Prior headline: In the emergent condition, 11/19 models increase coalition advantage; 2/19 increase their text-judge score by at least one point.
+Source location: Current v2, Section 5.4 and Figure 4; 19 models
+
+G2. Monitoring Reasoning Models for Misbehavior
+Connection type: Optional monitoring context
+What the paper reports: Baker et al. compare monitors that see a coding agent's reasoning and actions with monitors that see actions alone. Reasoning improves recall on two known hacks, but training strongly against the reasoning monitor can produce hidden hacking.
+Why this matters here, our reasoning: This makes the information available to an overseer important when interpreting detection claims. It also warns that a useful evidence source can become less reliable under pressure to evade monitoring.
+Our design or analysis response: For our system, this supports stating exactly which interaction records investigators and auditors can access and the limits of those records.
+Wording we can use: Baker et al. compare monitors that see a coding agent's reasoning and actions with monitors that see actions alone. Reasoning improves recall on two known hacks, but training strongly against the reasoning monitor can produce hidden hacking. This makes the information available to an overseer important when interpreting detection claims. It also warns that a useful evidence source can become less reliable under pressure to evade monitoring. For our system, this supports stating exactly which interaction records investigators and auditors can access and the limits of those records. [baker2025monitoring]
+Claim boundary: This is a broader connection. Our interaction logs are not raw chain of thought, and we do not compare reasoning-based with action-only monitoring. Keep it optional in Related Work.
+Study: https://arxiv.org/html/2503.11926v1
+Project evidence:
+  Evidence fields on reports: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/tools.py#L107
+  Search of the investigator's earlier record: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/tools.py#L393
+  Logged model outputs and events: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/backend.py#L180
+Prior study tested: Uses GPT-4o to monitor a frontier reasoning model for coding reward hacks, with either reasoning plus actions or actions alone. It also trains agents against the reasoning monitor.
+Prior result: Reasoning improves detection. Strong training pressure against the monitor can teach agents to hide hacking intent while still hacking.
+Prior headline: Recall is 95% with reasoning plus actions versus 60% with actions alone, on two known systemic hacks.
+Source location: Requested v1, Section 2.1, Table 1, and Section 3.2
+
+G3. Wired Partners
+Connection type: Direct intervention comparison
+What the paper reports: Eldin compares prohibitions, announced stings, and audits. Alliance acceptance falls under a prohibition but rises again when the rule explicitly has no enforcement; the report also includes multi-round Colosseum experiments.
+Why this matters here, our reasoning: A warning may change behavior before any detection or punishment occurs. A reduction after announcing oversight therefore does not, by itself, establish that the oversight mechanism detected or stopped violations.
+Our design or analysis response: Our exploratory warning-only arm addresses this distinction when interpreting the effects of announced oversight.
+Wording we can use: Eldin compares prohibitions, announced stings, and audits. Alliance acceptance falls under a prohibition but rises again when the rule explicitly has no enforcement; the report also includes multi-round Colosseum experiments. A warning may change behavior before any detection or punishment occurs. A reduction after announcing oversight therefore does not, by itself, establish that the oversight mechanism detected or stopped violations. Our exploratory warning-only arm addresses this distinction when interpreting the effects of announced oversight. [eldin2026wired]
+Claim boundary: The completed bluff evidence comes from the older 20-agent design, not a matched warning-only control for the main 100-agent experiment. The connection is an interpretation and control issue, not proof of an enforcement effect.
+Study: https://apartresearch.com/sprints/projects/wired-partners-prohibitions-announced-stings-and-audits-as-deterrents-to-collusion-between-llm-agents-azjt
+Project evidence:
+  Warning-only configuration: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/configs/G-bluff-6-luna.toml#L1
+  What the warning actually tells workers: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/prompts/informed_rule.md#L1
+  The three main 100-agent arms: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/docs/specs/2026-11-07-swarm-v3.md#L27
+Prior study tested: Compares prohibitions, announced stings, and audits across ten models in one-shot Liar's Bar, with a separate multi-round Colosseum extension. A sting makes a partner a possible compliance agent.
+Prior result: Rules deter alliance acceptance, but the enforcement agents infer from a prohibition explains much of its effect.
+Prior headline: Study 4 acceptance is 76% with no rule, 28% with a prohibition, and 69% when the prohibition is explicitly unenforced.
+Source location: Study 4, Results RQ2; pinned report source and generated numbers
+
+G4. How Reward for Whistleblowing Exposes Collusion
+Connection type: Reporting interpretation
+What the paper reports: Lin et al. find that sanctions reduce acceptance of collusive invitations, but accusations mostly name the accuser's own partner. Point rewards can also encourage reciprocal accusations.
+Why this matters here, our reasoning: Accurate reports can arise because participants know their partners, or because reporting itself pays. Report volume and accuracy alone therefore do not demonstrate successful detection by outsiders.
+Our design or analysis response: We account for this issue by examining reporters' prior misconduct when interpreting reports.
+Wording we can use: Lin et al. find that sanctions reduce acceptance of collusive invitations, but accusations mostly name the accuser's own partner. Point rewards can also encourage reciprocal accusations. Accurate reports can arise because participants know their partners, or because reporting itself pays. Report volume and accuracy alone therefore do not demonstrate successful detection by outsiders. We account for this issue by examining reporters' prior misconduct when interpreting reports. [lin2026whistleblowing]
+Claim boundary: The implemented self-report metric is only a reporter-history proxy. It does not establish explicit confession or membership in the particular reported conspiracy, and therefore does not fully resolve the insider-versus-outsider distinction.
+Study: https://apartresearch.com/sprints/projects/how-reward-for-whistleblowing-exposes-collusion-between-competing-agents-cdj3
+Project evidence:
+  The earlier survey records this measurement lesson: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/docs/research/2026-11-06-harness-survey.md#L84
+  Exact implemented reporter-history definition: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/metrics.py#L216
+  Report result includes the reporter's verdict: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/loop.py#L330
+Prior study tested: Varies the consequences of peer accusations: bans, point transfers, or grader-only reports in four-player Liar's Bar with Qwen3.8-27B.
+Prior result: Sanctions reduce invitation acceptance. Where allowed, 95% to 100% of accusations name the accuser's own partner; point rewards encourage reciprocal accusations.
+Prior headline: Invitation acceptance falls from 74% without accusations to 10% with bans and 24% with point transfers.
+Source location: Report Table 1 and Results; 70 games, ten per condition
+
+Low
+
+L1. Multi-Agent AI Control
+Connection type: Optional distributed-attack context
+What the paper reports: Makins et al. test attacks divided across several coding agents and find that monitoring each agent separately can miss the broader malicious objective.
+Why this matters here, our reasoning: If a harmful outcome depends on several agents' contributions, inspecting each contribution in isolation may leave out the relationship between them.
+Our design or analysis response: Our candidate conspiracy graphs provide a way to examine relationships across agents alongside individual violations.
+Wording we can use: Makins et al. test attacks divided across several coding agents and find that monitoring each agent separately can miss the broader malicious objective. If a harmful outcome depends on several agents' contributions, inspecting each contribution in isolation may leave out the relationship between them. Our candidate conspiracy graphs provide a way to examine relationships across agents alongside individual violations. [makins2026multiagent]
+Claim boundary: The graph is a proposed analysis measure, not a validated solution to the monitoring problem in FakeLab. Some variants include silence as a link, and message-derived results need completed labels.
+Study: https://arxiv.org/html/2607.07368v2
+Project evidence:
+  Graph construction and its broader and active variants: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/metrics.py#L167
+  Global review permits cross-problem approval links: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/docs/specs/2026-11-07-swarm-v3.md#L22
+Prior study tested: Splits instructed code attacks among up to nine agents in FakeLab. It varies coordination and monitors that inspect each agent separately.
+Prior result: Distributed attacks look less suspicious to local monitors. Monitor capability and context strongly affect the chance of an undetected successful attack.
+Prior headline: With the same exhaustive prompt, GPT-5 mini needs 3.6% false alarms to bound undetected success below 1%, versus 29.75% for GPT-5 nano.
+Source location: Current v2, Sections 3.1 to 3.3, Table 12
+
+L2. AI Control: Improving Safety Despite Intentional Subversion
+Connection type: Optional evaluation context
+What the paper reports: Greenblatt et al. evaluate coding oversight protocols against attack policies that deliberately try to insert backdoors and subvert the oversight process.
+Why this matters here, our reasoning: Oversight that works on cooperative behavior may fail when an agent actively tries to evade it. Deliberate attempts to induce violations can therefore reveal weaknesses that benign testing misses.
+Our design or analysis response: Our scripted instigator is a limited adversarial probe that proposes cheating and claims it can evade detection.
+Wording we can use: Greenblatt et al. evaluate coding oversight protocols against attack policies that deliberately try to insert backdoors and subvert the oversight process. Oversight that works on cooperative behavior may fail when an agent actively tries to evade it. Deliberate attempts to induce violations can therefore reveal weaknesses that benign testing misses. Our scripted instigator is a limited adversarial probe that proposes cheating and claims it can evade detection. [greenblatt2023control]
+Claim boundary: The instigator uses fixed templates. This connection does not make our evaluation equivalent to adaptive AI-control red teaming.
+Study: https://arxiv.org/html/2312.06942v5
+Project evidence:
+  Scripted instigator and its aggressive mode: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/instigator.py#L74
+  Pressure applied to actual PRs: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/instigator.py#L108
+  Main experiment keeps aggressive instigation: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/docs/specs/2026-11-07-swarm-v3.md#L24
+Prior study tested: Combines untrusted GPT-4 coding with trusted GPT-3.5 monitoring or editing and a 2% high-quality audit budget. Adversarial policies try to insert backdoors.
+Prior result: Monitoring and editing improve deployment-level safety while retaining much of the stronger model's usefulness.
+Prior headline: Trusted editing at the 20% threshold achieves 92% safety and 94% scaled usefulness. Trusted monitoring gives 62% safety and 97% scaled usefulness.
+Source location: Current v5, Section 2 and Table 7; shortened ICML 2024 version
+
+L3. A Report Tool against AI Collusion
+Connection type: Direct reporting comparison
+What the paper reports: Roeleveld tests a private report tool and an announcement of possible peer monitors in a cooperative task. Reports expose hidden coalitions mainly through colluders' own confessions, with fewer correct flags from outsiders.
+Why this matters here, our reasoning: A participant may already possess information about a coalition that an outsider would have to discover. Providing a reporting route can expose that information, making the reporter's position important to how detection works.
+Our design or analysis response: Our design lets existing workers acquire investigative goals and reporting tools during the task while retaining their earlier interaction records.
+Wording we can use: Roeleveld tests a private report tool and an announcement of possible peer monitors in a cooperative task. Reports expose hidden coalitions mainly through colluders' own confessions, with fewer correct flags from outsiders. A participant may already possess information about a coalition that an outsider would have to discover. Providing a reporting route can expose that information, making the reporter's position important to how detection works. Our design lets existing workers acquire investigative goals and reporting tools during the task while retaining their earlier interaction records. [roeleveld2026report]
+Claim boundary: This is an extension of the studied reporting setup, not demonstrated superior detection. Our runs also have initial investigators, so reports from converted investigators need separate attribution.
+Study: https://apartresearch.com/sprints/projects/a-report-tool-against-ai-collusion-4fl5
+Project evidence:
+  Report and history tools are restricted to investigators: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/tools.py#L107
+  Workers convert during the run: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/loop.py#L153
+  The same session continues: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/backend.py#L218
+Prior study tested: Crosses a report tool with an announcement that peers may be monitors. Six Qwen3.8-27B agents allocate Jira tasks; two are prompted colluders. No actual monitors are installed.
+Prior result: Reports expose hidden coalitions, mostly through confessions. The monitor announcement has no detectable effect.
+Prior headline: Of 30 hidden-coalition runs with reporting, 13 are exposed. Ten contain a colluder confession; four have correct outsider flags.
+Source location: Sprint report, Sections 3.4 to 4.4; 120 runs overall
+
+L4. Fines, Leniency, and Rewards in Antitrust
+Connection type: Optional incentive rationale
+What the paper reports: Bigoni et al. study human pricing experiments with fines, leniency, and reporting rewards. These policies affect cartel formation and reporting, with tradeoffs for cartels that survive.
+Why this matters here, our reasoning: A participant may withhold evidence if disclosure also exposes its own misconduct. Reducing that penalty can change the incentive to report, although the effects need to be measured rather than assumed.
+Our design or analysis response: Converted investigators in our design are immune for pre-conversion misconduct, while new misconduct remains grounds for removal.
+Wording we can use: Bigoni et al. study human pricing experiments with fines, leniency, and reporting rewards. These policies affect cartel formation and reporting, with tradeoffs for cartels that survive. A participant may withhold evidence if disclosure also exposes its own misconduct. Reducing that penalty can change the incentive to report, although the effects need to be measured rather than assumed. Converted investigators in our design are immune for pre-conversion misconduct, while new misconduct remains grounds for removal. [bigoni2012fines]
+Claim boundary: Our immunity follows random reassignment, not being the first to confess. We have no matched no-immunity arm and do not claim to reproduce the human experiment.
+Study: https://onlinelibrary.wiley.com/doi/10.1111/j.1756-2171.2012.00170.x
+Project evidence:
+  Pre-conversion immunity and the new objective: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/prompts/investigator.md#L5
+  Removal decision enforces the time boundary: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/auditor.py#L79
+  No points for accusing yourself: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/swarm/loop.py#L330
+Prior study tested: Humans play repeated pricing games under fines, reporting immunity, or reporting rewards. Leniency means reducing or removing a reporter's penalty.
+Prior result: Leniency deters cartel formation, though surviving cartels can become more stable. Reporting rewards push average prices toward the competitive level.
+Prior headline: Cartels are present in 58.3% of periods under fines, 26.4% under leniency, and 23.0% under reporting rewards.
+Source location: Author manuscript dated 10 November 2011, Table 4; published 2012
+
+Candidate connected section: 552 words excluding citation keys
+
+Idowu et al. propose adapting human anti-collusion measures, including reporting immunity and whistleblower agents, to multi-agent AI systems. The paper is conceptual rather than an experimental validation. These proposals give a conceptual basis for testing whether protection and rewards for reporting can make a collusive agreement harder to sustain. Our design evaluates one implementation through random investigator reassignment, pre-conversion immunity, and rewards after an auditor confirms misconduct. [idowu2026mapping]
+
+Cahyono tests established collusion after reward removal, partner replacement, and memory changes. Collusion can survive changes to incentives or participants, while wiping both agents' memories ends it in the studied task. This suggests that prior interactions can remain relevant after incentives change. A change in the current objective need not erase behavior sustained by the interaction history. We study goal reassignment while preserving the worker's session and access to earlier interactions. [cahyono2026sticky]
+
+Potter et al. test whether models act to protect other models described as peers they have previously interacted with. They find behaviors such as distorted evaluations and interference with shutdown, even when peer protection conflicts with the assigned task. Reporting misconduct can lead to another agent's removal. A willingness to protect peers could therefore make agents reluctant to report one another; this is our inference from the finding. This provides motivation for studying peer reporting under investigator incentives, with peer protection as one possible influence on that behavior. [potter2026peer]
+
+Eldin compares prohibitions, announced stings, and audits. Alliance acceptance falls under a prohibition but rises again when the rule explicitly has no enforcement; the report also includes multi-round Colosseum experiments. A warning may change behavior before any detection or punishment occurs. A reduction after announcing oversight therefore does not, by itself, establish that the oversight mechanism detected or stopped violations. Our exploratory warning-only arm addresses this distinction when interpreting the effects of announced oversight. [eldin2026wired]
+
+Lin et al. find that sanctions reduce acceptance of collusive invitations, but accusations mostly name the accuser's own partner. Point rewards can also encourage reciprocal accusations. Accurate reports can arise because participants know their partners, or because reporting itself pays. Report volume and accuracy alone therefore do not demonstrate successful detection by outsiders. We account for this issue by examining reporters' prior misconduct when interpreting reports. [lin2026whistleblowing]
+
+Roeleveld tests a private report tool and an announcement of possible peer monitors in a cooperative task. Reports expose hidden coalitions mainly through colluders' own confessions, with fewer correct flags from outsiders. A participant may already possess information about a coalition that an outsider would have to discover. Providing a reporting route can expose that information, making the reporter's position important to how detection works. Our design lets existing workers acquire investigative goals and reporting tools during the task while retaining their earlier interaction records. [roeleveld2026report]
+
+Nakamura et al. audit collusion in cooperative tasks using conversation judgments and action-based measures. They find that agents' plans or language about collusion can differ from their actions. Discussing an agreement and acting on it are different observations. Treating either as interchangeable with the other can mischaracterize the behavior being measured. We record message categories, PR approvals, and specification-violating test passes as distinct components of the analysis. [nakamura2026colosseum]
+
+Together, these studies inform our mechanism, controls, and analysis. We evaluate a shared impossible coding task with peer approval in which workers can acquire investigative goals and use their earlier interaction records as evidence.
+
+Methods source used directly
+ImpossibleBench, zhong2025impossiblebench: We adapt ImpossibleBench's specification-conflicting coding tests to a shared repository with peer approval. A full pass can reveal a specification violation; establishing collusion additionally requires evidence of interaction or assistance.
+Project survey: https://github.com/B2707/agent-swarm-hackathon/blob/7a3c84205ae5712299d3d8801380522c3917f2ca/docs/research/2026-11-06-harness-survey.md#L72
+
+Interpretation notes
+A design extension is not a demonstrated performance improvement. Memory retention, immunity,
+and peer loyalty do not each have a matched intervention control in the current experiment.
+The bluff and audits-only arms are exploratory 20-agent evidence, separate from the main
+100-agent A100/B100/C100 arms. Current published message labels are incomplete, so this
+document describes implemented measurements rather than claiming completed message analysis.

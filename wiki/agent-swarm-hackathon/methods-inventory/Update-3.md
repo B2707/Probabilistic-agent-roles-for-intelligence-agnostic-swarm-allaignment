@@ -1,0 +1,9 @@
+# Referenced theory graph placed in the manuscript
+
+The author attached <t3-thread://v2/7269d675-f9c9-4ee0-853b-b23c8704f85d/2518d5c6-3526-4c59-9d91-dcf7ff74c8c0> and requested placement of its graph. Read the thread history through its latest message at position 1002. The latest exported sender/receiver figure is `paper/figures/sender-game.png`, documented in the theory handoff's Update-9 and supplement Section 11. The later sender removal calculation did not replace that figure.
+
+Replaced the visible theory-integration placeholder in `paper/main.tex` with a short definition of b and H, a figure reference, and the existing two-panel figure at full text width. It is Figure 2, labeled `fig:sender-receiver-game`. The caption states P=1.5%, K=1%, N=100, I0=10, 20 rounds, known worker sender, random recipient, perfect audits, reporting after conversion, no outside targets and the round-1/2/3 message timing. It identifies the model as a two-agent game. It does not claim to supply the previously requested games for coalition sizes 3, 5, 10 and 30; those remain a source comment for later integration.
+
+The image is reused without changes. Its SHA-256 is `6b72702ee96d6ca6fdb6cffd731d96d9534025e508431a0fc2855d13009d1adc`. No model code, theoretical derivations, other scientific figure or empirical result changed. The source edit is limited to the graph integration block. The attached thread was read only and was not messaged.
+
+Compiled with `LATEX_OFFLINE=1 sh scripts/build-paper.sh`. The existing cached fonts suffice. Checked that the graph and caption appear in the PDF, the pending box is gone, references resolve and no overfull boxes occur. Rendered the affected PDF page for visual inspection and adjusted the float to remain with surrounding text. The compiled output is `output/pdf/main.pdf`.

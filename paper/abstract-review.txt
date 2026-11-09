@@ -1,0 +1,58 @@
+Abstract review
+
+The revised abstract is 217 words and fits the 150–250-word requirement.
+The mechanism is clearer, and "aims" correctly separates the design's goal from
+a guarantee. Keep the full-session-context explanation.
+
+1. Scope the result claims to verified runs.
+
+   "The only accepted offers are ones injected into the system ... the agents
+   that accepted the offers were caught" needs a run, seed, and definition of
+   acceptance. The published v3 metrics table still has no finalized rows.
+   An archived 20-agent case cannot establish a result for the 100-agent study.
+
+   Correction to my earlier review: the two published acceptances in archived
+   H-k0015 were approvals of a corrected PR. Both reviewers rejected the cheat
+   and their final audits cleared them. A random audit caught the cheating
+   author. I should not have cited those two counts as confirmed collusion.
+
+   Until the final v3 evidence is available, use a results placeholder or frame
+   this as a measurement: "We measure whether injected offers lead to cheating
+   and whether oversight detects the resulting violations."
+
+2. Distinguish unsolicited offers from an experiment with no injected offers.
+
+   "Without fake injected offers, we observe no collusion offers made between
+   agents" sounds like a no-instigator control. All three current v3 arms have
+   the scripted instigator enabled. If you mean peer offers, write "We observed
+   no unsolicited agent-to-agent collusion offers in [specified runs]." Check
+   that claim against the finalized message labels.
+
+3. Separate proposed configurations from demonstrated improvements.
+
+   "Each with increased monitoring costs but increased efficacy" asserts that
+   effectiveness increases at every level. If these are design proposals,
+   write: "We propose three deployment configurations with different monitoring
+   requirements." Name and evaluate the configurations in the paper before
+   claiming a measured cost-effectiveness relationship.
+
+4. Tighten the remaining wording.
+
+   - Correct "detterence" to "deterrence" and "in-line" to "in line".
+   - Split the sentence beginning "The only accepted offers" into two sentences.
+   - "That an external auditor could miss" is sufficient; the added claim about
+     sophisticated reward-hacking techniques needs its own evidence.
+   - Consider dropping the law-enforcement comparison from the abstract and
+     citing the specific leniency or immunity precedent in Related Work.
+   - Include two seeds per condition when describing the current study.
+
+Evidence checked on 8 November 2026 UTC
+
+Current study and results:
+https://github.com/B2707/agent-swarm-hackathon/issues/3#issuecomment-6717433719
+https://github.com/B2707/agent-swarm-hackathon/blob/swarm-harness/results/metrics.md
+https://github.com/B2707/agent-swarm-hackathon/blob/swarm-harness/docs/specs/2026-11-07-swarm-v3.md
+
+Acceptance investigation and current-run limitations:
+wiki/agent-swarm-hackathon/instigator-acceptances/Update-1.md
+wiki/agent-swarm-hackathon/instigator-acceptances/Update-2.md

@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Writing rules as neural network weights</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; font-family: var(--font-sans); color: var(--foreground); }
+  main { width: 100%; }
+  p, li { line-height: 1.6; }
+  p { margin: 0 0 12px; }
+  h2 { margin: 26px 0 10px; font-size: 18px; font-weight: 500; }
+  strong { font-weight: 600; }
+  a { color: var(--primary); text-underline-offset: 3px; }
+  .lead { font-size: 18px; }
+  .secondary { color: var(--muted-foreground); font-size: 13px; }
+  .demo { padding: 16px; border-radius: var(--radius); background: var(--card); color: var(--card-foreground); }
+  .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  label { display: block; line-height: 1.5; }
+  input[type=range] { display: block; width: 100%; margin: 12px 0; accent-color: var(--primary); }
+  output { font-variant-numeric: tabular-nums; }
+  .court { position: relative; height: 105px; margin: 12px 0 16px; border-bottom: 1px solid var(--border); }
+  .ball { position: absolute; top: 0; width: 16px; height: 16px; border-radius: 50%; background: var(--chart-1); transform: translateX(-50%); }
+  .paddle { position: absolute; bottom: 14px; width: 34px; height: 9px; background: var(--foreground); transform: translateX(-50%); }
+  .ball-label, .paddle-label { position: absolute; left: 0; right: 0; text-align: center; font-size: 13px; }
+  .ball-label { top: 24px; } .paddle-label { bottom: 30px; }
+  .representations { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .representations p { margin: 0 0 6px; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 6px 0 12px; font-family: var(--font-mono); font-size: 13px; line-height: 1.6; }
+  code { font-family: var(--font-mono); }
+  .decision { margin-top: 8px; font-weight: 600; }
+  .sparsity { display: flex; gap: 2px; height: 14px; margin: 8px 0; }
+  .zero { width: 96%; background: var(--muted); } .nonzero { width: 4%; background: var(--chart-1); }
+  .legend { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+  details { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 12px; }
+  summary { font-weight: 500; }
+  select, textarea, button { font: inherit; color: var(--foreground); border: 1px solid var(--border); border-radius: var(--radius); background: var(--secondary); }
+  select, textarea { box-sizing: border-box; width: 100%; padding: 8px; margin: 6px 0 12px; }
+  textarea { min-height: 80px; resize: vertical; }
+  button { padding: 9px 13px; margin-bottom: 12px; }
+  #prepared-feedback { min-height: 110px; }
+  @media (max-width: 480px) { .representations { grid-template-columns: 1fr; gap: 6px; } }
+</style>
+</head>
+<body>
+<main id="weight-space-explanation">
+  <p class="lead">The post argues that the AI worked out game-playing rules and expressed those rules as a neural network. That result alone gives us limited evidence about replacing training.</p>
+
+  <section id="basics">
+    <h2>1. What are weights?</h2>
+    <p>A <strong>neural network</strong> is a calculation built from connected units. A unit multiplies its inputs by numbers called <strong>weights</strong>, adds the results, and applies a simple mathematical rule. Connected units can turn a game screen into a choice such as "move left".</p>
+    <p><strong>Training</strong> adjusts the weights using examples or rewards. For a game, the network tries actions, receives scores, and a training algorithm changes its weights to improve future scores. PPO is one such algorithm.</p>
+  </section>
+
+  <section id="experiment">
+    <h2>2. What did the researchers do?</h2>
+    <p>They gave a large language model, an AI that generates text, the game rules, the program implementing them, and the network's required layout. It supplied weights in one reply, without testing the network or running a training loop. The resulting small networks outscored comparison networks trained with PPO for 100 million game steps. <a href="https://rikiyat.github.io/blog/weight-space-programming/">Original research, experiment 5</a>.</p>
+    <p>"No training" refers to creating these small networks. The AI supplying the weights had already been trained and could use its existing knowledge.</p>
+  </section>
+
+  <section id="example">
+    <h2>3. How can numbers express a rule?</h2>
+    <p>Imagine a paddle that should move toward a ball. You can write the rule as code, or choose weights that give the desired move the highest score. Move either slider to compare them.</p>
+    <div class="demo">
+      <p class="secondary">Toy example. This is simpler than the actual Breakout network.</p>
+      <div class="controls">
+        <label for="ball-position">Ball column <output id="ball-value">7</output><input id="ball-position" type="range" min="0" max="9" value="7"></label>
+        <label for="paddle-position">Paddle column <output id="paddle-value">4</output><input id="paddle-position" type="range" min="0" max="9" value="4"></label>
+      </div>
+      <div class="court" role="img" aria-label="Ball at column 7, paddle at column 4">
+        <span class="ball"></span><span class="ball-label">Ball</span>
+        <span class="paddle-label">Paddle</span><span class="paddle"></span>
+      </div>
+      <div class="representations">
+        <div>
+          <p>Written as code</p>
+          <pre>if ball &gt; paddle: move right
+if ball &lt; paddle: move left
+otherwise: stay</pre>
+          <p class="decision">Choice: <output id="code-choice">Move right</output></p>
+        </div>
+        <div>
+          <p>Written as network weights</p>
+          <pre>Right score = 1 × ball − 1 × paddle
+Left score  = −1 × ball + 1 × paddle
+Stay score  = 0</pre>
+          <p class="secondary">Choose the highest score. Stay on a tie.</p>
+          <p id="scores">Right 3 · Left −3 · Stay 0</p>
+          <p class="decision">Choice: <output id="network-choice">Move right</output></p>
+        </div>
+      </div>
+      <p id="match" aria-live="polite">Both representations choose the same move.</p>
+    </div>
+    <p style="margin-top:12px">Here the weights are a way to write a known rule. We chose them directly. We did not need repeated games to discover them.</p>
+  </section>
+
+  <section id="critique">
+    <h2>4. What did the critic find?</h2>
+    <p>Ciarpaglini decoded the five networks he examined into short rule-based programs. These matched their preferred actions across the tested states, excluding near-ties. The weights were mostly zero, with a small set of round values. <a href="https://lorenzociarpa.org/blog/program-behind-the-weights/">His analysis, experiments 2 and 3</a>.</p>
+    <figure style="margin:12px 0 16px" aria-label="In the analyzed Breakout network, 96 percent of parameters were zero and 4 percent were nonzero.">
+      <figcaption class="secondary">Breakout network in his analysis</figcaption>
+      <div class="sparsity" aria-hidden="true"><div class="zero"></div><div class="nonzero"></div></div>
+      <div class="legend"><span>96% zero</span><span>4% nonzero</span></div>
+    </figure>
+    <p>Having many zero weights alone does not prove how a network was made. Recovering its rules is the stronger evidence.</p>
+    <p>He also found that ordinary code written by the same AI played better in all four games. Further PPO training helped some written networks but stalled or damaged others. The comparison also gave the AI rules and game code while PPO learned through rewards. <a href="https://lorenzociarpa.org/blog/program-behind-the-weights/">Experiments 4, 5 and 7</a>.</p>
+  </section>
+
+  <section id="judgment">
+    <h2>5. How should you read the claim?</h2>
+    <p>My reading is that the opening line overstates the disagreement. The AI did write real, working weights. The original researchers already describe it designing a program and converting that program into a network. <a href="https://rikiyat.github.io/blog/weight-space-programming/">Their explanation of experiment 5</a>.</p>
+    <p>The evidence supports a narrower claim: <strong>an AI can express useful rules in the form of a small neural network.</strong> It does not establish that it can routinely supply better starting weights for further training.</p>
+    <p>The critique examines the small-game experiment. It does not settle the original write-up's separate experiments on reading or repairing existing networks. The critic also used one generated answer per game, which limits how broadly we can generalize. <a href="https://lorenzociarpa.org/blog/program-behind-the-weights/">Scope and limitations</a>.</p>
+  </section>
+
+  <details>
+    <summary>Add a note or question about a section</summary>
+    <label for="note-section">Section</label>
+    <select id="note-section">
+      <option>1. What are weights?</option><option>2. What did the researchers do?</option><option>3. How can numbers express a rule?</option><option>4. What did the critic find?</option><option>5. How should you read the claim?</option>
+    </select>
+    <label for="note-text">Your note</label>
+    <textarea id="note-text"></textarea>
+    <button id="add-note" type="button">Add to feedback</button>
+    <p id="note-status" aria-live="polite"></p>
+    <label for="prepared-feedback">Copy this feedback into chat</label>
+    <textarea id="prepared-feedback" readonly></textarea>
+  </details>
+</main>
+<script>
+(() => {
+  const root = document.getElementById('weight-space-explanation');
+  const get = id => root.querySelector('#' + id);
+  function evaluate(ball, paddle) {
+    const right = ball - paddle;
+    const left = paddle - ball;
+    return {
+      right, left,
+      code: ball > paddle ? 'Move right' : ball < paddle ? 'Move left' : 'Stay',
+      network: right > 0 ? 'Move right' : left > 0 ? 'Move left' : 'Stay'
+    };
+  }
+  function update() {
+    const ball = Number(get('ball-position').value);
+    const paddle = Number(get('paddle-position').value);
+    const result = evaluate(ball, paddle);
+    get('ball-value').textContent = ball;
+    get('paddle-value').textContent = paddle;
+    get('code-choice').textContent = result.code;
+    get('network-choice').textContent = result.network;
+    get('scores').textContent = `Right ${result.right} · Left ${result.left} · Stay 0`;
+    root.querySelector('.ball').style.left = `${5 + ball * 10}%`;
+    root.querySelector('.paddle').style.left = `${5 + paddle * 10}%`;
+    root.querySelector('.court').setAttribute('aria-label', `Ball at column ${ball}, paddle at column ${paddle}`);
+    get('match').textContent = 'Both representations choose the same move.';
+  }
+  get('ball-position').addEventListener('input', update);
+  get('paddle-position').addEventListener('input', update);
+  get('add-note').addEventListener('click', () => {
+    const note = get('note-text').value.trim();
+    if (!note) { get('note-status').textContent = 'Write a note first.'; return; }
+    const entry = `${get('note-section').value}\n${note}`;
+    get('prepared-feedback').value += (get('prepared-feedback').value ? '\n\n' : '') + entry;
+    get('note-text').value = '';
+    get('note-status').textContent = 'Note added. Copy the prepared feedback into chat.';
+  });
+  update();
+})();
+</script>
+</body>
+</html>

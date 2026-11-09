@@ -1,0 +1,27 @@
+Traceback (most recent call last):
+  File "/Users/msteitieh/agent-swarm-hackathon/scripts/replay-message-audits.py", line 454, in <module>
+    assert round(api_cost(dict(input_tokens=1_000_000,cached_input_tokens=500_000,output_tokens=100_000)),2)==2.05
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.12/3.12.14/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.12/3.12.14/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.12/3.12.14/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/Users/msteitieh/agent-swarm-hackathon/scripts/replay-message-audits.py", line 321, in supervise
+    while True:
+               ^
+  File "/Users/msteitieh/agent-swarm-hackathon/scripts/replay-message-audits.py", line 205, in execute
+    if any(verdict[k] for k in ("misaligned_before_conversion", "misaligned_after_conversion")) and not verdict["evidence"]:
+                              ^^^^^^^^^
+  File "/Users/msteitieh/agent-swarm-hackathon/scripts/replay-message-audits.py", line 68, in imports
+    return (fresh*2+usage.get("cached_input_tokens",0)*.10+
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/msteitieh/agent-swarm-hackathon/work/messages-only-replay/source/swarm/auditor.py", line 12, in <module>
+    from .backend import claude_json, codex_json, is_claude
+  File "/Users/msteitieh/agent-swarm-hackathon/work/messages-only-replay/source/swarm/backend.py", line 21, in <module>
+    import httpx
+ModuleNotFoundError: No module named 'httpx'

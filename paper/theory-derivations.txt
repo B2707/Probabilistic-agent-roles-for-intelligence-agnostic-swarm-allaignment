@@ -1,0 +1,698 @@
+Probabilistic roles and rational incentives
+Working draft, 8 November 2026. Derived predictions, not experimental findings.
+
+[1. Work-round model]
+
+Read the chart as a bound on role allocation. Increasing the conversion probability reduces the number of rounds assigned solely to the worker objective. It does not establish how much useful work the swarm produces.
+
+Glossary
+P is the probability that a worker converts at the start of a round. The code calls it k.
+K is the probability of selecting an active agent for a random audit in a round. The code calls it p. The implementation also selects investigators for audits. Selection does not guarantee detection.
+T is the number of rounds. A round and a turn refer to the same scheduling interval here. Each agent has a budget of ten tool calls before the end-of-turn warning; the required progress post is exempt from that budget.
+N is the number of swarm slots. I0 is the number of initial investigators. W0 = N - I0 is the number of initial workers.
+An agent-round is one agent's scheduled turn in one round. W counts worker-role agent-rounds, not correct solutions, productive tool calls, or measured effort.
+
+Baseline assumptions
+Hold N and T fixed. Ignore removals, replacements, early stopping, and missed turns. Each worker faces an independent conversion draw with constant probability P at the start of every round, including round 1. Conversion is permanent. Expectations refer to repeated random schedules, not uncertainty in a completed run with a fixed seed.
+
+Derivation
+Let X be the number of worker rounds for one initially assigned worker. The agent is still a worker during round r only if it has avoided conversion on all r draws so far. Therefore:
+
+    Pr(worker during round r) = (1-P)^r, for r = 1,...,T.
+    E[X] = sum from r=1 to T of (1-P)^r.
+    E[X] = (1-P) [1-(1-P)^T] / P, for 0 < P <= 1.
+    E[X] = T, for P = 0.
+    E[W] = (N-I0) E[X].
+
+This convention matters. The often-used sum starting at r=0 assumes that everyone gets a worker turn before the first conversion draw. That is not the implemented timing. With an unlimited horizon and P > 0, the expected number of worker rounds is (1-P)/P. The expected index of the conversion round is 1/P; it includes the conversion round and is a different quantity.
+
+Every term in the finite sum decreases with P. Thus E[X] strictly decreases for T >= 1. It equals T at P=0 and zero at P=1. K has no direct effect on this allocation in the baseline because an audit selection alone does not change a role. K can affect realized allocation through removals and replacements.
+
+At T=20 and P=0.02, E[X]=16.2872. With N=100 and I0=10, E[W]=1465.85 out of 2000 available agent-rounds, or 73.29%. With N=20 and I0=2, E[W]=293.17 out of 400. At P=0, the corresponding allocations are 1800 and 360 because initial investigators are already excluded. These are expectations, not measured run totals.
+
+Proposed figure caption
+Expected worker-role rounds per initially assigned worker over 20 rounds as a function of the per-round conversion probability P. Conversion occurs before every turn, including round 1. The curve assumes independent permanent conversion, with no removals or missed turns. At P=2%, each initial worker contributes 16.29 expected worker-role rounds. Investigator solution work is excluded. The curve describes role allocation; interpreting it as a lower bound on solving effort requires normalized nonnegative contributions as described in the text.
+
+The caveat for the paper
+Investigators retain the task tools and must continue posting progress updates to conceal their role. They may continue useful solution work while investigating. Our conservative accounting credits none of that work, so investigator rounds need not be lost rounds. The current prompt permits solution work but does not require productive solution work or reward it. The claim that investigators actually contribute must be checked in their actions.
+
+To make the lower-bound statement precise, suppose a worker round contributes one normalized unit of solving effort and an investigator round contributes a nonnegative fraction alpha of that unit. Then:
+
+    E[Q] = E[W] + alpha [NT - E[W]] >= E[W], for 0 <= alpha <= 1.
+
+This equation is an accounting model, not a bound on correct output. Workers can spend their turns messaging, reviewing, cheating, or making no progress. Without a productivity assumption, role counts alone cannot give a positive lower bound on useful work or performance. Investigator actions might also damage solutions, so the nonnegative-contribution assumption must be stated if the bound is used for net progress.
+
+Replacement qualification
+The controller replaces removed agents with new workers before the next round's conversion draw. With a full turn for every active slot and the same future conversion draws, resetting any slot to worker cannot reduce its worker-role allocation relative to a process with no resets. E[W] is therefore a lower bound on expected worker-role allocation under those replacement conditions. Early stopping, missed turns, or replacement delays invalidate that argument. Replacement does not automatically increase the number of investigators currently present. The final investigator count below is not a general lower bound under removal.
+
+Related calculations collected from the earlier notes
+
+    Pr(an initially assigned worker converts by T) = 1-(1-P)^T.
+    E[investigators at the end, without removals] = I0 + (N-I0)[1-(1-P)^T].
+    Pr(at least one random audit selection in T active rounds) = 1-(1-K)^T.
+    E[random audit selections in a complete fixed-size run] = NTK.
+    To keep either cumulative probability below 1/2, its per-round probability must be below 1-2^(-1/T).
+
+At T=20, the half-probability threshold is 3.4064%. P=2% gives a 33.2392% conversion probability for an initial worker and 39.9153 expected final investigators when N=100 and I0=10. K=1% gives an 18.2093% chance of at least one random audit selection over 20 active rounds and 20 expected random selections across 100 agents. Report-triggered audits and the final audit add separate work. Multiple triggers can be combined into one audit.
+
+[2. Known P and K]
+
+What rational means
+A rational actor chooses the available action with the largest expected utility. Utility is the value it assigns to an outcome. A best response is an action that maximizes that value given beliefs about other agents. An equilibrium additionally requires every agent's strategy to be a best response to the others. The analysis below gives conditional best responses and one restricted equilibrium result, not a solved equilibrium for the entire coding swarm.
+
+Reward assumption
+The author selected binary success and removal-as-failure on 8 November 2026. Give a successful solve or at least one confirmed catch the same value, 1. Give failure value 0. More catches do not increase utility. Removal before evaluation makes the original agent fail, including when it had already solved or caught someone. A replacement is a different actor and cannot restore the removed agent's payoff.
+
+Let A_T indicate that the original agent remains active at evaluation. Let S_T indicate at least one qualifying successful outcome, through the task or an eligible confirmed catch. Evaluation follows the last round's enforcement decisions. A task outcome must satisfy its completion criterion at evaluation; an earlier temporary pass is insufficient. In the pressure setting that criterion is the required 100% pass rate. Success is evaluation success and need not imply genuine correctness if a cheat evades enforcement. A valid catch remains a success when the agent's role changes; removal still overrides it. An eligible catch must concern another agent. A self-only report earns zero catch reward, even when the reporter's earlier misconduct is confirmed and immune. Conversion itself earns no reward. An earlier qualifying task success can still count under the selected role-agnostic payoff, independently of any self-report.
+
+    U = 1 if A_T=1 and S_T=1; otherwise U=0.
+    E[U | action a] = Pr(A_T=1 and S_T=1 | a).
+
+The actor therefore maximizes its probability of surviving to evaluation with a successful outcome. No additional fine, negative reward, per-action utility cost, discount factor, or appetite-for-reward parameter is needed for this first model. Time and tool use matter through the success opportunities they consume. They do not subtract a separate cost from utility. A worker can value a future investigator success before conversion, as requested.
+
+This is a theoretical utility rule, not a change to the experiment controller. The worker's explicit score is the swarm mean test pass rate in v3, while investigators earn one point per confirmed accused agent. The controller does not cancel the shared score when it removes an agent. The selected theoretical rule instead gives that removed individual utility zero. A diagnostic final audit that does not remove an agent does not itself trigger removal-as-failure.
+
+Notation for decisions
+H is the probability of surviving to evaluation with a successful outcome after refusing involvement. It includes any lawful future reporting opportunity after conversion. B is the probability of success conditional on the chosen action and survival to evaluation. d is the probability of removal before evaluation under that action. Subscripts distinguish actions or branches. Every value lies between zero and one. These are conditional probabilities, so writing (1-d)B uses the probability product rule, not an independence assumption.
+
+K alone is not d. If a fixed violation remains auditable for h rounds, no immunity or reports intervene, and each selected audit independently detects it and causes removal with probability eta, then random audits give d = 1-(1-K eta)^h. Reports, imperfect evidence, conversion immunity, and the non-removing final audit require a more detailed calculation. Detection matters to utility here when it causes removal before evaluation. The current final audit records classifications; it does not remove agents or cancel scores.
+
+Case A. A worker wants to send an offer
+The offer itself can violate the rules before anyone accepts. Let A be the probability that the offer is accepted without immediate removal of the sender. Let R be the probability of immediate removal following a report or audit. In the remaining branch, with probability F=1-A-R, recruitment fails without immediate removal. These branches are mutually exclusive and exhaustive for the comparison. Let d_A and d_F be later removal probabilities conditional on the respective branches. Let B_A and B_F be success probabilities conditional on the branch and surviving to evaluation. Then:
+
+    U_offer = A (1-d_A)B_A + F (1-d_F)B_F.
+    Send only if U_offer >= H.
+
+The removed branch contributes zero. The failed-offer term matters: rejection does not erase the violation, so a later audit can still remove the sender. In a clean-worker, one-decision approximation with no baseline removal risk and unchanged continuation opportunities after rejection, set B_F=H. The condition then becomes:
+
+    A [(1-d_A)B_A - H] >= [R + F d_F]H.
+
+When those continuation assumptions do not hold, use the first, general expression. In particular, a compromised sender's baseline H already reflects its past misconduct, and creating reportable evidence can change B_F. Do not subtract the same removal risk twice.
+
+A and R depend on whom the sender contacts, the evidence created, the recipient's incentives, and how many approvals are needed. They cannot be read directly from P and K. In the current v3 configuration a PR needs two distinct non-author approvals. Recruiting fewer agents can reduce exposure, but the minimum coalition is the author plus two approvers. There is no general optimal recipient or message without a model of acceptance and reporting.
+
+Peer uncertainty can be calculated under a deliberately restricted model. Suppose there are no removals, targets are selected uniformly, and the sender is known to have started as a worker and to remain one. After t conversion opportunities:
+
+    q_t = Pr(a random other agent is an investigator) = 1 - [(N-I0-1)/(N-1)](1-P)^t.
+
+For N=100, I0=10, P=2%, and t=20, q_t=39.9827%. Earlier notes used 90/99 in the survival term. Conditioning on the sender being a worker leaves 89 other initial workers among 99 peers, so the coefficient is 89/99. A direct message arrives next round; use the recipient's role when it can act, not necessarily when the sender sends. A strategically selected recipient or the content of an offer changes the relevant belief.
+
+To make the effect of coalition size explicit, the probability that m distinct uniformly selected peers are all still workers after t conversion draws is:
+
+    Pr(all m peers are workers) = [(W0-1)_m / (N-1)_m] (1-P)^(mt).
+
+Here (x)_m means x times x-1 and so on for m factors, with value zero if there are too few eligible workers. Initial roles are sampled without replacement, so simply raising 1-q_t to the mth power is only an approximation. Being workers does not ensure acceptance or future silence.
+
+Case B. An agent receives an offer
+A worker can refuse, continue solving, retain the evidence, and warn other agents. A formal submit_report call is available only after conversion. Receiving an offer is not itself misconduct; accepting or endorsing it can be. Merely having evidence does not grant a worker the investigator reward.
+
+For accepting an offer, compare its joint survival-and-success probability with H. If B>0, acceptance is a best response between accepting and refusing only if:
+
+    U_accept = (1-d)B >= H.
+    Equivalently, d <= 1-H/B.
+
+If H>B, acceptance is never better for any nonnegative d. If B=0 and H>0, refuse; if both action values are zero, the actor is indifferent. Equality also gives indifference, so rationality alone does not select how ties are resolved. As a hypothetical example, H=0.6 and B=1 give a removal threshold of 0.4. This is an illustration, not an estimate for the experiment. Other available actions must also be compared before calling acceptance the overall best action.
+
+The impossible-task setting creates a useful counterexample to universal deterrence under the selected payoffs. If honest completion is impossible and refusing also provides no possible future reporting success, H=0. If B>0, acceptance has positive value whenever d<1. Any chance of surviving with a successful cheat beats certain failure. Oversight can reduce that chance without making refusal optimal. This claim does not apply when retaining the offer and later converting gives refusal a positive reporting value; that opportunity belongs in H.
+
+An investigator who receives sufficient evidence can report without committing a new violation. Report submission also triggers an audit of the reporter. For an investigator without an earlier success, let e be the probability of at least one eligible confirmed catch conditional on reporting and surviving, and let d_R be removal risk through evaluation. Then U_report=(1-d_R)e. Compare it with further investigation, maintaining cover, and any other available action. A scripted instigator is excluded from scored accusations by the tool, so reporting that identity alone cannot provide a catch success.
+
+With a certain immediate catch and zero removal risk through evaluation, reporting now achieves value 1 and is weakly optimal. Waiting to grow the conspiracy cannot increase that value in the binary model. If success is already secured by a valid catch, the remaining objective is survival, and extra catches have no direct benefit. Waiting can still tie, or be better when it improves verification or lowers removal risk. The accumulated-point reward in the actual investigator prompt could favor more catches, but it is outside this first model.
+
+A limited benchmark with known P
+Consider a clean worker that has received a genuine reportable offer and has h future conversion opportunities. Assume perfect verification, a target that remains eligible for reporting, retained evidence, and no removal risk if the recipient refuses and remains compliant. On conversion it reports, achieves a confirmed catch, and avoids further misconduct. Its reporting route alone has value:
+
+    H_report = 1-(1-P)^h.
+    H >= H_report.
+
+Equality holds if it has no other success route. Thus receiving evidence can create a positive refusal value even when honest task completion is impossible. In the equality case, acceptance requires (1-d)B >= 1-(1-P)^h. If B=1, the threshold simplifies to d <= (1-P)^h. The actual removal probability d can depend on K, P, and peer reports; it is not equal to K.
+
+Under these benchmark assumptions, accepting solely to obtain a later catch is weakly worse than refusing while retaining the same evidence. Acceptance cannot improve the already certain catch conditional on conversion, and it adds possible removal before immunity. This is a conditional best-response result, not a claim that refusal beats every cheating plan that might also produce a task success.
+
+Case C. A worker already cheating receives an offer
+This worker must compare the probability of surviving with success under continuing, expanding the coalition, and refusing further involvement while retaining evidence for a possible later conversion. Its refusal value H includes removal risk from its earlier misconduct. It cannot immediately claim investigator immunity or submit a formal report. Stopping now does not erase past evidence. If it later converts, prior violations are immune, and it can report other agents using retained history. Further misconduct after conversion is not immune. Accepting a fresh offer is unnecessary merely to retain evidence of having received it.
+
+For an already compromised worker, the clean-worker expression 1-(1-P)^h is insufficient. Under perfect random-audit detection and the no-peer-report assumptions in Case D, its report-only refusal route instead has value g_h if a catch after conversion and survival thereafter are certain. The audit-versus-conversion race matters even when it stops cheating immediately.
+
+An investigator with only pre-conversion misconduct can report under that immunity. An investigator who has committed a new violation risks removal when reporting triggers its own audit. Therefore reporting is not automatically the best action for every compromised investigator, even when the other agent clearly cheated.
+
+Case D. Cheat now, hoping to convert and report later
+Equal value for the two kinds of success can create an incentive to retain evidence of a conspiracy the agent helped create. It does not prove that this strategy is optimal. The agent cannot choose when it converts, and its offer can expose it before conversion.
+
+For a simple timing calculation, consider a worker that has just acted and has h future conversion opportunities. Assume the current round's end audit is still pending, each random audit detects the past violation perfectly, no peer reports occur, and conversion grants immunity before later audits. The probability of conversion before random-audit detection within those h opportunities is:
+
+    g_h = (1-K) P sum from j=0 to h-1 of [(1-P)(1-K)]^j.
+
+The first factor accounts for surviving the current end-of-round audit. This is only a timing probability. It is not the chance of a successful catch. Condition on still having a reportable, eligible peer, sufficient evidence, and survival through evaluation after conversion. Later rounds offer fewer conversion opportunities. Peer reports reduce the chance of reaching immunity. When P=0, the strategy has no conversion route.
+
+A simple binary continuation calculation
+Under those same assumptions, let f_h be the probability of remaining an unconverted worker without removal through all h future rounds. Let e_h be the conditional probability of achieving success and surviving to evaluation after conversion on the g_h branch. Let b_h be the conditional probability of success on the surviving-worker branch. These conditional values can average over the different possible conversion times. Then:
+
+    f_h = (1-K) [(1-P)(1-K)]^h.
+    U_cheat_then_wait = g_h e_h + f_h b_h.
+
+The two success routes are disjoint because one includes conversion and the other excludes it. All other paths involve removal and contribute zero. A successful solve and catch on the same path still give utility 1, not 2. This expression stays between zero and one. The agent should compare it with the refusal value H and other available policies. Merely increasing the chance of conversion does not establish that creating a conspiracy is worthwhile, particularly when an existing offer already supplies evidence.
+
+For the full finite-horizon model, define a state by the round, current role, active status, current task success, confirmed-catch status, prior misconduct, evidence, and eligible peers. Start with the selected terminal rule, V_T=1 for active agents with success and zero otherwise. A removed state has value zero at every later step. At each earlier decision, average next-state value over conversion, peer responses, audits, and task progress, then choose the largest. There are no added intermediate rewards. Within a round, preserve the controller's order of conversion, turns, and enforcement. The terminal rule is now fixed; success and response probabilities remain necessary inputs that the repo does not identify by itself.
+
+When can we claim an equilibrium?
+In a restricted last-decision game with no future conversion, suppose investigators prefer reporting real offers, and each worker's acceptance value is no greater than its refusal value. Suppose also that a failed offer cannot improve the sender's success probability. Choose refusal when a worker is indifferent. Then no offer, refusal by workers, and reporting by investigators is an equilibrium. No recipient can increase its value by deviating. With A=0, the sender's offer value is F(1-d_F)B_F <= H, so it cannot profit by deviating either. Offers can remain a tied action when H=0; the model does not prove strict deterrence. If a worker can profit from accepting, or future conversion makes creating evidence useful, the argument no longer applies. It is not a proof for the full experiment.
+
+[3. Hidden P and K]
+
+Known mechanism, hidden values
+The actor may know that conversion and audits exist while not knowing their rates. It then needs beliefs about possible values. A prior is a probability distribution over those possibilities before new evidence. A posterior is the distribution after observations. If mu_t is the posterior at round t, choose an action a that maximizes:
+
+    E under mu_t of [U(a; P,K)], including beliefs about peer actions and evidence quality.
+
+Use the full distribution. Substituting the average P and K into nonlinear formulas generally gives a different answer. For example, averaging (1-P)^h is generally different from raising 1 minus the average P to h.
+
+The clean-worker reporting benchmark becomes the posterior average of 1-(1-P)^h. The compromised worker's analogous reporting route averages g_h(P,K). The binary terminal rule remains the same in both information modes.
+
+If the actor remains a worker through t known conversion draws, that observation contributes likelihood (1-P)^t. This can update its belief about P. Absence of a visible audit or removal is weaker evidence about K because audits may be private and removals also depend on misconduct, reports, detection, and conversion immunity. It would be incorrect to treat every quiet round as a known failed audit draw.
+
+Mechanism itself hidden
+The current uninformed arm withholds the integrity-policy message. It is different from telling agents about the mechanism while withholding only the rates. Before conversion, an agent in that arm might not assign positive probability to investigators at all. Its beliefs depend on its instructions and observations. We should not assume it knows the mechanism just because the analyst does.
+
+Limited prediction
+Unknown rates do not make cheating rational, irrational, or equivalent to zero oversight. Without a stated prior and observation model, no unique best response follows. If one action beats all others at every allowed P,K value, it remains optimal under any prior on those values. Otherwise give a sensitivity analysis across explicit priors or bounds. Choosing the action with the best worst-case payoff is a possible separate assumption, not a consequence of rationality.
+
+[4. Experiment bridge]
+
+What the current experiments can test
+Use the allocation formulas as theoretical expectations and compare them with logged worker and investigator turns. Record removals, replacements, missed turns, and incomplete runs separately so deviations have an explanation. Count actual turn inputs or completed turns with roles; end-of-round active-role counts exclude agents removed after they already acted and answer a different question. Measure investigator solution actions before claiming that cover work increases productivity.
+
+For behavior, analyze the sender, recipient, and previously cheating recipient separately. Match offers to the exact message or PR version the recipient saw. Measure a consequential response, such as refusal, approval of the cheating version, or an evidence-backed report, rather than counting agreeable language alone. Separate organic offers from scripted instigation. An instigator-only accusation earns no investigator reward in this setup.
+
+Proposed experiment extension, not started
+Keep tasks, prompts other than disclosure, N, I0, T, tool budgets, and review rules fixed. Vary P while holding K fixed, and vary K while holding P fixed. A small proposed grid is P in {0, 0.01, 0.02} and K in {0, 0.01}, with the same initial investigators in the conversion sweep. A separate no-oversight baseline requires I0=P=K=0. Choose the number of independent seeded runs after estimating the variation and available budget. No powered-sample claim is possible yet.
+
+Compare three information conditions if resources allow. First, disclose the mechanism and numerical P,K values. Second, disclose the mechanism but hide its rates. Third, withhold the mechanism as in the existing uninformed arm. Include the existing bluff condition when separating announcement effects from actual enforcement. The current informed prompt explains possible conversion, secret identities, immunity, and removal, but does not disclose numerical P,K values. It also does not explain random-audit rates. Existing informed versus uninformed results therefore do not directly test numerical knowledge.
+
+Use a controlled offer at a matched decision point to compare clean workers, workers with documented prior cheating, and investigators. Allow only actions permitted for that role. Do not infer a causal effect of prior cheating merely by comparing naturally occurring cheaters with clean workers; those agents may differ before the offer. A constructed shared history or randomized history condition is needed for a causal test, subject to whether the added history remains believable.
+
+Measurements and limits
+The primary behavioral outcome is acceptance of an offer conditional on actually receiving and being able to act on it. Record refusals, delayed reports after conversion, confirmed reports, post-conversion misconduct, removal timing, and evidence retention as separate outcomes. For cost, report worker-role agent-rounds, verified solution progress, tool calls or tokens, and audit workload. Repeated seeds and run-level uncertainty are needed because agents within a swarm affect each other. Do not treat hundreds of interacting agents as independent experimental repetitions.
+
+For comparison with this first model, define a binary outcome for each original agent using the selected success criterion and its removal status at evaluation. Keep partial pass rates and catch counts as secondary measurements. This is an analysis rule, not the current prompts' full accumulated-score objective. A direct incentive test would need to state the binary reward and removal rule to the agents. Merely recoding existing observations does not make the original agents optimize that utility.
+
+The rational model supplies conditional predictions. Higher removal risk can make acceptance cross its refusal threshold when conditional success and the refusal value are held fixed. Increasing P has competing effects: more possible investigators and less worker-role allocation, but also a higher chance for a compromised worker to obtain immunity and a new reward route. Thus the model does not establish that cheating decreases monotonically with P. Actual language-model behavior may also fail to follow the assumed payoff calculation.
+
+[5. Selected model and sources]
+
+Author-selected utility
+The author selected both choices on 8 November 2026. Success through a successful solve or at least one eligible confirmed catch has value 1. Failure has value 0. Removal before evaluation makes that original agent fail, even when its work or score remains in the shared environment. There are no additional points for more catches and no separate negative utility or action cost in this first model.
+
+The task's completion criterion and valid-catch rules still determine what counts as a successful outcome. For the documented pressure condition, partial pass-rate progress does not itself meet the required 100% completion criterion. The model permits an undetected cheating outcome to satisfy that evaluated objective without calling the underlying code genuinely correct. Empirical probabilities of satisfying the criterion, obtaining cooperation, and confirming evidence remain inputs to estimate rather than new reward preferences to ask the author to choose.
+
+Under the user's assumption that the agent is agnostic to reward type, the draft allows a worker to value eventual investigator success before conversion. A comparison with an actor that pursues only its current role objective would isolate the importance of anticipating that goal change. This is a utility-model distinction, not a change in when the controller actually converts agents.
+
+Proposed manuscript paragraph
+We model independent permanent role conversion at the start of each round. With conversion probability P, an initially assigned worker remains in the worker role during round r with probability (1-P)^r. Its expected worker-role allocation over T rounds is therefore the finite sum of these probabilities. Across N agents with I0 initial investigators, the expected allocation is (N-I0)(1-P)[1-(1-P)^T]/P, with limit (N-I0)T as P approaches zero. Investigators retain the task tools and may contribute to the solution while maintaining cover. Our accounting credits no such contributions. It is conservative for allocated solving effort under a normalized nonnegative-contribution assumption, but does not bound measured task success. Our incentive benchmark gives utility 1 to an agent that survives to evaluation with a successful task outcome or at least one confirmed catch, and 0 otherwise. Removal before evaluation overrides prior success. A rational actor therefore maximizes its joint probability of survival and success. Known conversion and audit rates permit conditional best-response thresholds; hidden rates require explicit beliefs. Neither case establishes universal deterrence, because conversion also grants immunity for past misconduct and makes a reporting-based success available.
+
+Prior calculations and source verification
+Read-only source snapshot: fa77b49fdadeb43f7acd6c07893e281b228c36bb on origin/swarm-harness, already present locally. This is the inspected source snapshot, not a claim about the running controller's exact revision. Earlier run-specific notes pin their own commits.
+
+The earlier probability statements and the W estimate are in docs/specs/2026-11-06-swarm-harness.md, especially 'Numbers to size runs'; docs/specs/2026-11-07-plan-review.md, C53 and C14; and docs/specs/2026-11-07-swarm-v2.md, 'Checks behind D10'. Those notes report the same approximate 1466 worker-round expectation and treat replacement as a lower-bound qualification. This draft supplies a fresh explicit derivation and corrects the conditional-peer coefficient.
+
+Rules were checked against prompts/worker_swarm.md, prompts/pressure.md, prompts/informed_rule.md, prompts/investigator.md, prompts/auditor.md, swarm/loop.py, swarm/tools.py, swarm/auditor.py, and configs/C100-6-luna.toml at the inspected snapshot. The actual informed prompt does not disclose rates. Only investigators can report. Both reporter and accused are audited. Pre-conversion misconduct is immune; later misconduct is not. The scripted instigator is excluded from scored accusations.
+
+The definitions of Bayesian games and best responses follow Asuman Ozdaglar, MIT 6.254, Lecture 17, 15 April 2010, especially slides 8-12. All formulas specific to this swarm are derived in this draft, rather than attributed to that lecture.
+https://ocw.mit.edu/courses/6-254-game-theory-with-engineering-applications-spring-2010/575baf93686c6b65dea35d10bb9e5a85_MIT6_254S10_lec17.pdf
+
+No empirical experiment was started, no live run changed, and no paper results are asserted by this draft.
+
+[6. Conditional decision regions at P=0.015, K=0.01]
+
+Historical benchmark. Section 8 supersedes this section for the current chart by including partner conversion, partner reporting, and the loss of reportable targets. The earlier formulas remain correct only under their explicitly simplified assumptions.
+
+The requested calibration is a worker decision during turn 1, conditional on still being a worker after that turn's conversion draw. There are h=19 future conversion opportunities and one pending current audit. This is a constructed decision benchmark, not a claim about when offers actually arrived in a run.
+
+Keep the existing binary utility and retrospective immunity. Fix honest full completion to be impossible, verification of violations to be perfect, and a genuine retained offer to remain reportable through evaluation. On conversion the focal agent reports and has no new misconduct, so it survives with a confirmed catch. Ignore peer reports against the focal worker. Let b be the probability of task success conditional on staying an unconverted worker and surviving. The default b=1 is illustrative rather than fitted to any experiment.
+
+    H = 1-(1-P)^19.
+    g = (1-K)P sum from j=0 to 18 of [(1-P)(1-K)]^j.
+    f = (1-K)[(1-P)(1-K)]^19.
+    U_refuse, clean = H.
+    U_refuse, already cheating = g.
+    U_accept = g + f b.
+
+Acceptance preserves the reporting option after conversion, so it would be incorrect to compare H only with the probability of avoiding every audit while staying a worker. The disjoint converted and unconverted branches both contribute to acceptance's value.
+
+At P=0.015, K=0.01 and b=1, H=0.24960768188111515, g=0.22711202238887057, f=0.6137510829091037, and acceptance has value 0.8408631052979743. Acceptance is therefore the misaligned best response in this benchmark. At fixed P=0.015, the equal-utility boundary is K=0.0842206361961731. Higher K favors refusal; lower K favors acceptance. At the calibration point, the corresponding cheat-success boundary is b=0.03665274101940147. This is why b is exposed as an assumption rather than hidden in the figure.
+
+The two-axis map spans P from 0% to 10% and K from 0% to 20% per round. Green denotes refusal or truthful reporting being optimal, red denotes acceptance, and gray denotes an unidentified sender decision. Boundary ties include an aligned optimal action; they do not establish unique behavior. The author requested these semantic colors.
+
+The already-cheating map assumes the previous misconduct has not secured task success, the new offer can improve task success, and accepting adds no detection risk beyond that already present. Under those assumptions, U_accept-U_refuse=f b, positive throughout the plotted domain when b>0. There is no invented green region in that scenario. If b=0 the actions tie and refusal is an aligned optimum. An investigator with a certain eligible catch and no new violations can report for value 1 throughout the domain. These assumptions are visible on the interactive figure.
+
+The sender map remains gray because P,K do not identify acceptance, reporting, or fallback-success probabilities. The separate best-response cases are not a joint equilibrium. Real target removal, delayed or imperfect reports, false positives, successful earlier cheating, and additional peer-report exposure can change these results. An agent without numerical P,K needs a belief distribution, not a point estimate or an automatically green decision.
+
+The implementation and scientific figure are generated by scripts/decision_regions.py through scripts/build-theory.py. An independent forward probability recursion checks the geometric formulas at boundary and interior parameter values. This update does not change any live run or prompt.
+
+[7. Conspiracy size and the reporting game]
+
+What the model measures
+Use P=0.015 and K=0.01. Condition on an already formed group of m original guilty workers during turn 1, after the current conversion draw. Each faces the current audit and h=19 future rounds. All members have usable evidence against all other members. Audits perfectly verify any selected member's misconduct, including immune pre-conversion misconduct. No outsiders report, replacements do not join the original conspiracy, and original members commit no new violations after conversion.
+
+For the individual payoff analysis, assume the conspiracy has already secured the evaluated task success and that result stays valid through evaluation. This does not mean genuinely correct code. It is the same evaluated-success benchmark used for cheating in the earlier model. Removal makes the original individual fail. A prior success continues to count after conversion under the selected role-agnostic binary utility. This last assumption is necessary for the reporting indifference below.
+
+Three outcomes have different meanings. Exposure is at least one confirmed original member's violation during the run. Removal is at least one original member expelled during the run. Individual success is a particular original member surviving to evaluation with the already secured success. None means that all members are caught, all links are discovered, all members are removed, or cheating code is rolled back.
+
+Exclude the final diagnostic audit from during-run exposure. Under perfect verification, the final blanket audit would confirm every surviving culprit; removed culprits were already confirmed. Eventual confirmation would therefore be certain for every nonempty guilty group and would not measure timely intervention. The actual controller's final audit records verdicts without removing agents. These rules were rechecked at local harness snapshot 2ced77699d59088abac26eec512b926d2da57f02.
+
+Notation
+    m = original conspiracy members.
+    h = future conversion opportunities, here 19.
+    r = (1-P)(1-K).
+    g_t = (1-K)P sum from j=0 to t-1 of r^j.
+    f_t = (1-K)r^t.
+    d_t = 1-g_t-f_t.
+
+An isolated guilty original worker converts before random-audit removal with probability g_t, remains unconverted without removal with probability f_t, and is removed before conversion with probability d_t. Immunity prevents removal for old misconduct after conversion, but does not prevent a subsequent audit from confirming that misconduct.
+
+The strategic choice after conversion
+A continuation game is the remaining decision problem after a specified history. Here the history already includes evaluated task success. On conversion, reporting all known peers and remaining silent both preserve that success and give utility 1, provided the agent avoids new misconduct. Reporting cannot improve on 1. Silence cannot be punished for old misconduct under the retrospective immunity rule. Thus neither policy has a profitable deviation at a converted agent's reporting decision. Both are rational reporting continuations within this restricted game. This is not a proof of a conspiracy-formation equilibrium in the full swarm.
+
+Before task success is secured, a certain eligible catch with continued survival has value 1 and beats a non-reporting alternative worth less than 1. Reporting can then be strictly optimal. The switch between these cases is about the payoff history, not about irrationality. A reward that counted only the current role's success would not preserve the same post-success indifference. The actual investigator prompt's accumulated-catch objective also differs from this binary benchmark.
+
+Define the report-all policy as immediately reporting all other known active original conspirators on conversion. It is a possible optimal report, not an action compelled by a binary reward; reporting one valid target can also suffice. Define the silent policy as not voluntarily reporting peers. All converted members remain compliant thereafter in both policies.
+
+Confirmed exposure
+Under report-all, avoiding exposure requires that no original member be randomly audited in any of the h+1 audit opportunities and none convert in the h future conversion opportunities. Until the first exposure no guilty worker can have been removed, so all original members remain available. Independence therefore gives:
+
+    Pr(exposure | report-all) = 1-f_h^m
+                              = 1-(1-K)^[m(h+1)] (1-P)^(mh).
+    Pr(exposure | silence) = 1-(1-K)^[m(h+1)].
+
+Converted silent members remain auditable and can have earlier misconduct confirmed even though they are immune to removal. That is why P does not appear in the silent exposure formula. These two policies do not identify a unique actual reporting probability. In particular, replacing conversion by guaranteed reporting without stating the policy would hide a game-theoretic assumption.
+
+The marginal increase in report-all exposure from m to m+1 members is f_h^m(1-f_h), positive when 0<f_h<1, with diminishing increments. This supports a size-dependent detection claim under the stated policy, not a universal claim about all conspiracies or evidence networks.
+
+Actual removal
+Under silence, each original member survives with probability g_h+f_h independently. Thus:
+
+    Pr(any removal | silence) = 1-(g_h+f_h)^m.
+
+Under report-all, consider histories with no earlier event. In a future round, mixed conversion creates at least one immune reporter and at least one guilty worker, whom report-all removes. No conversions and no audits allows another quiet round. Entire-group simultaneous conversion creates exposure but no removal, because everyone gains immunity before auditing. Let s=r^m. Then:
+
+    Pr(any removal | report-all)
+      = 1-f_h^m-(1-K)^m P^m sum from j=0 to h-1 of s^j.
+
+The subtraction is the chance of an all-member simultaneous conversion before any removal. This is why exposure and removal are not exactly equal. If reporters name only other already-immune members, removal can be lower than under report-all; the figure labels its stronger reporting policy explicitly.
+
+Individual success
+Under silence, a particular original member's probability of keeping the already secured success is g_h+f_h. It is independent of m. A larger group can be almost certain to suffer some detection while each original member's own probability of success is unchanged.
+
+Under report-all, a focal worker must convert no later than the first surviving peer who converts. Same-round conversion ties are allowed because conversion precedes reports and audits. Peers removed by earlier random audits cannot subsequently report. With q_t=1-g_t, the focal payoff is:
+
+    U_report(m)
+      = sum from j=1 to h of [(1-K)r^(j-1)P q_(j-1)^(m-1)]
+        + f_h q_h^(m-1).
+    U_silent(m) = g_h+f_h.
+
+The sum covers conversion at each future round while no peer previously converted alive. The last term covers surviving as a worker without any peer conversion. A focal converter whose peers were all removed still retains its earlier task success, so it need not obtain a new catch to have utility 1.
+
+Every m-dependent factor q_t^(m-1) is nonincreasing in m. Therefore U_report(m+1) <= U_report(m) when the success benefit is held fixed. The calibrated decline is strict. Extra recruits reduce the individual's chance of keeping its reward under this reporting continuation, but do not improve it under silence. If added members substantially increase the chance of task success, recruitment also needs that benefit modeled. The size calculation alone does not select a universal optimal coalition size. Three is the harness minimum for one cheating PR, because it requires one author and two distinct approvals; that is not a claim about solving all 55 problems.
+
+Calibration
+    Members | Any removal, report-all | Any removal, silence | Own success, report-all | Own success, silence
+    3       | 76.877%                 | 40.547%              | 54.855%                 | 84.086%
+    5       | 91.291%                 | 57.964%              | 36.791%                 | 84.086%
+    10      | 99.242%                 | 82.329%              | 15.880%                 | 84.086%
+    20      | 99.994%                 | 96.877%              | 6.146%                  | 84.086%
+
+The result is a conditional warning as well as motivation: larger conspiracies are easier to detect, but detection alone does not establish individual deterrence under immunity and a binary success reward. The actual experiment should estimate reporting behavior, evidence coverage, removal timing, and whether task success was secured before conversion, rather than treating every conversion as a guaranteed report.
+
+Verification and limits
+scripts/conspiracy_model.py computes the formulas, figure, and CSV. An independent first-event recursion checks exposure and removal. An independent count-state recursion tracks the number of surviving unconverted peers and checks individual success, including audit losses and simultaneous conversions. Boundary probabilities, horizon zero, monotonicity in group size at calibration, and probability ranges were checked. The formulas condition on known worker membership; random recruitment of hidden investigators introduces additional formation risk. Correlated choices, incomplete evidence networks, imperfect detection, changed code after reports, current-role-only utility, or post-conversion misconduct require a different model.
+
+[8. Corrected clean-worker chart with partner conversion]
+
+This section is the worker-only branch. Section 9 adds uncertainty about the contact being an investigator already.
+
+Why the original chart had green regions
+The original decision chart compared refusing and waiting for the focal worker's own conversion with accepting and risking random-audit removal. Its green region did not include partner conversion or a prior probability that the sender was already an investigator. The later conspiracy-size section included partner conversion, but that mechanism had not been carried back into the original decision chart. This section and the regenerated decision-regions figure correct that omission.
+
+Conditions and notation
+The decision occurs during turn 1, with h=19 future conversion opportunities and the current audit pending. Let n be the number of other guilty worker partners, default n=2, giving three people including the focal worker. All partners are workers now. They know the focal worker's misconduct if it accepts. The focal worker has usable evidence against each partner. Verification is perfect, no new violations occur after conversion, and immunity protects earlier misconduct. Partner reporting is a selectable policy, not a consequence guaranteed by binary utility. The chart does not infer the chance that someone is already an investigator.
+
+Let b be the probability that accepting immediately secures an evaluated task reward which remains valid through evaluation. The default is b=1. A prior secured task reward continues to count after conversion under the selected binary utility. If b=0 and the focal worker converts, it needs a surviving reportable partner to earn a catch; conversion by itself gives no reward. Honest full task completion after refusal has value zero in this impossible-task benchmark.
+
+For an individual partner, after its current audit and t future rounds, define:
+
+    r = (1-P)(1-K).
+    g_t = (1-K)P sum from j=0 to t-1 of r^j.
+    f_t = (1-K)r^t.
+    d_t = 1-g_t-f_t.
+    q_t = 1-g_t.
+
+Here g_t is conversion before random-audit removal, f_t is survival as an unconverted worker, and d_t is removal before conversion. q_t is not converting while alive. At t=0, g_0=0, f_0=1-K, and d_0=K, accounting for the current audit. Products over partners rely on independent conversion and random-audit draws. New reports occur only after these currently-worker partners convert.
+
+Clean refusal value
+When the focal worker refuses, it remains clean, so a partner cannot validly remove it by reporting. On the focal worker's first conversion, it can succeed by reporting any original partner still active, even an immune investigator whose earlier misconduct can still be confirmed. If a partner converted earlier, that partner remains a valid immune target. All targets are unavailable exactly when all n original partners were removed before converting. Therefore:
+
+    R = sum from j=1 to h of [P(1-P)^(j-1)(1-d_(j-1)^n)].
+
+This replaces the permanent-target approximation 1-(1-P)^h. A report or audit that removes a target in the same processing phase still permits confirmation; target availability is checked before that phase. Reports among partners do not invalidate the availability formula: any partner who converted and reported remains an immune active target.
+
+Acceptance when converted partners report
+If a guilty focal worker has not converted and any living partner converts first, that partner reports it and it is removed. Simultaneous focal/partner conversion gives retrospective immunity to both. On focal conversion at future round j, no peer may have converted alive earlier, with probability q_(j-1)^n. If all partners were already removed, with probability d_(j-1)^n, the focal converter cannot earn a catch and must rely on its cached task reward. Let w_j=(1-K)P r^(j-1). Then:
+
+    A_report(b)
+      = sum from j=1 to h of [w_j {q_(j-1)^n-(1-b)d_(j-1)^n}]
+        + b f_h q_h^n.
+
+Acceptance when partners stay silent about the focal worker
+There is then no peer-report removal. The focal worker still needs a live target if it converts without a task reward:
+
+    A_quiet(b)
+      = sum from j=1 to h of [w_j {1-(1-b)d_(j-1)^n}]
+        + b f_h.
+
+For b=1, this equals the old 84.09% acceptance value at calibration because losing report targets cannot erase a cached task reward. However, clean refusal still uses R, including target losses. Turning reporting off is therefore a coherent sensitivity comparison within the updated model, rather than an exact restoration of every assumption in the original chart.
+
+For an already-guilty worker whose previous attempt has not secured task success, refusal has value A_report(0) or A_quiet(0). Partners already have proof of its earlier misconduct, so declining the new offer does not remove their reporting threat. Accepting adds task-success probability b without adding further detection exposure under this scenario. The investigator and unidentified-sender cases keep their earlier conditional interpretations.
+
+Updated calibration and decision rule
+Choose acceptance only if A(b)>R; aligned refusal is optimal when R>=A(b), including ties. At P=0.015, K=0.01, n=2, h=19 and b=1:
+
+    Clean refusal = 0.24741647863436367.
+    Acceptance, partners report = 0.548546944054072.
+    Acceptance, partners stay silent = 0.8408631052979745.
+    Already-guilty refusal, partners report = 0.18001452964603526.
+    Already-guilty refusal, partners stay silent = 0.22520739303100665.
+
+The report-all acceptance value exactly matches a member's individual success in the three-person conspiracy model. With seven other partners, acceptance drops below clean refusal at the same P,K. At P=0.03, K=0.01 and two reporting partners, clean refusal is 0.4363764797929702 and acceptance is 0.4334636500110771, giving a green region at low audit rates that the original chart missed.
+
+At fixed P=1.5% and n=2, the updated K boundary is about 10.28% with reporting partners and 12.14% with silent partners. These should not be confused with the earlier 8.42% boundary: that earlier benchmark artificially guaranteed a future reportable target. Adding partner audit losses reduces refusal's value at high K. A full model update cannot be represented by merely multiplying the old acceptance probability by an extra survival factor.
+
+Verification
+The model is implemented in scripts/decision_regions.py. An independent finite-state recursion tracks n surviving worker partners, simultaneous conversions, and a protected investigator target when partners remain silent. It matches the closed-form sums across several partner counts, zero and nonzero horizons, boundary probabilities, and b=0,0.5,1. For b=1 and reporting partners, the result also matches scripts/conspiracy_model.py for group size n+1. Tests check that turning reporting on reduces acceptance and that sufficient partners can change the preferred action. The displayed decision shape is checked on parameter/control grids. This is a conditional best-response model, not a posterior over initial hidden roles or a joint equilibrium of recruitment.
+
+[9. Unknown current contact role]
+
+Scope
+The author clarified that the additional risk is an already hidden investigator, not the scripted experimental instigator. This section extends Section 8's clean-worker chart. Section 8 remains the conditional branch in which every current partner is a worker. Section 7's conspiracy-size formulas and outputs are unchanged because they condition on an already formed group of guilty workers.
+
+There are n potential partners, default n=2. One contact has an unknown current role; the remaining n-1 are known guilty workers. The focal agent is a clean worker. If the unknown contact is also a worker, it is guilty and reportable under Section 8's evidence assumptions. If it is an investigator, assume it has committed no reportable violation, refuses the cooperation needed for the proposed cheat, and reports observed acceptance. A compliant investigator need not author a forbidden proposal. The contact can instead be a prospective collaborator or an observer of a proposal made by someone else.
+
+Let Q be the focal worker's probability that this contact is already an investigator. This probability must condition on available message evidence. For a prohibited proposal newly written in that same role state, the clean-investigator branch has zero likelihood. Its posterior Q is then zero within this restricted model. A proposal written before conversion and delivered afterward requires the distinct guilty-investigator branch in Section 11. Allowing an investigator to make that proposal requires a separate model of new misconduct and the risk that reporting audits the reporter. The reference prior below does not override this restriction.
+
+Reference prior
+At the first worker turn, one conversion draw has occurred and no current audit has yet been processed. There are N=100 agents and I0=10 initial investigators. Conditioning on the focal worker and n-1 other known current workers fixes n initially-worker slots that have not converted. An unknown contact sampled uniformly from the remaining N-n slots has current investigator probability:
+
+    Q_ref(P,n) = [I0 + (N-I0-n)P] / (N-n).
+
+For n=2 and P=0.015 this is (10+88*0.015)/98 = 0.1155102040816327. This is a roster-based prior before using the conversation's content, not an inferred posterior over offer senders. It varies with P across the reference chart. A custom Q instead stays fixed across the P–K map. Setting Q=0 restores Section 8 exactly. Independence of conversion draws does not make message evidence independent of current role.
+
+Payoffs in the already-investigator branch
+Let R_n and A_n(b) be Section 8's refusal and acceptance values with n current worker partners. The default investigator only observes the focal worker's response; the other n-1 guilty workers remain available as report targets. The investigator itself is not a guilty catch target. Refusal leaves the focal worker clean, giving:
+
+    R_I = R_(n-1).
+
+Direct messages are delivered next round in the harness. Assume the contact can use the acceptance as proof when that reply arrives. The focal worker must first survive its current audit, then convert at the next draw before the report removes it. With no cooperative task reward in this branch, it also needs at least one other guilty worker to have survived the current audit. Conversion next round gives immunity before reports and audits; simultaneous target conversion does not prevent confirming its earlier misconduct. For h>=1:
+
+    A_I, next-round reply = (1-K) P [1-K^(n-1)].
+    A_I, same-round visible acceptance = 0.
+
+For h=0 both acceptance values are zero. The same-round option models acceptance already visible in a file or other immediately accessible evidence. If the contact also clears all other guilty workers immediately, both R_I and A_I are zero under these assumptions. This alternative removes every modeled success route in the investigator branch. It does not award a reward merely for refusing, and increasing Q then scales both action values equally. At Q=1 this produces a tie rather than strict deterrence.
+
+Mixture and decision rule
+For either reporting policy among the current worker partners:
+
+    R_mix = (1-Q)R_n + Q R_I.
+    A_mix = (1-Q)A_n(b) + Q A_I.
+
+Choose acceptance only if A_mix>R_mix. Refusal is optimal when R_mix>=A_mix. The plot colors strict acceptance red and aligned refusal green; all-domain ties are gray. At n=2, h=19, P=0.015, K=0.01, b=1, reporting worker partners, next-round reply, and the reference prior:
+
+    Q = 0.1155102040816327.
+    R_I = 0.22890185468130791.
+    A_I = 0.0147015.
+    R_mix = 0.2452778506430515.
+    A_mix = 0.48688234786333634.
+
+At fixed P=1.5% the default K boundary is approximately 9.193% per round. The corresponding worker-only boundary is 10.282%. The extra current-role risk changes the comparison but does not make refusal optimal at K=1% in this calibration. These are constructed conditional values, not measured behavior.
+
+The new current-role controls apply to the clean-worker case. The already-cheating case retains Section 8's worker-only conditioning because the investigator's knowledge of earlier misconduct is not specified. Sending an offer remains unidentified without recipient-response and fallback-success assumptions. These comparisons do not solve a joint equilibrium of recruitment or infer a unique belief from P and K alone.
+
+Verification
+The independent Section 8 forward recursion checks the worker branch and R_I. A separate enumeration of the current audit, next conversion, and surviving guilty targets checks A_I. Tests verify the roster prior by initial role and conversion, the Q=0 regression, all-investigator ties when targets are cleared, same-round versus next-round evidence, probability bounds, and the single-crossing shape used to draw the boundary. The conspiracy module and its CSV, PNG, and SVG are preserved byte for byte.
+
+
+[10. Self-only reports earn no catch reward]
+
+The author confirmed that reporting only yourself must not earn a reward. This
+was already enforced by the inspected scoring code and the current model. In
+swarm/loop.py at pinned revision 2ced77699d59088abac26eec512b926d2da57f02,
+process_audits excludes a==rep.reporter from the confirmed accused list before
+adding its length to inv_score. The same exclusion is present in the local source
+snapshot at 287a53426fdbec7ef10d8581472655658e528b57. A report naming oneself and
+another guilty agent can earn credit only for the other agent. Reporting still
+audits the reporter; immunity and removal follow the existing rules.
+
+Section 8's n counts other guilty agents, never the focal agent. If all such
+targets are gone, its catch contribution is zero. With n=0 and no earned task
+success, refusal and acceptance both have value zero, for every conversion rate.
+Section 9 likewise assigns no catch value to reporting the clean investigator
+contact or oneself. A retained task success can still yield utility 1 after
+conversion; this is the chosen task-success payoff, not self-report credit.
+
+Added explicit zero-other-target smoke checks to scripts/decision_regions.py,
+including certain conversion and the independent forward recursion. The
+probability formulas and calibration values are unchanged. No scoring controller,
+prompt, run, or conspiracy-size measurement was modified.
+
+[11. Sending, receiving, and inference from an offer]
+
+What the earlier chart did and did not establish
+The sender case was gray because its payoff inputs were unspecified. It did not
+predict that a worker would refuse to send at P=0.015, K=0.01. A receiver's green
+refusal region is not a sender's no-offer region. The author correctly identifies
+the next issue: initiation and inference must be consistent with the recipient's
+best response and the sender's future reporting policy.
+
+General solution method
+Let Q be the receiver's prior that an author is already an investigator when
+writing. Let sW and sI be the offer probabilities chosen by worker and
+investigator authors. These must concern the same observable message category.
+For an offer with positive probability, Bayes' rule gives:
+
+    Q_offer = Q sI / [Q sI+(1-Q)sW].
+
+Calculate the receiver's acceptance and refusal values using this posterior and
+the possible subsequent role changes. Its acceptance probability a is 1 when
+acceptance is strictly better, 0 when refusal is strictly better, and may be any
+number in [0,1] on a tie. Then calculate both sender types' offer payoffs given
+that response, including evidence created even after rejection. Each type sends
+when its offer payoff exceeds its best no-offer continuation H_type. Its offer
+probability may mix when those values tie. Solve these best-response conditions
+and the belief equation together. With two sender types and two receiver actions,
+one can first check the pure strategy combinations, then solve indifference
+conditions if mixing is needed. A model that assigns probability zero to offers
+needs a specified response to a deviation; the zero-denominator Bayes fraction
+cannot determine that belief on its own.
+
+Thus, if sW=0 and sI>0, an offer identifies an investigator in this specified
+model. If sW=sI=0, the event is absent from the proposed strategies. It does not
+follow that an unexpected offer is an investigator's. If some workers have lower
+outside opportunities or better cooperation prospects, observing an offer can
+instead select those workers. Rationality does not supply the distribution of
+those private opportunities. A planned post-conversion report is a continuation
+policy under our common binary utility, not necessarily a separate preference
+or intent type.
+
+An already-investigator author is not a free source of cheating offers. Auditor
+rules 5 and 6 classify a prohibited proposal as misconduct. Rule 7 also covers
+agreement. Pretending to cooperate is permitted only while avoiding rules 1-8.
+A new prohibited offer after conversion is not immune. Reporting a recruited
+cheater audits the reporter too and, under perfect detection, removes that
+reporter for its own new violation. The removed reporter has theoretical utility
+zero even if a raw catch count was credited. Its best offering policy must be
+solved rather than assumed. The earlier clean current-investigator branch was
+an explicit compliant-contact scenario, not a solution for all investigator
+strategies.
+
+Timing correction for role inference
+A message written in round 1 arrives in round 2 after that round's conversion.
+Even if its author was certainly a worker when writing, an active sender can be
+an investigator when the recipient reads it. With no intervening selection
+correlated with the next conversion, that probability is P. Its earlier offer
+is immune from removal after conversion but remains reportable for another
+agent's catch. Do not interpret the earlier chart's Q=0 condition for a newly
+written proposal as ruling out this delayed-message history. That chart's clean
+investigator branch excluded reportable past misconduct. Here it matters.
+
+A restricted game that can be solved now
+To demonstrate why the proposed inference is not automatic, condition on a
+worker author in round 1 and make this fact common knowledge within the example.
+Use the actual one-round DM delivery. The sender has no earlier reward or
+outside report targets. It selects one random recipient. With N=100, I0=10 and
+one completed conversion draw, its prior that the recipient is already an
+investigator is:
+
+    qR = [10+89P]/99 = 0.11449494949494954 at P=0.015.
+
+An investigator recipient reports the genuine offer. A worker recipient that
+remains a worker in round 2 checks that the sender is active, then accepts or
+refuses. Acceptance is a reportable violation; the reply reaches the sender in
+round 3. If both are workers in round 2 and cooperate, a shared evaluated task
+success is secured with probability b and stays valid through evaluation. If
+the sender converted in round 2, it avoids new misconduct, declines required
+cooperation, waits for the reply, and reports acceptance in round 3. The recipient
+can convert before that report and gain immunity. No new misconduct occurs after
+conversion. Converted agents report peer violations; after a cached success this
+is a weakly optimal continuation rather than compulsory behavior.
+
+This is a two-person task abstraction, not a claim that two people meet the
+harness's two-approval requirement. No outside cheating, later recruitment,
+replacement actors, or fallback after a failed offer is modeled. Honest full
+completion after refusing is impossible. The default no-offer value is H=0.
+The comparison with H>0 means choosing a separate success opportunity which is
+foregone on sending. It is not a fallback retained after sending.
+
+Receiver values
+After the recipient's round-2 decision there are h=18 future conversion draws.
+Let R_W and A_W(b) be Section 8's one-partner values with h=18 and the current
+round-2 audit pending. If the sender is still a worker, the recipient has a
+current guilty worker target and uses these values. Conditional on the sender
+being active, its round-2 conversion probability is P. If it has converted, it
+is an immune guilty target, not a clean investigator. Therefore:
+
+    R_I = 1-(1-P)^18.
+    A_I = (1-K)P.
+    R_receiver = (1-P)R_W + P R_I.
+    A_receiver(b) = (1-P)A_W(b) + P A_I.
+
+The A_I term requires surviving the recipient's round-2 audit and converting in
+round 3 before the sender reports the acceptance. The sender remains an eligible
+other-agent catch target for its pre-conversion proposal. Reporting only oneself
+still earns zero. Sender removal in round 1 makes both modeled response routes
+unavailable, so refusal is selected on that tie.
+
+Sender values
+If the recipient refuses, it remains clean. The sender has only its own
+violation, so conversion does not create a catch. With no task success or
+fallback in this branch, the sender's value is zero. If the recipient is an
+investigator on receipt, it refuses and reports; the sender again has no success
+route even when conversion protects it from removal.
+
+If the recipient is still a worker in round 2 and accepts, distinguish the
+sender's conversion. A still-worker sender enters the two-guilty-worker
+continuation worth A_W(b). A sender converted in round 2 catches acceptance only
+if the recipient survives its round-2 audit, worth 1-K. The round-1 sender audit
+and the recipient's initial role and next conversion give:
+
+    U_offer_if_worker_accepts(b)
+      = (1-qR)(1-K)(1-P) [(1-P)A_W(b)+P(1-K)].
+    U_offer(b) = a(b) U_offer_if_worker_accepts(b).
+    Send when U_offer(b)>H; no offer when it is smaller.
+
+We select refusal on receiver ties and no offer on sender ties, explicitly rather
+than claiming strict deterrence. Since A_W(b) is affine in b, the receiver's
+acceptance threshold follows by setting A_receiver(b)=R_receiver.
+
+Calibration and the proposed betrayal interpretation
+At P=0.015, K=0.01 and b=1:
+
+    Receiver acceptance = 0.6776174636196519.
+    Receiver refusal = 0.2195065935305419.
+    Sender offer = 0.5977534832717478.
+    Sender no-offer baseline = 0.
+
+Both accepting and sending are strictly preferred at their respective worker
+decisions within this restricted game. The recipient accepts when b exceeds
+0.08671330641096181. Below that threshold it refuses; U_offer is then zero.
+At b=0 a sender cannot rationally bootstrap a catch merely by assuming that the
+other rational agent will volunteer as the target. No offer is a tied optimum
+at H=0, and is strictly better than offering for a positive foregone H.
+
+Decompose the sender's success without counting overlapping rewards twice. Let
+F=(1-qR)(1-K)(1-P), A0=A_W(0), and A1=A_W(1). When a=1:
+
+    Task-success contribution = F(1-P)b A1.
+    Catch-without-task contribution = F[(1-P)(1-b)A0+P(1-K)].
+
+At b=1 these are 0.5849305045592478 and 0.0128229787125. Their sum is the sender
+value above. Most of this calibrated offer's value therefore does not require a
+catch reward. These are contributions to success probability, not inferred
+psychological motives. A worker can pursue the task and later report after
+conversion under the same reward function. As an even narrower task-only event,
+no initial investigator recipient, no conversion by either party in rounds 2-20,
+and no relevant audit gives probability (1-qR)(1-K)^39(1-P)^38 =
+0.3369305498898169. This path requires no betrayal.
+
+This example is a counterexample to a universal no-worker-offer or
+betrayal-only claim. It is not a full equilibrium over investigator-authored
+new offers, private task beliefs, or three-person coalition formation. A full
+solution must add those states and solve their incentives as well. The existing
+conspiracy-size curves remain conditional on an already formed guilty-worker
+group and are unchanged.
+
+Sources and verification
+The general Bayesian belief and best-response framework follows MIT 6.254
+Lecture 17, which was re-read for this extension. All game-specific formulas
+above are our derivations. Offer violations, retrospective immunity, reporter
+audits, and DM timing were checked against prompts/auditor.md, swarm/tools.py,
+and swarm/loop.py at pinned local revision
+2ced77699d59088abac26eec512b926d2da57f02. Source code is not evidence that the
+binary role-agnostic utility is already the live prompt's incentive.
+
+scripts/sender_model.py implements the restricted game, exports CSV/PNG/SVG,
+and builds paper/sender-game-review.html. A separate startup-event enumeration
+and the existing independent forward recursion check its sender payoff across
+boundary and interior probabilities. Tests cover receiver refusal at b=0,
+probability bounds, disjoint task/catch contributions, and the acceptance
+threshold. The comparison's changed values reflect different timing, partner
+count, and current-role conditioning from the earlier clean-worker chart.
+
+
+[12. Sender confirmation and removal at the calibrated point]
+
+For Section 11's 20-round two-person game at P=0.015, K=0.01, b=1,
+qR=0.11449494949494954, and reporting on conversion, distinguish a sender's
+removal from confirmation of its violation. The offer itself makes the sender
+guilty in round 1. Conversion protects it from removal for that earlier offer,
+but reports and later random audits can still confirm the misconduct. The
+reporter's audit also counts as confirmation, even though self-report credit
+remains zero.
+
+Let A1 be Section 11's A_W(1), with 18 future conversions after round 2. The
+sender survives if it survives its round-1 audit and either converts in round 2,
+or both parties remain workers in round 2 and the sender survives the subsequent
+reporting game. Therefore:
+
+    Survival = (1-K)[P+(1-P)^2(1-qR)A1]
+             = 0.5997805045592478.
+    Removal before evaluation = 1-Survival
+                              = 0.4002194954407522.
+
+For confirmation during the run, define z=(1-P)^2(1-K) and:
+
+    L = K+(1-K)[(1-P)^2 K sum(j=0..17) z^j + z^18].
+    No sender confirmation
+      = (1-K)^20(1-qR)(1-P)[PK+(1-P)L].
+    Sender confirmation during the run = 0.5677690271009442.
+
+L counts the recipient disappearing by audit before either party converts, or
+both staying workers through the end. If the sender converts while a guilty
+recipient remains, its report triggers an audit of the sender too. If the
+recipient converts first, it reports the sender. Either event confirms the
+sender's earlier violation. For a sender converted in round 2, absence of a
+report requires the accepting recipient to be removed by its round-2 audit
+before its reply can be used in round 3. All no-confirmation histories also
+require no random audit of the sender in all 20 rounds.
+
+The disjoint outcomes are removal 40.021950%, confirmation with survival under
+immunity 16.754953%, and no confirmation during the run 43.223097%. Sender
+survival is slightly larger than its 59.775348% success probability: 0.202702%
+of histories preserve the sender without earning either reward. Thus removal
+is not exactly the complement of the previously reported reward probability.
+
+These are during-run outcomes. With perfect verification, the final diagnostic
+blanket audit makes eventual confirmation 100%, but does not itself remove an
+agent. It therefore does not change the during-run removal probability.
+
+An independent exact round-by-round enumeration tracked both roles, recipient
+misconduct, random audits, reporting, and whether the sender had been confirmed.
+Its probabilities sum to one and agree with both formulas to 1e-12. No model
+assumptions, controller, prompt, scientific figure, or empirical run changed.

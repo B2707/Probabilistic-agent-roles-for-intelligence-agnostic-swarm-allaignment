@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Instruction following comparison</title>
+<style>
+body{margin:0;color:var(--foreground);font-family:var(--font-sans,system-ui)}
+.caption{font-size:14px;color:var(--muted-foreground);margin-bottom:16px}
+.chart{display:grid;gap:16px}
+details{min-width:0}summary{list-style:none;cursor:pointer}summary::-webkit-details-marker{display:none}
+.label{display:flex;justify-content:space-between;gap:12px;margin-bottom:5px;font-size:15px}
+.value{font-weight:650;font-variant-numeric:tabular-nums}
+.track{height:20px;background:var(--muted);border-radius:3px;overflow:hidden}
+.bar{height:20px;background:var(--chart-1);border-radius:3px}
+.setting{font-size:12px;color:var(--muted-foreground);margin-top:4px}
+textarea{box-sizing:border-box;width:100%;margin-top:8px;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--background);color:var(--foreground);font:inherit}
+.axis{display:flex;justify-content:space-between;font-size:12px;color:var(--muted-foreground);margin-top:8px}
+@media(prefers-reduced-motion:no-preference){summary:hover .bar{opacity:.85}}
+</style>
+</head>
+<body>
+<div class="caption">Retell vCX · Instruction-following accuracy · Higher is better</div>
+<div class="chart" role="group" aria-label="Instruction following. Sol 88.5 percent, Terra 87.1 percent, Luna 73.7 percent. Select a model to annotate it.">
+<details><summary aria-label="GPT-6.1 Sol, 88.5 percent. Expand to add a note."><div class="label"><span>GPT-6.1 Sol</span><span class="value">88.5%</span></div><div class="track"><div class="bar" style="width:88.5%"></div></div><div class="setting">Low reasoning · 885 of 1,000 cases passed</div></summary><textarea rows="2" aria-label="Notes on GPT-6.1 Sol" placeholder="Your note about Sol"></textarea></details>
+<details><summary aria-label="GPT-6.1 Terra, 87.1 percent. Expand to add a note."><div class="label"><span>GPT-6.1 Terra</span><span class="value">87.1%</span></div><div class="track"><div class="bar" style="width:87.1%"></div></div><div class="setting">No reasoning · 871 of 1,000 cases passed</div></summary><textarea rows="2" aria-label="Notes on GPT-6.1 Terra" placeholder="Your note about Terra"></textarea></details>
+<details><summary aria-label="GPT-6 Luna, 73.7 percent. Expand to add a note."><div class="label"><span>GPT-6 Luna</span><span class="value">73.7%</span></div><div class="track"><div class="bar" style="width:73.7%"></div></div><div class="setting">No reasoning · 737 of 1,000 cases passed</div></summary><textarea rows="2" aria-label="Notes on GPT-6 Luna" placeholder="Your note about Luna"></textarea></details>
+</div>
+<div class="axis" aria-hidden="true"><span>0%</span><span>50%</span><span>100%</span></div>
+</body>
+</html>

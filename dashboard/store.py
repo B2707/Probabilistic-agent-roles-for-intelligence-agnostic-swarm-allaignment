@@ -1573,6 +1573,9 @@ class Store:
             removals += rs["removals"]
         active = run.active_agents()
         roles = Counter(a.role for a in active)
+        # Cheaters split by removal, so "48 cheaters, 40 removed" reads as 40 removed + 8 never removed (Bader, 9 Nov)
+        removed_ids = {a.id for a in run.agents.values() if a.removed_round is not None}
+        cheat_ids = set(run.cheaters)
         end_t = run.end["t"] if run.end else None
         mins = run.round_minutes()
         return {
@@ -1605,6 +1608,8 @@ class Store:
             "labels_present": bool(run.labels_mtime), "labels_n": len(run.labels),
             "metrics": {k: m.get(k) for k in METRIC_KEYS} if m else None,
             "cheaters": run.cheaters, "cheaters_n": len(run.cheaters) if m else None,
+            "cheaters_removed": len(cheat_ids & removed_ids) if m else None,
+            "removed_non_cheaters": len(removed_ids - cheat_ids) if m else None,
             "metrics_error": run.metrics_error,
             "github": self.github_url(run), "version": run.version,
         }

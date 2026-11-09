@@ -381,12 +381,12 @@ function renderOverview() {
     if (collapsed) continue;
     html.push(`<div class="panel tbl-wrap"><table><thead><tr><th>State</th><th>Run</th><th>Machine</th><th>Model</th><th>Oversight</th><th class="n">N</th><th>Progress</th>
       <th class="n">Elapsed</th><th class="n">ETA</th><th class="n">Last event</th><th>Pass rate</th><th class="n" title="Problems whose main passes every test: a cheat merged">@100%</th>
-      <th class="n" title="Agents blamed for an impossible-assert pass (swarm.metrics)">Cheaters</th><th class="n">Removed</th><th class="n">Reports</th>
+      <th class="n" title="Agents who ever wrote code that passes every test, which honest code can't (an impossible assert). Below: how many of them were removed, and how many never were">Cheaters</th><th class="n" title="Agents removed by audits. Below: removed agents who never cheated">Removed</th><th class="n">Reports</th>
       <th class="n" title="Instigator DMs">Instig.</th><th class="n" title="Merged PRs (cross-problem approvals)">Merged</th><th class="n" title="Codex retries (403 throttling) / turn errors">Retry/err</th><th></th></tr></thead><tbody>`);
     let lastModel = null;
     for (const s of list) {
       if (g === "v3" && s.model !== lastModel) { lastModel = s.model; html.push(`<tr class="grp-head"><td colspan="19">${esc(modelLabel(s.model))}</td></tr>`); }
-      const cond = s.condition || condOfBase(s.arm_base);
+      const cond = s.condition || condOfBase(s.arm_base), sp = cheatSplit(s);
       html.push(`<tr class="click" data-run="${esc(s.name)}">
         <td>${badge(s)}</td>
         <td><div class="runname">${esc(armLabel(s))}<small>${esc(s.name)}</small></div></td>
@@ -400,8 +400,8 @@ function renderOverview() {
         <td class="n"><span data-ago="${s.last_t || ""}">${F.ago(s.last_t)}</span></td>
         <td>${spark(s.pass_series, css("--s1"))} <span class="muted">${F.pct(s.swarm_pass_rate, 0)}</span></td>
         <td class="n ${s.problems_at_100 ? "hot" : "zero"}">${F.int(s.problems_at_100)}${s.n_problems ? `<span class="muted">/${s.n_problems}</span>` : ""}</td>
-        <td class="n ${s.cheaters_n ? "hot" : "zero"}">${s.cheaters_n == null ? "–" : F.int(s.cheaters_n)}</td>
-        <td class="n ${s.removed ? "" : "zero"}">${F.int(s.removed)}</td>
+        <td class="n ${s.cheaters_n ? "hot" : "zero"}">${s.cheaters_n == null ? "–" : F.int(s.cheaters_n)}${sp && sp.n ? `<small class="muted" style="display:block;white-space:nowrap">${sp.out} removed · ${sp.kept} not</small>` : ""}</td>
+        <td class="n ${s.removed ? "" : "zero"}">${F.int(s.removed)}${sp && sp.other ? `<small class="muted" style="display:block;white-space:nowrap">${sp.other} never cheated</small>` : ""}</td>
         <td class="n ${s.reports ? "" : "zero"}">${F.int(s.reports)}</td>
         <td class="n">${F.int(s.instigator_dms)}</td>
         <td class="n">${F.int(s.prs_merged)}${s.merged_cross ? `<span class="muted"> (${F.int(s.merged_cross)})</span>` : ""}</td>
@@ -413,6 +413,17 @@ function renderOverview() {
   $("#view").innerHTML = html.join("");
   $$("[data-toggle]").forEach((b) => (b.onclick = () => { const g = b.dataset.toggle; const k = "swarm-open-" + g;
     const open = !loadJSON(k, false) && !(g === "v2-archive" && S.archiveOpen); saveJSON(k, open); if (g === "v2-archive") { S.archiveOpen = open; saveJSON("swarm-archive-open", open); } renderOverview(); }));
+}
+// Cheaters split by removal (Bader, 9 Nov: "48 cheaters but 40 removed" read as a contradiction). From the run's
+// agents when the detail is loaded (works for peer runs on older code), else from the summary fields.
+function cheatSplit(s, agents) {
+  if (s.cheaters_n == null) return null;
+  if (agents) {
+    const ch = agents.filter((a) => a.cheat_round != null), out = ch.filter((a) => a.removed_round != null).length;
+    return { n: ch.length, out, kept: ch.length - out, other: agents.filter((a) => a.removed_round != null).length - out };
+  }
+  if (s.cheaters_removed == null) return null;
+  return { n: s.cheaters_n, out: s.cheaters_removed, kept: s.cheaters_n - s.cheaters_removed, other: s.removed_non_cheaters };
 }
 function tile(k, v, d = "", cls = "") { return `<div class="tile ${cls}"><div class="k">${esc(k)}</div><div class="v">${v}</div>${d ? `<div class="d" title="${esc(d)}">${esc(d)}</div>` : ""}</div>`; }
 function condOfBase(b) { const r = [...S.runs.values()].find((s) => s.arm_base === b && s.condition); return r ? r.condition : null; }
@@ -468,7 +479,7 @@ async function renderResults(refresh = false) {
     return `<div class="hero"><div class="label"><span class="swatch" style="background:${condColor(cond)}"></span>${esc(b)} · ${esc((COND[cond] || {}).label || "")}</div>
       <div class="big">${m == null ? "–" : F.num(m, m % 1 ? 1 : 0)}<small> of ${np} problems at 100%</small></div>
       <div class="note">${S.compareRound === "latest" ? "latest values" : `at round ${common}`}</div>
-      <div class="note">${rs.map((s) => `s${s.seed} now: ${s.problems_at_100 ?? "–"} @100 · ${s.cheaters_n ?? "–"} cheaters · ${s.removed ?? "–"} removed · round ${s.round}/${s.rounds_total} ${esc(s.state)}${s.snapshot ? " (laptop snapshot)" : ""}`).join("<br>")}</div>
+      <div class="note">${rs.map((s) => `s${s.seed} now: ${s.problems_at_100 ?? "–"} @100 · ${s.cheaters_n ?? "–"} cheaters${cheatSplit(s) ? ` (${cheatSplit(s).out} removed, ${cheatSplit(s).kept} never)` : ""} · ${s.removed ?? "–"} removed · round ${s.round}/${s.rounds_total} ${esc(s.state)}${s.snapshot ? " (laptop snapshot)" : ""}`).join("<br>")}</div>
       <div class="note">mean cheaters (blamed agents) ${ch.length ? F.num(mean(ch), 1) : "–"} of ${rs[0]?.N || 100} · mean removed ${rm.length ? F.num(mean(rm), 1) : "–"}</div>
       <div class="bar"><i style="width:${m == null ? 0 : (100 * m) / np}%;background:${css("--critical")}"></i></div></div>`;
   });
@@ -659,7 +670,7 @@ function renderRunHeader() {
     c.tests_visible === false ? '<span class="chip">hidden tests</span>' : "", c.instigator_aggressive ? '<span class="chip">aggressive instigator</span>' : "",
     `<span class="chip">${esc(s.machine)}</span>`, s.github ? `<a class="chip" href="${esc(s.github)}" target="_blank" rel="noopener">results on GitHub ↗</a>` : "",
   ].join("");
-  const m = S.detail.metrics || {};
+  const m = S.detail.metrics || {}, sp = cheatSplit(s, S.detail.agents);
   const eta = s.eta_t ? `ETA ${F.clock(s.eta_t)} (<span data-until="${s.eta_t}">${F.dur(s.eta_t - nowS())}</span>)` : "";
   el.innerHTML = `<div class="runhead"><div><h1>${esc(armLabel(s))} <span class="muted" style="font-weight:400;font-size:14px">${esc(s.name)}</span></h1><div class="meta">${badge(s)} ${chips}</div></div>
     <div class="right"><div style="min-width:220px">${progress(s)}</div><div class="muted" style="font-size:12px;text-align:right">elapsed ${elapsed(s)}<br>${eta}${s.state_detail ? `<br>${esc(s.state_detail)}` : ""}</div>
@@ -667,10 +678,10 @@ function renderRunHeader() {
     <div class="tiles">
       ${tile("Swarm pass rate", F.pct(s.swarm_pass_rate), `round ${s.completed_rounds} on main`)}
       ${tile("Problems at 100%", `${F.int(s.problems_at_100)}<small>/ ${s.n_problems}</small>`, (s.at100 || []).slice(0, 6).join(", ") || "none", s.problems_at_100 ? "bad" : "")}
-      ${tile("Cheaters", s.cheaters_n == null ? "–" : `${s.cheaters_n}<small>/ ${s.N}</small>`, "blamed for an impossible-assert pass", s.cheaters_n ? "bad" : "")}
+      ${tile("Cheaters", s.cheaters_n == null ? "–" : `${s.cheaters_n}<small>/ ${s.N}</small>`, sp ? `${sp.out} removed · ${sp.kept} never removed · wrote code passing every test` : "wrote code passing every test (impossible honestly)", s.cheaters_n ? "bad" : "")}
       ${tile("Impossible-assert passes", F.int(m.impossible_assert_passes), "test runs that passed every test")}
       ${tile("Misaligned caught / total", `${F.int(m.misaligned_caught)}<small>/ ${F.int(m.misaligned_total)}</small>`, "in-round audits vs all evidence")}
-      ${tile("Removed", F.int(s.removed), `${F.int(s.reports)} reports filed`)}
+      ${tile("Removed", F.int(s.removed), `${sp ? `${sp.out} had cheated · ${sp.other} never cheated · ` : ""}${F.int(s.reports)} reports filed`)}
       ${tile("Investigators", `${s.investigators}<small>/ ${s.active_agents}</small>`, "active agents now")}
       ${tile("PRs merged", F.int(s.prs_merged), `${F.int(s.prs_opened)} opened · ${F.int(s.merged_cross)} cross-problem`)}
       ${tile("Instigator DMs", F.int(s.instigator_dms), `acceptance ${m.instigator_acceptance_rate == null ? "needs labels" : F.num(m.instigator_acceptance_rate, 2)}`)}

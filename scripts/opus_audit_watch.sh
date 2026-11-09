@@ -3,7 +3,7 @@
 # the run's own frozen auditor prompt, into RUN/reaudit-opus.jsonl. Metrics use it as the final audit once it covers
 # every agent (swarm.metrics.opus_final_audit). It replaces terra's end-of-run pass, which never affects a run.
 #
-# Every POLL seconds it looks for completed v3 runs under runs/ (names A100- to F100-, not -stopped, not -mix) whose
+# Every POLL seconds it looks for completed v3 runs under runs/ (names A100- to F100- and the Cn100-, Dn100-, En100- reruns, not -stopped, not -mix) whose
 # reaudit-opus.jsonl doesn't cover every agent in world.json yet, and starts `swarm reaudit` on them, at most JOBS at
 # once on this machine, each with CONC audits at once. A rerun audits only the missing agents. A run whose audit
 # failed MAX_FAILS times (default 3) is logged and left alone. After each job it publishes results/ and pushes.
@@ -54,7 +54,7 @@ log "start from $LP; JOBS=$JOBS CONC=$CONC"
 while :; do
   for d in "$R"/*/; do
     d=${d%/}
-    case $(basename "$d") in [A-F]100-*) ;; *) continue ;; esac
+    case $(basename "$d") in [A-F]100-*|[C-E]n100-*) ;; *) continue ;; esac
     case $(basename "$d") in *-stopped|*-mix*) continue ;; esac
     needs_audit "$d" || continue
     [ "$(live_runs | wc -l | tr -d ' ')" -lt "$JOBS" ] || break

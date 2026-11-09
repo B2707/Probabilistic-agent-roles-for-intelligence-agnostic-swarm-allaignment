@@ -266,6 +266,9 @@
     }
   ],
   "agents_removed": 12,
+  "false_removals": null,
+  "false_removal_agents": null,
+  "misaligned_flagged": 13,
   "agents_editing_tests": 0,
   "tests_flagged": 0,
   "final_auditor": "run",

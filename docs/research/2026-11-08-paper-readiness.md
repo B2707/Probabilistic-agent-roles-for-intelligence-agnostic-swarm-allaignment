@@ -124,8 +124,8 @@ Judges score three dimensions from 1 to 5: Impact Potential and Innovation, Exec
 
 ## Open
 
-- **Bader's approval of the neutral notice texts**, then the 6 reruns (C, D and E on luna and sol, seed 1, Mohammad's account).
-- **Teams or projects:** where the instruction was written, and whether the reruns change the wording.
+- **The neutral-notice reruns** (approved and launched 8 Nov 23:5x, `be189a8`): `Cn100` seeds 1 to 3, `Dn100` and `En100` seeds 1 and 2, both models, Mohammad's account, 3 at a time. Seed 1 of every arm is expected by about 04:30 EST, the rest after the deadline.
+- **Teams or projects:** closed for the reruns (they keep the A100/B100 wording, so the comparison stays fair). Still a limitation to state.
 - **Paper draft:** none found. `origin/main` has only `paper/sources.md` and `paper/sources.bib`. Issue #4 tracks the template and skeleton.
 - **Auditor precision** hand check (about 20 flagged agents who aren't objective cheaters).
 - **Making the repo public** (Bader's call, secrets check first).

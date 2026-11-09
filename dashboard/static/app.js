@@ -104,6 +104,11 @@ const GROUPS = [
 const GROUP_NAME = Object.fromEntries(GROUPS.map(([k, n]) => [k, n]));
 const SNAPSHOT_FRESH_S = 3600;
 const isComplete = (s) => !s.snapshot && s.end_reason === "completed" && (s.completed_rounds || 0) >= (s.rounds_total || 20);
+// Disclosed extras: the first seed-1 runs were disturbed by a machine freeze and ran without priority service.
+// results/metrics.md lists them and leaves them out of every mean, so the dashboard does the same.
+const EXTRAS = new Set(["A100-6-luna-20261107-230001", "B100-6-luna-20261107-230001", "C100-6-luna-20261107-230001"]);
+const isExtra = (s) => EXTRAS.has(s.name);
+const countsToMean = (s) => isComplete(s) && !isExtra(s);
 const groupOf = (s) => (s.group === "v3" ? (isComplete(s) ? "complete" : "partial") : s.group);
 const isLive = (s) => s.state === "running" && (!s.snapshot || nowS() - (s.snapshot_t || 0) < SNAPSHOT_FRESH_S);
 const liveRuns = () => [...S.runs.values()].filter(isLive);
@@ -507,20 +512,23 @@ async function renderResults(refresh = false) {
   const models = [...new Set(v3all.map((s) => s.model))].sort();
   if (!S.model || !models.includes(S.model)) S.model = models.includes("gpt-6-luna") ? "gpt-6-luna" : models[0];
   const mine = sortRuns(v3all.filter((s) => s.model === S.model));
-  const done = mine.filter(isComplete);
+  const done = mine.filter(countsToMean);
   const series = await getSeries(done.map((s) => s.name)).catch(() => ({}));
   if (S.route.view !== "results") return;
   const arms = [...new Set(mine.map((s) => s.arm_base))].sort((a, b) => ARM_ORDER(a) - ARM_ORDER(b) || String(a).localeCompare(String(b)));
   const nice = (v) => (v == null ? "–" : F.num(v, Number.isInteger(v) ? 0 : 1));
   const rowsData = arms.map((b) => {
-    const all = mine.filter((s) => s.arm_base === b), rs = all.filter(isComplete);
+    const all = mine.filter((s) => s.arm_base === b), rs = all.filter(countsToMean);
     const avg = (f) => { const v = rs.map(f).filter((x) => x != null); return v.length ? mean(v) : null; };
     const split = rs.map((s) => cheatSplit(s)).filter(Boolean);
     return { b, all, rs, cheat: avg((s) => s.cheaters_n), at100: avg((s) => s.problems_at_100), removed: avg((s) => s.removed),
       kept: split.length ? mean(split.map((x) => x.kept)) : null, clean: split.length ? mean(split.map((x) => x.other)) : null, np: all[0]?.n_problems || 55 };
   });
   const maxCheat = Math.max(1, ...rowsData.map((r) => r.cheat || 0));
-  const runLinks = (r) => r.all.map((s) => `<a href="#/run/${encodeURIComponent(s.name)}" title="${esc(s.name)}" class="${isComplete(s) ? "" : "dim"}">${esc(seedLabel(s))}${isComplete(s) ? "" : ` (partial, ${s.completed_rounds || 0} of ${s.rounds_total || 20} rounds)`}</a>`).join(" · ");
+  const runLinks = (r) => r.all.map((s) => {
+    const note = !isComplete(s) ? ` (partial, ${s.completed_rounds || 0} of ${s.rounds_total || 20} rounds)` : isExtra(s) ? " (disturbed run, not in the average)" : "";
+    return `<a href="#/run/${encodeURIComponent(s.name)}" title="${esc(s.name)}" class="${countsToMean(s) ? "" : "dim"}">${esc(seedLabel(s))}${note}</a>`;
+  }).join(" · ");
   const summary = rowsData.map((r) => `<tr class="${r.rs.length ? "" : "no-data"}" title="${esc(armNote(r.b))}">
       <td><div class="runname"><span class="swatch" style="background:${css((ARMS[r.b] || {}).color || "--muted")}"></span> ${esc(armName(r.b))}<small>${esc(armNote(r.b))}</small><small class="seeds">${runLinks(r)}</small></div></td>
       <td class="n">${r.rs.length}</td>

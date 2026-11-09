@@ -1,5 +1,9 @@
 """Restricted offer game with one-round delivery and binary individual success."""
 
+# NOTE: P and K in this file (and p, k in its functions, charts and text) are the opposite of the harness and the
+# paper: here P is the per-round conversion probability (harness and paper: k, K) and K is the per-round random-audit
+# probability (harness and paper: p, P). The numbers are unaffected; only the letters differ.
+
 import csv
 import json
 import math

@@ -779,7 +779,7 @@ def test_luna_runs_on_mohammads_account_differ_from_their_base_config_only_in_th
 def test_account_b2_configs_differ_from_their_base_only_in_the_codex_home():
     # Bader, 9 Nov 01:0x: his second ChatGPT account runs the D and E arms on his Mac while the laptop finishes C
     b2 = sorted((ROOT / "configs").glob("*-b2.toml"))
-    assert len(b2) == 6
+    assert len(b2) == 8
     for path in b2:
         cfg = Config.load(path, ROOT).to_dict()
         base = Config.load(path.with_name(path.name.replace("-b2.toml", ".toml")), ROOT).to_dict()
